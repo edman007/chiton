@@ -1,2 +1,2 @@
 bin_PROGRAMS = chiton
-chiton_SOURCES = main.cpp
+chiton_SOURCES = main.cpp util.cpp

@@ -1,8 +1,8 @@
 #include <main.hpp>
-#include <iostream>
+#include "util.hpp"
 
 int main (int argc, char **argv){
-    std::cout << "Starting Chiton..." << std::endl;
+    Util::log_msg("Starting Chiton...", LOG_INFO);
 
     return 0;
 }
