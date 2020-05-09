@@ -1,0 +1,4 @@
+# database Settings
+db-host = localhost
+db-user = chiton
+db-password = changeme
