@@ -20,4 +20,4 @@ install-sh
 libtool
 ltmain.sh
 missing
-
+config/chiton.cfg

@@ -35,25 +35,41 @@ AC_ARG_ENABLE([profiling], [AS_HELP_STRING([--enable-profiling], [Enable Profili
 
 
 AS_IF([test "x$enable_debug" != "xno"],
-    [AS_VAR_APPEND([[CFLAGS]], [[" -g -O0 -rdynamic "]])
+    [AS_VAR_APPEND([[CXXFLAGS]], [[" -g -O0 -rdynamic "]])
     AC_DEFINE([DEBUG], [1], [Debugging enabled])
     ],
-    [AS_VAR_APPEND([[CFLAGS]], [[" -O3 "]])
+    [AS_VAR_APPEND([[CXXFLAGS]], [[" -O3 "]])
     AC_DEFINE([NDEBUG], [1], [Debugging Disabled])
     ]
 )
 
 #CPU specific debug flags...
 case $host in
-       arm*-*-*)   AS_IF([test "x$enable_debug" != "xno"], [AS_VAR_APPEND([[CFLAGS]], [[" -funwind-tables "]])]) ;;
-       i?86-*-*)   AS_IF([test "x$enable_debug" != "xno"], [], [AS_VAR_APPEND([[CFLAGS]], [["  "]])]) ;;
+       arm*-*-*)   AS_IF([test "x$enable_debug" != "xno"], [AS_VAR_APPEND([[CXXFLAGS]], [[" -funwind-tables "]])]) ;;
+       i?86-*-*)   AS_IF([test "x$enable_debug" != "xno"], [], [AS_VAR_APPEND([[CXXFLAGS]], [["  "]])]) ;;
 esac
 
 AS_IF([test "x$enable_profiling" != "xno"],
-    [AS_VAR_APPEND([[CFLAGS]], [[" -pg -fprofile-arcs -ftest-coverage "]])
+    [AS_VAR_APPEND([[CXXFLAGS]], [[" -pg -fprofile-arcs -ftest-coverage "]])
     ],
     []
 )
+
+
+#our required libs:
+PKG_PROG_PKG_CONFIG
+
+#untested with mysql...
+PKG_CHECK_MODULES([MARIADB], [mariadb],
+                             [AS_VAR_APPEND([[CPPFLAGS]], [" $MARIADB_CFLAGS"])
+                             AS_VAR_APPEND([[LIBS]], [" $MARIADB_LIBS "])],
+                             [PKG_CHECK_MODULES([MYSQL], [mysqlclient],
+                             [AS_VAR_APPEND([[CPPFLAGS]], [" $MYSQL_CFLAGS"])
+                             AS_VAR_APPEND([[LIBS]], [" $MYSQL_LIBS "])]
+                             )])
+
+
+
 
 AC_CONFIG_FILES(Makefile)
 AC_OUTPUT

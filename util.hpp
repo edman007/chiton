@@ -18,7 +18,7 @@ public:
     /*
      * Log a message
      */
-    static void log_msg(std::string msg, LOG_LEVEL lvl);
+    static void log_msg(const LOG_LEVEL lvl, const std::string& msg);
 
     
     
