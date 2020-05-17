@@ -21,3 +21,4 @@ libtool
 ltmain.sh
 missing
 config/chiton.cfg
+vids/

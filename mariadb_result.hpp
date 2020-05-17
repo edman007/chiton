@@ -15,7 +15,9 @@ public:
     long num_rows(void);
     const std::string& col_name(unsigned int col);
     const std::string& get_field(unsigned int col);
-
+    const long get_field_long(unsigned int col);//get the data from the specified column as a long
+    const double get_field_double(unsigned int col);//get the data from the specified column as a double
+    
     bool next_row(void);
     bool field_is_null(unsigned int col);
 private:

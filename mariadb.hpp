@@ -4,7 +4,7 @@
 #include "database.hpp"
 #include <mysql/mysql.h>
 #include "mariadb_result.hpp"
-
+#include <mutex>
 
 class MariaDB : public Database {
 public:
@@ -15,10 +15,11 @@ public:
     //escape a string
     std::string escape(const std::string& str);
     MariaDBResult* query(const std::string& query) __wur;
-
-    long affected_rows(void);
+    MariaDBResult* query(const std::string& query, long* affected_rows, long *insert_id);
+    
 private:
     MYSQL *conn;//our server connection
-    
+    MariaDBResult* query_nolock(const std::string& sql);
+    std::mutex mtx;
 };
 #endif

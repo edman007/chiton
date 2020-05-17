@@ -39,8 +39,8 @@ std::string MariaDB::escape(const std::string& str){
     
 }
 
-MariaDBResult* MariaDB::query(const std::string& query){
-    int ret = mysql_real_query(conn, query.c_str(), query.length());
+MariaDBResult* MariaDB::query_nolock(const std::string& sql){
+    int ret = mysql_real_query(conn, sql.c_str(), sql.length());
     if (ret){
         //error
         Util::log_msg(LOG_WARN, "Query Failed: " + std::string(mysql_error(conn)));
@@ -54,6 +54,21 @@ MariaDBResult* MariaDB::query(const std::string& query){
     }
 }
 
-long MariaDB::affected_rows(void){
-    return mysql_affected_rows(conn);
+
+MariaDBResult* MariaDB::query(const std::string& sql){
+    return query(sql, NULL, NULL);
+}
+
+MariaDBResult* MariaDB::query(const std::string& sql, long* affected_rows, long *insert_id){
+    mtx.lock();
+    MariaDBResult *ret = query_nolock(sql);
+    if (affected_rows){
+        *affected_rows = mysql_affected_rows(conn);
+    }
+    if (insert_id){
+        *insert_id = mysql_insert_id(conn);
+    }
+    mtx.unlock();
+    return ret;
+
 }

@@ -64,6 +64,44 @@ const std::string& MariaDBResult::get_field(unsigned int col){
     }
 }
 
+const long MariaDBResult::get_field_long(unsigned int col){
+    const std::string& val = get_field(col);
+    if (!val.compare("")){
+        //empty
+        return 0;
+    }
+
+    try {
+        return std::stol(val);
+    } catch (const std::invalid_argument& ia){
+        Util::log_msg(LOG_WARN, "database  value " + std::to_string(col) + " ( " + val + " ) must be an integer");
+    } catch (const std::out_of_range& ia) {
+        Util::log_msg(LOG_WARN, "database value " + std::to_string(col) + " ( " + val + " ) is out of range ");
+    }
+    
+    return 0;
+
+}
+
+const double MariaDBResult::get_field_double(unsigned int col){
+    const std::string& val = get_field(col);
+    if (!val.compare("")){
+        //empty
+        return 0;
+    }
+
+    try {
+        return std::stod(val);
+    } catch (const std::invalid_argument& ia){
+        Util::log_msg(LOG_WARN, "database value " + std::to_string(col) + " ( " + val + " ) must be a double");
+    } catch (const std::out_of_range& ia) {
+        Util::log_msg(LOG_WARN, "database value " + std::to_string(col) + " ( " + val + " ) is out of range ");
+    }
+    
+    return 0;
+
+}
+
 bool MariaDBResult::field_is_null(unsigned int col){
     if (col < col_count && col_count != 0){
         return row[col] == NULL;

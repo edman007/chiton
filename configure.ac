@@ -69,6 +69,10 @@ PKG_CHECK_MODULES([MARIADB], [mariadb],
                              )])
 
 
+##ffmpeg
+PKG_CHECK_MODULES([FFMPEG], [libavformat libavcodec libavutil],
+                             [AS_VAR_APPEND([[CPPFLAGS]], [" $FFMPEG_CFLAGS"])
+                             AS_VAR_APPEND([[LIBS]], [" $FFMPEG_LIBS "])])
 
 
 AC_CONFIG_FILES(Makefile)

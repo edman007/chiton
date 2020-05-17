@@ -17,8 +17,10 @@ public:
     //returns a result if there is one, caller must call delete on it when done
     virtual DatabaseResult* query(const std::string& query) __wur = 0;
 
-    //returns affected row count of last query
-    virtual long affected_rows(void) = 0;
+    //returns a result if there is one, caller must call delete on it when done
+    //if affected_rows is not null, will be set to the affected_row count in a thread safe manner
+    //if insert_id is not null, will be set to the last insert_id in a thread safe manner
+    virtual DatabaseResult* query(const std::string& query, long* affected_rows, long *insert_id) __wur = 0;
 
     virtual ~Database() {};
     
