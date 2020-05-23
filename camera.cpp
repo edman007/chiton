@@ -1,5 +1,6 @@
 #include "camera.hpp"
 #include "util.hpp"
+#include "stream_writer.hpp"
 
 Camera::Camera(int camera, Database& db) : id(camera), db(db), stream(cfg), fm(db, cfg) {
     //load the config
@@ -25,6 +26,18 @@ void Camera::run(void){
     struct timeval start;
     Util::get_videotime(start);
     std::string new_output = fm.get_next_path(file_id, id, start);
+    
+    StreamWriter out = StreamWriter(cfg, new_output, stream);
+    out.open();
+
+    AVPacket pkt;
+    while (stream.get_next_frame(pkt)){
+        out.write(pkt);//log it
+        
+        stream.unref_frame(pkt);
+    }
+    out.close();
+    
 }
 
 void Camera::stop(void){

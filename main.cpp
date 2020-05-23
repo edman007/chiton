@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <thread>
 #include <stdlib.h>
+#include "chiton_ffmpeg.hpp"
 
 static char timezone_env[256];//if timezone is changed from default, we need to store it in memory for putenv()
 
@@ -43,6 +44,8 @@ int main (int argc, char **argv){
 
     //load system config
     load_sys_cfg(cfg);
+
+    load_ffmpeg();
     
     //Launch all cameras
     res = db.query("SELECT camera FROM config WHERE camera IS NOT NULL AND name = 'active' AND value = '1' GROUP BY camera");

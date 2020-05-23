@@ -18,4 +18,13 @@ av_always_inline char* av_err2str(int errnum)
 }
 #endif
 
+
+//make AVRounding valid in bitwise operations
+inline AVRounding operator|(AVRounding a, AVRounding b)
+{
+    return static_cast<AVRounding>(static_cast<int>(a) | static_cast<int>(b));
+}
+
+void load_ffmpeg(void);
+
 #endif
