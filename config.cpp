@@ -46,8 +46,13 @@ const std::string Config::get_value(const std::string& key){
         Util::log_msg(LOG_WARN, "Code is requesting a null key");
         return "";
     }
-    
-    return cfg_db[key];
+
+    auto ret = cfg_db.find(key);
+    if (ret == cfg_db.end()){
+        return "";
+    } else {
+        return ret->second;
+    }
 }
 
 void Config::set_value(const std::string& key, const std::string& value){

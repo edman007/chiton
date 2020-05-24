@@ -39,9 +39,16 @@ std::string FileManager::get_next_path(long int &file_id, int camera, struct tim
         + std::to_string(date.day) + "/"
         + std::to_string(date.hour);
 
-
+    //make sure the config value is correct
+    std::string modified_base = std::string(base);
+    if (modified_base == ""){
+        modified_base = "./";
+    } else if (modified_base.back() != '/'){
+        modified_base += "/";
+    }
+    
     //make sure dir exists
-    std::string path = base + dir;
+    std::string path = modified_base + dir;
     mkdir_recursive(path);
     
     std::string sql = "INSERT INTO videos (path, starttime, camera) VALUES ('" + dir + "/'," + ptime + ", " + std::to_string(camera) + " )";    

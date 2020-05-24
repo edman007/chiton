@@ -29,7 +29,21 @@
 #include <stdlib.h>
 #include "chiton_ffmpeg.hpp"
 
+#include <csignal>
+#include <atomic>
+#include <chrono>
+
 static char timezone_env[256];//if timezone is changed from default, we need to store it in memory for putenv()
+static std::atomic_bool exit_requested(false);
+static int exit_count = 0;//multiple exit requests will kill the application with this
+
+void shutdown_signal(int sig){
+    exit_requested = true;
+    exit_count++;
+    if (exit_count > 2){
+        std::exit(sig);
+    }
+}
 
 void load_sys_cfg(Config &cfg) {
     std::string timezone = cfg.get_value("timezone");
@@ -70,34 +84,45 @@ int main (int argc, char **argv){
     
     //Launch all cameras
     res = db.query("SELECT camera FROM config WHERE camera IS NOT NULL AND name = 'active' AND value = '1' GROUP BY camera");
-    std::vector<Camera> cams;
+    std::vector<Camera*> cams;
     std::vector<std::thread> threads;
     while (res && res->next_row()){
-        cams.emplace_back(res->get_field_long(0), db);//create camera
+        LINFO("Loading camera " + std::to_string(res->get_field_long(0)));
+        cams.emplace_back(new Camera(res->get_field_long(0), db));//create camera
         threads.emplace_back(&Camera::run, cams.back());//start it
 
     }
     delete res;
 
+    //load the signal handlers
+    std::signal(SIGINT, shutdown_signal);
+    
     //camera maintance
-    bool exit_requested = true;
     do {
         //we should check if they are running and restart anything that froze
         for (auto &c : cams){
-            if (c.ping()){
-                Util::log_msg(LOG_ERROR, "Thread Stalled");
+            if (c->ping()){
+                int id = c->get_id();
+                LWARN("Thread " + std::to_string(id) + " Stalled");
+                //we should kill this thread and re-run it
             }
         }
-        
+        std::this_thread::sleep_for(std::chrono::seconds(10));
     } while (!exit_requested);
-
+    LINFO("Exiting!");
     //shutdown all cams
-    for (auto &c : cams){
-        c.stop();
+    for (auto c : cams){
+        c->stop();
     }
-    
+    LINFO("Stop Has been sent!");    
     for (auto &t : threads){
         t.join();
+    }
+
+    //destruct everything
+    while (!cams.empty()){
+        delete cams.back();
+        cams.pop_back();
     }
 
     

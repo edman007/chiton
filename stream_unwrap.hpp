@@ -44,8 +44,8 @@ public:
 private:
     const std::string url;//the URL of the camera we are connecting to
     Config& cfg;
-
-
+    AVDictionary *get_options(void);
+    void dump_options(AVDictionary* dict);
 
     AVFormatContext *input_format_context;
     AVPacket pkt;

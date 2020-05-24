@@ -28,6 +28,9 @@ Camera::Camera(int camera, Database& db) : id(camera), db(db), stream(cfg), fm(d
     //load the config
     load_cfg();
     //stream = StreamUnwrap(cfg);
+    shutdown = false;
+    alive = true;
+    watchdog = false;
 }
 Camera::~Camera(){
 
@@ -43,29 +46,52 @@ void Camera::load_cfg(void){
 }
     
 void Camera::run(void){
-    stream.connect();
+    LINFO("Camera " + std::to_string(id) + " starting...");
+    if (!stream.connect()){
+        alive = false;
+        return;
+    }
+    LINFO("Camera " + std::to_string(id) + " connected...");
     long int file_id;
     struct timeval start;
     Util::get_videotime(start);
     std::string new_output = fm.get_next_path(file_id, id, start);
-    
+
     StreamWriter out = StreamWriter(cfg, new_output, stream);
     out.open();
 
     AVPacket pkt;
-    while (stream.get_next_frame(pkt)){
-        out.write(pkt);//log it
+    bool valid_keyframe = false;
+    long max_dts = 0;
+    while (!shutdown && stream.get_next_frame(pkt)){
+        watchdog = true;
+        if (pkt.dts == AV_NOPTS_VALUE && pkt.pts == AV_NOPTS_VALUE){
+            pkt.dts = 0;//re-write DTS to zero if it had no value
+            pkt.pts = 0;//re-write PTS to zero if it had no value
+        }
+        if (valid_keyframe || pkt.flags & AV_PKT_FLAG_KEY){
+            out.write(pkt);//log it
+            valid_keyframe = true;
+            LINFO("Got Frame " + std::to_string(id));
+        } else {
+            LINFO("Waiting for a keyframe...");
+        }
         
         stream.unref_frame(pkt);
     }
+    LINFO("Camera " + std::to_string(id)+ " is exiting");
     out.close();
-    
+    alive = false;
 }
 
 void Camera::stop(void){
-
+    shutdown = true;
 }
 
-int Camera::ping(void){
-    return 0;
+bool Camera::ping(void){
+    return !watchdog.exchange(false) || !alive;
+}
+
+int Camera::get_id(void){
+    return id;
 }

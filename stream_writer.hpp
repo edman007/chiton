@@ -41,5 +41,6 @@ private:
     int stream_mapping_size = 0;
     int *stream_mapping = NULL;
     
+    void log_packet(const AVFormatContext *fmt_ctx, const AVPacket &pkt, const std::string &tag);
 };
 #endif

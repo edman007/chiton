@@ -138,17 +138,16 @@ bool StreamWriter::write(const AVPacket &packet){
         av_packet_unref(&out_pkt);
         return true;//we processed the stream we don't care about
     }
-
+    log_packet(unwrap.get_format_context(), packet, "in-" + path);
     out_pkt.stream_index = stream_mapping[out_pkt.stream_index];
     out_stream = output_format_context->streams[out_pkt.stream_index];
-
 
     /* copy packet */
     out_pkt.pts = av_rescale_q_rnd(out_pkt.pts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
     out_pkt.dts = av_rescale_q_rnd(out_pkt.dts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
     out_pkt.duration = av_rescale_q(out_pkt.duration, in_stream->time_base, out_stream->time_base);
     out_pkt.pos = -1;
-
+    log_packet(output_format_context, out_pkt, "out-"+path);
 
     int ret = av_interleaved_write_frame(output_format_context, &out_pkt);
     if (ret < 0) {
@@ -158,4 +157,16 @@ bool StreamWriter::write(const AVPacket &packet){
 
     av_packet_unref(&out_pkt);
     return true;
+}
+
+void StreamWriter::log_packet(const AVFormatContext *fmt_ctx, const AVPacket &pkt, const std::string &tag){
+    AVRational *time_base = &fmt_ctx->streams[pkt.stream_index]->time_base;
+    LINFO(tag + ": pts:" + std::string(av_ts2str(pkt.pts)) +
+          " pts_time:"+std::string(av_ts2timestr(pkt.pts, time_base))+
+          " dts:" + std::string(av_ts2str(pkt.dts)) +
+          " dts_time:"+ std::string(av_ts2timestr(pkt.dts, time_base)) +
+          " duration:" +std::string(av_ts2str(pkt.duration)) +
+          " duration_time:" + std::string(av_ts2timestr(pkt.duration, time_base))+
+          " stream_index:" + std::to_string(pkt.stream_index)
+    );
 }

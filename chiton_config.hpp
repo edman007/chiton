@@ -38,6 +38,8 @@
  *
  * === Can be set essentially anywhere (.cfg or database) ==
  * timezone (defaults to system timezone)
+ * output-dir - the location to store videos
+ * ffmpeg-demux-options - options for the demuxer
  *
  * === Applies to a specific camera ===
  * video-url - ffmpeg compatible URL for camera N
@@ -59,7 +61,7 @@ public:
     double get_value_double(const std::string& key);//returns the value as an double
     
     void set_value(const std::string& key, const std::string& value);
-
+    
 private:
     std::map<std::string,std::string> cfg_db;
 };

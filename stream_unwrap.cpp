@@ -43,13 +43,24 @@ bool StreamUnwrap::connect(void) {
 
 
     int error;
+    AVDictionary *opts = get_options();
     /* Open the input file to read from it. */
-    if ((error = avformat_open_input(&input_format_context, url.c_str(), NULL, NULL)) < 0) {
+    if (av_dict_count(opts)){
+        LWARN("Setting Options:");
+        dump_options(opts);
+    }
+    if ((error = avformat_open_input(&input_format_context, url.c_str(), NULL, &opts)) < 0) {
         Util::log_msg(LOG_ERROR, "Could not open camera url '" + url + "' (error '" + std::string(av_err2str(error)) +")");
         input_format_context = NULL;
+        av_dict_free(&opts);
         return false;
     }
-
+    if (av_dict_count(opts)){
+        LWARN("Invalid Options:");
+        dump_options(opts);
+    }
+    av_dict_free(&opts);
+    
     /* Get information on the input file (number of streams etc.). */
     if ((error = avformat_find_stream_info(input_format_context, NULL)) < 0) {
         Util::log_msg(LOG_ERROR, "Could not open find stream info (error '" + std::string(av_err2str(error)) + "')");
@@ -57,7 +68,7 @@ bool StreamUnwrap::connect(void) {
         return false;
     }
     LINFO("Video Stream has " + std::to_string(input_format_context->nb_streams) + " streams");
-    
+    input_format_context->flags |= AVFMT_FLAG_GENPTS;//fix the timestamps...    
     /*
     if (!(input_codec = avcodec_find_decoder(input_format_context->streams[0]->codecpar->codec_id))) {
         LERROR("Could not find input codec\n");
@@ -90,7 +101,7 @@ AVCodecContext* StreamUnwrap::alloc_decode_context(unsigned int stream){
     /* Allocate a new decoding context. */
     avctx = avcodec_alloc_context3(input_codec);
     if (!avctx) {
-        fprintf(stderr, "Could not allocate a decoding context");
+        LERROR("Could not allocate a decoding context");
         return NULL;
     }
     
@@ -119,4 +130,26 @@ bool StreamUnwrap::get_next_frame(AVPacket &packet){
 
 void StreamUnwrap::unref_frame(AVPacket &packet){
     av_packet_unref(&packet);
+}
+
+//reorder_queue_size = 500
+AVDictionary *StreamUnwrap::get_options(void){
+    AVDictionary *dict = NULL;
+    if (cfg.get_value("ffmpeg-demux-options") == ""){
+        return NULL;
+    }
+    int error;
+    if (error = av_dict_parse_string(&dict, cfg.get_value("ffmpeg-demux-options").c_str(), "=", ":", 0)){
+        LERROR("Error Parsing input ffmpeg options: " + std::string(av_err2str(error)));
+        av_dict_free(&dict);
+        return NULL;
+    }
+    return dict;
+}
+
+void StreamUnwrap::dump_options(AVDictionary* dict){
+    AVDictionaryEntry *en = NULL;
+    while ((en = av_dict_get(dict, "", en, AV_DICT_IGNORE_SUFFIX))) {
+        LWARN("\t" + std::string(en->key) + "=" + std::string(en->value));
+    }
 }
