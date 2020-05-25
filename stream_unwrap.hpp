@@ -24,6 +24,7 @@
 
 #include "chiton_config.hpp"
 #include "chiton_ffmpeg.hpp"
+#include <list>
 
 class StreamUnwrap {
     /*
@@ -46,9 +47,16 @@ private:
     Config& cfg;
     AVDictionary *get_options(void);
     void dump_options(AVDictionary* dict);
-
+    bool charge_reorder_queue(void);//loads frames until the reorder queue is full
+    void sort_reorder_queue(void);//ensures the last frame is in the correct position in the queue, sorting it if required
+    bool read_frame(void);//read the next frame (internally used)
+    
     AVFormatContext *input_format_context;
     AVPacket pkt;
+
+    unsigned int reorder_len;
+    int max_dts;//max DTS encountered so far, we reorder the fames when DTS is greater than this
+    std::list<AVPacket> reorder_queue;
 };
 
 #endif

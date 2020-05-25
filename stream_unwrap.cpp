@@ -26,7 +26,7 @@
 
 StreamUnwrap::StreamUnwrap(Config& cfg) : cfg(cfg) {
     input_format_context = NULL;
-
+    max_dts = 0;
 }
 
 StreamUnwrap::~StreamUnwrap(){
@@ -76,8 +76,9 @@ bool StreamUnwrap::connect(void) {
         return false;
     }
     */
-    
-    return true;
+    //start reading frames
+    reorder_len = cfg.get_value_int("reorder_queue_len");
+    return charge_reorder_queue();
 }
 
 AVFormatContext* StreamUnwrap::get_format_context(void){
@@ -125,7 +126,16 @@ AVCodecContext* StreamUnwrap::alloc_decode_context(unsigned int stream){
 }
 
 bool StreamUnwrap::get_next_frame(AVPacket &packet){
-    return 0 == av_read_frame(input_format_context, &packet);
+    read_frame();
+    if (reorder_queue.size() > 0){
+        av_packet_move_ref(&packet, &reorder_queue.front());
+        reorder_queue.pop_front();
+        return true;
+    } else {
+        return false;
+    }
+    
+
 }
 
 void StreamUnwrap::unref_frame(AVPacket &packet){
@@ -152,4 +162,44 @@ void StreamUnwrap::dump_options(AVDictionary* dict){
     while ((en = av_dict_get(dict, "", en, AV_DICT_IGNORE_SUFFIX))) {
         LWARN("\t" + std::string(en->key) + "=" + std::string(en->value));
     }
+}
+
+bool StreamUnwrap::charge_reorder_queue(void){
+    while (reorder_queue.size() < reorder_len){
+        read_frame();
+    }
+    return true;
+}
+
+void StreamUnwrap::sort_reorder_queue(void){
+    if (reorder_queue.back().dts < max_dts){
+        //need to walk the queue and insert it in the right spot...
+        for (std::list<AVPacket>::iterator itr = reorder_queue.begin(); itr != reorder_queue.end() ; itr++){
+            if (itr->dts > reorder_queue.back().dts){
+                reorder_queue.splice(itr, reorder_queue, std::prev(reorder_queue.end()));
+                break;
+            }
+        }
+    } else {
+        max_dts = reorder_queue.back().dts;
+    }
+
+}
+
+bool StreamUnwrap::read_frame(void){
+    reorder_queue.emplace_back();
+    if (av_read_frame(input_format_context, &reorder_queue.back())){
+        reorder_queue.pop_back();
+        return false;
+    }
+    //fixup this data...maybe limit it to the first one?
+    if (reorder_queue.back().dts == AV_NOPTS_VALUE){
+        reorder_queue.back().dts = 0;
+    }
+    if (reorder_queue.back().pts == AV_NOPTS_VALUE){
+        reorder_queue.back().pts = 0;
+    }
+
+    sort_reorder_queue();
+    return true;
 }

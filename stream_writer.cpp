@@ -138,7 +138,7 @@ bool StreamWriter::write(const AVPacket &packet){
         av_packet_unref(&out_pkt);
         return true;//we processed the stream we don't care about
     }
-    log_packet(unwrap.get_format_context(), packet, "in-" + path);
+    //log_packet(unwrap.get_format_context(), packet, "in-" + path);
     out_pkt.stream_index = stream_mapping[out_pkt.stream_index];
     out_stream = output_format_context->streams[out_pkt.stream_index];
 
@@ -147,7 +147,7 @@ bool StreamWriter::write(const AVPacket &packet){
     out_pkt.dts = av_rescale_q_rnd(out_pkt.dts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
     out_pkt.duration = av_rescale_q(out_pkt.duration, in_stream->time_base, out_stream->time_base);
     out_pkt.pos = -1;
-    log_packet(output_format_context, out_pkt, "out-"+path);
+    //log_packet(output_format_context, out_pkt, "out-"+path);
 
     int ret = av_interleaved_write_frame(output_format_context, &out_pkt);
     if (ret < 0) {

@@ -65,14 +65,10 @@ void Camera::run(void){
     long max_dts = 0;
     while (!shutdown && stream.get_next_frame(pkt)){
         watchdog = true;
-        if (pkt.dts == AV_NOPTS_VALUE && pkt.pts == AV_NOPTS_VALUE){
-            pkt.dts = 0;//re-write DTS to zero if it had no value
-            pkt.pts = 0;//re-write PTS to zero if it had no value
-        }
         if (valid_keyframe || pkt.flags & AV_PKT_FLAG_KEY){
             out.write(pkt);//log it
             valid_keyframe = true;
-            LINFO("Got Frame " + std::to_string(id));
+            //LINFO("Got Frame " + std::to_string(id));
         } else {
             LINFO("Waiting for a keyframe...");
         }
