@@ -22,3 +22,6 @@ ltmain.sh
 missing
 config/chiton.cfg
 vids/
+gmon.out
+*.gcno
+*.gcda

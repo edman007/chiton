@@ -124,7 +124,7 @@ void StreamWriter::close(void){
     av_write_trailer(output_format_context);
 }
 
-bool StreamWriter::write(const AVPacket &packet){
+bool StreamWriter::write(const AVPacket &packet, const AVRational &offset){
     AVStream *in_stream, *out_stream;
     AVPacket out_pkt;
     if (av_packet_ref(&out_pkt, &packet)){
@@ -144,7 +144,9 @@ bool StreamWriter::write(const AVPacket &packet){
 
     /* copy packet */
     out_pkt.pts = av_rescale_q_rnd(out_pkt.pts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+    out_pkt.pts -= av_rescale_q(1, offset, out_stream->time_base);//subtract the offset
     out_pkt.dts = av_rescale_q_rnd(out_pkt.dts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+    out_pkt.dts -= av_rescale_q(1, offset, out_stream->time_base);//subtract the offset
     out_pkt.duration = av_rescale_q(out_pkt.duration, in_stream->time_base, out_stream->time_base);
     out_pkt.pos = -1;
     //log_packet(output_format_context, out_pkt, "out-"+path);
@@ -169,4 +171,16 @@ void StreamWriter::log_packet(const AVFormatContext *fmt_ctx, const AVPacket &pk
           " duration_time:" + std::string(av_ts2timestr(pkt.duration, time_base))+
           " stream_index:" + std::to_string(pkt.stream_index)
     );
+}
+
+void StreamWriter::change_path(std::string &new_path){
+    path = new_path;
+
+    //free the output context, we will need to create a new one
+    if (output_format_context && !(output_format_context->flags & AVFMT_NOFILE))
+        avio_closep(&output_format_context->pb);
+    avformat_free_context(output_format_context);
+    
+    av_freep(&stream_mapping);
+
 }

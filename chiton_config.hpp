@@ -41,7 +41,7 @@
  * output-dir - the location to store videos
  * ffmpeg-demux-options - options for the demuxer
  * reorder_queue_len - how many packets to cache to properly resort frames
- *
+ * seconds-per-file - how long a file should be, files are split at the next opprotunity after this, in seconds
  * === Applies to a specific camera ===
  * video-url - ffmpeg compatible URL for camera N
  * active - set to "1" when the camera is active
@@ -50,6 +50,8 @@
  *
  */
 
+//default config values that absolutly must be set, we define defaults in case we get a bad value
+const long DEFAULT_SECONDS_PER_FILE = 360;
 
 class Config {
 public:

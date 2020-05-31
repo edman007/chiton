@@ -62,11 +62,35 @@ void Camera::run(void){
 
     AVPacket pkt;
     bool valid_keyframe = false;
-    long max_dts = 0;
+
+    //variables for cutting files...
+    AVRational last_cut = av_make_q(0, 1);
+    int seconds_per_file_raw = cfg.get_value_int("seconds-per-file");
+    if (seconds_per_file_raw <= 0){
+        seconds_per_file_raw = DEFAULT_SECONDS_PER_FILE;
+    }
+    AVRational seconds_per_file = av_make_q(seconds_per_file_raw, 1);
+    
     while (!shutdown && stream.get_next_frame(pkt)){
         watchdog = true;
-        if (valid_keyframe || pkt.flags & AV_PKT_FLAG_KEY){
-            out.write(pkt);//log it
+
+        if (pkt.flags & AV_PKT_FLAG_KEY && stream.get_format_context()->streams[pkt.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){
+            //calculate the seconds:
+            AVRational sec = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);//current time..
+            sec = av_sub_q(sec, last_cut);
+            if (av_cmp_q(sec, seconds_per_file) == 1){
+                //cutting the video
+                out.close();
+                Util::get_videotime(start);//should actually compute a more accurate time...we will be off by the reorder buffer
+                new_output = fm.get_next_path(file_id, id, start);
+                out.change_path(new_output);
+                out.open();
+                //save out this position
+                last_cut = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);
+            }
+        }        
+        if (valid_keyframe || (pkt.flags & AV_PKT_FLAG_KEY && stream.get_format_context()->streams[pkt.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)){
+            out.write(pkt, last_cut);//log it
             valid_keyframe = true;
             //LINFO("Got Frame " + std::to_string(id));
         } else {

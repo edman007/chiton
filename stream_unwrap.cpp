@@ -26,7 +26,6 @@
 
 StreamUnwrap::StreamUnwrap(Config& cfg) : cfg(cfg) {
     input_format_context = NULL;
-    max_dts = 0;
 }
 
 StreamUnwrap::~StreamUnwrap(){
@@ -68,7 +67,9 @@ bool StreamUnwrap::connect(void) {
         return false;
     }
     LINFO("Video Stream has " + std::to_string(input_format_context->nb_streams) + " streams");
-    input_format_context->flags |= AVFMT_FLAG_GENPTS;//fix the timestamps...    
+    input_format_context->flags |= AVFMT_FLAG_GENPTS;//fix the timestamps...
+    //initise stream DTS mapping
+    stream_max_dts.insert(stream_max_dts.end(), input_format_context->nb_streams, 0);
     /*
     if (!(input_codec = avcodec_find_decoder(input_format_context->streams[0]->codecpar->codec_id))) {
         LERROR("Could not find input codec\n");
@@ -149,7 +150,7 @@ AVDictionary *StreamUnwrap::get_options(void){
         return NULL;
     }
     int error;
-    if (error = av_dict_parse_string(&dict, cfg.get_value("ffmpeg-demux-options").c_str(), "=", ":", 0)){
+    if ((error = av_dict_parse_string(&dict, cfg.get_value("ffmpeg-demux-options").c_str(), "=", ":", 0))){
         LERROR("Error Parsing input ffmpeg options: " + std::string(av_err2str(error)));
         av_dict_free(&dict);
         return NULL;
@@ -172,16 +173,25 @@ bool StreamUnwrap::charge_reorder_queue(void){
 }
 
 void StreamUnwrap::sort_reorder_queue(void){
-    if (reorder_queue.back().dts < max_dts){
+    if (reorder_queue.back().dts < stream_max_dts[reorder_queue.back().stream_index]){
         //need to walk the queue and insert it in the right spot...
+        bool back_is_video = input_format_context->streams[reorder_queue.back().stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
         for (std::list<AVPacket>::iterator itr = reorder_queue.begin(); itr != reorder_queue.end() ; itr++){
-            if (itr->dts > reorder_queue.back().dts){
+            long back_dts_in_itr = av_rescale_q_rnd(reorder_queue.back().dts,
+                                                    input_format_context->streams[reorder_queue.back().stream_index]->time_base,
+                                                    input_format_context->streams[itr->stream_index]->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+            if ((itr->dts > reorder_queue.back().dts && itr->stream_index == reorder_queue.back().stream_index) || //same stream and dts is out of order
+                (itr->stream_index != reorder_queue.back().stream_index && itr->dts > back_dts_in_itr) || // different stream and out of order
+                (itr->stream_index != reorder_queue.back().stream_index && itr->dts == back_dts_in_itr && back_is_video)){ //different stream and video and same time
+                if (itr == reorder_queue.begin()){
+                    LWARN("Reorder queue does not appear to be big enough, received out of order packet");
+                }
                 reorder_queue.splice(itr, reorder_queue, std::prev(reorder_queue.end()));
                 break;
             }
         }
     } else {
-        max_dts = reorder_queue.back().dts;
+        stream_max_dts[reorder_queue.back().stream_index] = reorder_queue.back().dts;
     }
 
 }

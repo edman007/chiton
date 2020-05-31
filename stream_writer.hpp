@@ -31,7 +31,8 @@ public:
     
     bool  open();//open the file for writing, returns true on success
     void close(void);
-    bool write(const AVPacket &pkt);//write the packet to the file
+    bool write(const AVPacket &pkt, const AVRational &offset);//write the packet to the file
+    void change_path(std::string &new_path);
 private:
     Config &cfg;
     std::string path;

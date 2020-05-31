@@ -25,6 +25,7 @@
 #include "chiton_config.hpp"
 #include "chiton_ffmpeg.hpp"
 #include <list>
+#include <vector>
 
 class StreamUnwrap {
     /*
@@ -55,7 +56,7 @@ private:
     AVPacket pkt;
 
     unsigned int reorder_len;
-    int max_dts;//max DTS encountered so far, we reorder the fames when DTS is greater than this
+    std::vector<long> stream_max_dts;//max DTS encountered so far, we reorder the fames when DTS is greater than this
     std::list<AVPacket> reorder_queue;
 };
 
