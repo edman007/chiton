@@ -76,12 +76,13 @@ int main (int argc, char **argv){
     }
     delete res;
 
-
+    
     //load system config
     load_sys_cfg(cfg);
 
     load_ffmpeg();
-    
+
+    FileManager fm(db, cfg);
     //Launch all cameras
     res = db.query("SELECT camera FROM config WHERE camera IS NOT NULL AND name = 'active' AND value = '1' GROUP BY camera");
     std::vector<Camera*> cams;
@@ -107,6 +108,7 @@ int main (int argc, char **argv){
                 //we should kill this thread and re-run it
             }
         }
+        fm.clean_disk();
         std::this_thread::sleep_for(std::chrono::seconds(10));
     } while (!exit_requested);
     LINFO("Exiting!");

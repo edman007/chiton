@@ -41,7 +41,10 @@
  * output-dir - the location to store videos
  * ffmpeg-demux-options - options for the demuxer
  * reorder_queue_len - how many packets to cache to properly resort frames
- * seconds-per-file - how long a file should be, files are split at the next opprotunity after this, in seconds
+ * seconds-per-file - how long a file should be, files are split at the next opprotunity
+ *   after this, in seconds
+ * min-free-space - how many bytes of free space triggers a cleanup, if it contains a %,
+ *   is is the target free-percentage of useraccessable space
  * === Applies to a specific camera ===
  * video-url - ffmpeg compatible URL for camera N
  * active - set to "1" when the camera is active
@@ -52,6 +55,7 @@
 
 //default config values that absolutly must be set, we define defaults in case we get a bad value
 const long DEFAULT_SECONDS_PER_FILE = 360;
+const long DEFAULT_MIN_FREE_SPACE = 1073741824;//1G in bytes
 
 class Config {
 public:
@@ -61,6 +65,7 @@ public:
     
     const std::string get_value(const std::string& key);
     int get_value_int(const std::string& key);//returns the value as an int
+    long get_value_long(const std::string& key);//returns the value as a long
     double get_value_double(const std::string& key);//returns the value as an double
     
     void set_value(const std::string& key, const std::string& value);

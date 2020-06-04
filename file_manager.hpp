@@ -38,10 +38,15 @@ public:
 
     //update metadata about the file
     bool update_file_metadata(long int file_id, struct timeval &end_time);
+
+    void clean_disk(void);//clean up the disk by deleting files
 private:
     Database &db;
     Config &cfg;
     bool mkdir_recursive(std::string path);
+
+    void rmdir_r(const std::string &path);//delete directory and all empty parent directories
+    long get_target_free_bytes(void);//return the bytes that must be deleted
 };
 
 #endif

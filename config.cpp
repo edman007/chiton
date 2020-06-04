@@ -82,6 +82,25 @@ int Config::get_value_int(const std::string& key){
     return 0;
 }
 
+long Config::get_value_long(const std::string& key){
+    const std::string& val = get_value(key);
+    if (!val.compare("")){
+        //empty
+        return 0;
+    }
+
+    try {
+        return std::stol(val);
+    } catch (const std::invalid_argument& ia){
+        Util::log_msg(LOG_WARN, "Config value " + key + " ( " + val + " ) must be an integer");
+    } catch (const std::out_of_range& ia) {
+        Util::log_msg(LOG_WARN, "Config value " + key + " ( " + val + " ) is out of range ");
+    }
+    
+    return 0;
+}
+
+
 double Config::get_value_double(const std::string& key){
     const std::string& val = get_value(key);
     if (!val.compare("")){
