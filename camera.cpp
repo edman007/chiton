@@ -31,6 +31,7 @@ Camera::Camera(int camera, Database& db) : id(camera), db(db), stream(cfg), fm(d
     shutdown = false;
     alive = true;
     watchdog = false;
+    startup = true;
 }
 Camera::~Camera(){
 
@@ -49,8 +50,12 @@ void Camera::run(void){
     LINFO("Camera " + std::to_string(id) + " starting...");
     if (!stream.connect()){
         alive = false;
+        startup = false;
         return;
     }
+    watchdog = true;;
+    startup = false;
+
     LINFO("Camera " + std::to_string(id) + " connected...");
     long int file_id;
     struct timeval start;
@@ -59,7 +64,7 @@ void Camera::run(void){
 
     StreamWriter out = StreamWriter(cfg, new_output, stream);
     out.open();
-
+    
     AVPacket pkt;
     bool valid_keyframe = false;
 
@@ -114,4 +119,16 @@ bool Camera::ping(void){
 
 int Camera::get_id(void){
     return id;
+}
+
+bool Camera::in_startup(void){
+    return startup && alive;
+}
+
+
+void Camera::set_thread_id(std::thread::id tid){
+    thread_id = tid;
+}
+std::thread::id Camera::get_thread_id(void){
+    return thread_id;
 }

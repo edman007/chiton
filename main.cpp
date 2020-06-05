@@ -37,12 +37,17 @@ static char timezone_env[256];//if timezone is changed from default, we need to 
 static std::atomic_bool exit_requested(false);
 static int exit_count = 0;//multiple exit requests will kill the application with this
 
+static std::atomic_bool reload_requested(false);
 void shutdown_signal(int sig){
     exit_requested = true;
     exit_count++;
     if (exit_count > 2){
         std::exit(sig);
     }
+}
+
+void reload_signal(int sig){
+    reload_requested = true;
 }
 
 void load_sys_cfg(Config &cfg) {
@@ -58,11 +63,7 @@ void load_sys_cfg(Config &cfg) {
 
 }
 
-int main (int argc, char **argv){
-    Util::log_msg(LOG_INFO, "Starting Chiton...");
-    Util::log_msg(LOG_INFO, std::string("\tVersion ") + GIT_VER);
-    Util::log_msg(LOG_INFO, std::string("\tBuilt ") + BUILD_DATE);
-    
+void run(void){
     Config cfg;
     cfg.load_default_config();
     MariaDB db;
@@ -80,7 +81,6 @@ int main (int argc, char **argv){
     //load system config
     load_sys_cfg(cfg);
 
-    load_ffmpeg();
 
     FileManager fm(db, cfg);
     //Launch all cameras
@@ -91,32 +91,52 @@ int main (int argc, char **argv){
         LINFO("Loading camera " + std::to_string(res->get_field_long(0)));
         cams.emplace_back(new Camera(res->get_field_long(0), db));//create camera
         threads.emplace_back(&Camera::run, cams.back());//start it
+        cams.back()->set_thread_id(threads.back().get_id());
 
     }
     delete res;
 
-    //load the signal handlers
-    std::signal(SIGINT, shutdown_signal);
     
     //camera maintance
     do {
         //we should check if they are running and restart anything that froze
         for (auto &c : cams){
             if (c->ping()){
-                int id = c->get_id();
-                LWARN("Thread " + std::to_string(id) + " Stalled");
-                //we should kill this thread and re-run it
+                if (!c->in_startup()){
+                    int id = c->get_id();
+                    LWARN("Lost connection to cam " + std::to_string(id) + ", restarting...");
+                    
+                    //then this needs to be restarted
+                    c->stop();
+                    //find the thread and replace it...
+                    for (auto &t : threads){
+                        if (t.get_id() == c->get_thread_id()){
+                            t.join();
+                            delete c;
+                            LINFO("Old camera is " + std::to_string((unsigned long)c));
+                            c = new Camera(id, db);
+                            LINFO("New camera is " + std::to_string((unsigned long)c));
+                            t = std::thread(&Camera::run, c);
+                            c->set_thread_id(t.get_id());
+                            break;
+                        }
+                    }
+                    
+                } else {
+                    LWARN("Camera stalled, but appears to be in startup");
+                }
+                
             }
         }
         fm.clean_disk();
         std::this_thread::sleep_for(std::chrono::seconds(10));
-    } while (!exit_requested);
-    LINFO("Exiting!");
+    } while (!exit_requested && !reload_requested);
+
     //shutdown all cams
     for (auto c : cams){
         c->stop();
     }
-    LINFO("Stop Has been sent!");    
+
     for (auto &t : threads){
         t.join();
     }
@@ -127,7 +147,22 @@ int main (int argc, char **argv){
         cams.pop_back();
     }
 
+
+}
+int main (int argc, char **argv){
+    Util::log_msg(LOG_INFO, "Starting Chiton...");
+    Util::log_msg(LOG_INFO, std::string("\tVersion ") + GIT_VER);
+    Util::log_msg(LOG_INFO, std::string("\tBuilt ") + BUILD_DATE);
+    load_ffmpeg();
+    //load the signal handlers
+    std::signal(SIGINT, shutdown_signal);
+    std::signal(SIGHUP, reload_signal);
     
+    while (!exit_requested){
+        reload_requested = false;
+        run();
+    }
+
     return 0;
 }
 
