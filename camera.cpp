@@ -90,7 +90,7 @@ void Camera::run(void){
             }
         }        
         if (valid_keyframe || (pkt.flags & AV_PKT_FLAG_KEY && stream.get_format_context()->streams[pkt.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)){
-            out.write(pkt, last_cut);//log it
+            out.write(pkt);//log it
             valid_keyframe = true;
             //LINFO("Got Frame " + std::to_string(id));
         } else {

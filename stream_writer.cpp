@@ -24,16 +24,9 @@
 #include "chiton_ffmpeg.hpp"
 
 bool StreamWriter::open(void){
-    //need to free input_ctx
-    /*
-    AVCodecContext *input_ctx = unwrap.alloc_decode_context(0);
-    if (!input_ctx){
-        return false;
-    }
-    */
-    
     int error;
 
+    
     avformat_alloc_output_context2(&output_format_context, NULL, NULL, path.c_str());
     if (!output_format_context) {
         LERROR("Could not create output context");
@@ -54,6 +47,9 @@ bool StreamWriter::open(void){
     
     AVOutputFormat *ofmt = output_format_context->oformat;
     int stream_index = 0;
+    stream_offset.clear();
+    last_dts.clear();
+    
     for (unsigned int i = 0; i < unwrap.get_stream_count(); i++) {
         AVStream *out_stream;
         AVStream *in_stream = unwrap.get_format_context()->streams[i];
@@ -68,6 +64,10 @@ bool StreamWriter::open(void){
 
         stream_mapping[i] = stream_index++;
 
+        //set the offset to -1, indicating unknown
+        stream_offset.push_back(-1);
+        last_dts.push_back(-1);
+        
         out_stream = avformat_new_stream(output_format_context, NULL);
         if (!out_stream) {
             LERROR("Failed allocating output stream");
@@ -124,7 +124,7 @@ void StreamWriter::close(void){
     av_write_trailer(output_format_context);
 }
 
-bool StreamWriter::write(const AVPacket &packet, const AVRational &offset){
+bool StreamWriter::write(const AVPacket &packet){
     AVStream *in_stream, *out_stream;
     AVPacket out_pkt;
     if (av_packet_ref(&out_pkt, &packet)){
@@ -144,11 +144,27 @@ bool StreamWriter::write(const AVPacket &packet, const AVRational &offset){
 
     /* copy packet */
     out_pkt.pts = av_rescale_q_rnd(out_pkt.pts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
-    out_pkt.pts -= av_rescale_q(1, offset, out_stream->time_base);//subtract the offset
     out_pkt.dts = av_rescale_q_rnd(out_pkt.dts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
-    out_pkt.dts -= av_rescale_q(1, offset, out_stream->time_base);//subtract the offset
     out_pkt.duration = av_rescale_q(out_pkt.duration, in_stream->time_base, out_stream->time_base);
     out_pkt.pos = -1;
+
+    //correct for the offset, it is intentional that we base the offset on DTS (always first), and subtract it from DTS and PTS to
+    //preserve any difference between them
+    if (stream_offset[stream_mapping[out_pkt.stream_index]] < 0){
+        stream_offset[stream_mapping[out_pkt.stream_index]] = out_pkt.dts;
+    }
+    out_pkt.dts -= stream_offset[stream_mapping[out_pkt.stream_index]];
+    out_pkt.pts -= stream_offset[stream_mapping[out_pkt.stream_index]];
+
+    //guarentee that they have an increasing DTS
+    if (out_pkt.dts <= last_dts[stream_mapping[out_pkt.stream_index]]){
+        LWARN("Shifting frame timestamp due to out of order issue");
+        last_dts[stream_mapping[out_pkt.stream_index]]++;
+        long pts_delay = out_pkt.pts - out_pkt.dts;
+        out_pkt.dts = last_dts[stream_mapping[out_pkt.stream_index]];
+        out_pkt.pts = out_pkt.dts + pts_delay;
+    }
+    last_dts[stream_mapping[out_pkt.stream_index]] = out_pkt.dts;
     //log_packet(output_format_context, out_pkt, "out-"+path);
 
     int ret = av_interleaved_write_frame(output_format_context, &out_pkt);

@@ -151,7 +151,6 @@ long FileManager::get_target_free_bytes(void){
             min_freed /= 100;
             long total_bytes = info.f_bsize * (info.f_blocks - info.f_bfree + info.f_bavail);//ignore root's space we can't use when calculating filesystem space
             min_free = total_bytes * min_freed;
-            LWARN("Percent mode, target is " + std::to_string(min_free));
             if (min_free < 0){
                 min_free = 0;//they set something wrong...I don't know, this will result in the defualt
             }
