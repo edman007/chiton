@@ -83,7 +83,7 @@ bool StreamUnwrap::connect(void) {
     }
     */
     //start reading frames
-    reorder_len = cfg.get_value_int("reorder_queue_len");
+    reorder_len = cfg.get_value_int("reorder-queue-len");
     return charge_reorder_queue();
 }
 
