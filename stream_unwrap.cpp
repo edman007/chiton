@@ -29,6 +29,11 @@ StreamUnwrap::StreamUnwrap(Config& cfg) : cfg(cfg) {
 }
 
 StreamUnwrap::~StreamUnwrap(){
+    //the reorder queue should be freed
+    for (auto pkt : reorder_queue){
+        unref_frame(pkt);
+    }
+    
     avformat_close_input(&input_format_context);
 
 }
@@ -185,6 +190,27 @@ void StreamUnwrap::sort_reorder_queue(void){
                 (itr->stream_index != reorder_queue.back().stream_index && itr->dts == back_dts_in_itr && back_is_video)){ //different stream and video and same time
                 if (itr == reorder_queue.begin()){
                     LWARN("Reorder queue does not appear to be big enough, received out of order packet");
+                    //itr is the front here
+                    //estimate what it would take
+                    long dts_itr_to_front = itr->dts - back_dts_in_itr;//this is how far ahead the packet was from the queue
+                    auto av_back = reorder_queue.end();
+                    std::advance(av_back, -2);
+                    AVPacket &back = *av_back;
+                    
+                    AVPacket &front = reorder_queue.front();
+                    long back_dts_in_itr = av_rescale_q_rnd(back.dts,
+                                                            input_format_context->streams[back.stream_index]->time_base,
+                                                            input_format_context->streams[itr->stream_index]->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+                    long front_dts_in_itr = av_rescale_q_rnd(front.dts,
+                                                             input_format_context->streams[front.stream_index]->time_base,
+                                                             input_format_context->streams[itr->stream_index]->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+                    double que_lent = av_q2d(input_format_context->streams[itr->stream_index]->time_base) * ( back_dts_in_itr - front_dts_in_itr);
+                    double target_addational_lent = av_q2d(input_format_context->streams[itr->stream_index]->time_base) * ( dts_itr_to_front );
+                    double target_change = (target_addational_lent/que_lent) + 1.0;
+                    LINFO("Queue is short by " + std::to_string(target_addational_lent) + "s, recommend making reorder-queue-len at least " +
+                          std::to_string((int)(target_change * reorder_queue.size())));
+                    
+                    
                 }
                 reorder_queue.splice(itr, reorder_queue, std::prev(reorder_queue.end()));
                 break;

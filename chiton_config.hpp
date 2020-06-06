@@ -40,7 +40,7 @@
  * timezone (defaults to system timezone)
  * output-dir - the location to store videos
  * ffmpeg-demux-options - options for the demuxer
- * reorder_queue_len - how many packets to cache to properly resort frames
+ * reorder-queue-len - how many packets to cache to properly resort frames
  * seconds-per-file - how long a file should be, files are split at the next opprotunity
  *   after this, in seconds
  * min-free-space - how many bytes of free space triggers a cleanup, if it contains a %,
