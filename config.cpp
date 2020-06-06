@@ -32,7 +32,7 @@ bool Config::load_config(const std::string& path){
     std::ifstream ifs;
     ifs.open(path);
     if (ifs.fail()){
-        Util::log_msg(LOG_WARN, "Failued to open config file `" + path + "`");
+        Util::log_msg(LOG_WARN, "Failed to open config file `" + path + "`");
         return false;//didn't work
     }
     ConfigParser parser(*this, ifs);

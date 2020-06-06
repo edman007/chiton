@@ -71,7 +71,7 @@ void run(void){
                cfg.get_value_int("db-port"), cfg.get_value("db-socket"));
 
     //load the default config from the database
-    DatabaseResult *res = db.query("SELECT name, value FROM config WHERE camera IS NULL");
+    DatabaseResult *res = db.query("SELECT name, value FROM config WHERE camera = -1");
     while (res && res->next_row()){
         cfg.set_value(res->get_field(0), res->get_field(1));
     }
@@ -84,7 +84,7 @@ void run(void){
 
     FileManager fm(db, cfg);
     //Launch all cameras
-    res = db.query("SELECT camera FROM config WHERE camera IS NOT NULL AND name = 'active' AND value = '1' GROUP BY camera");
+    res = db.query("SELECT camera FROM config WHERE camera != -1 AND name = 'active' AND value = '1' GROUP BY camera");
     std::vector<Camera*> cams;
     std::vector<std::thread> threads;
     while (res && res->next_row()){
