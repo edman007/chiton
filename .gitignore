@@ -25,3 +25,8 @@ vids/
 gmon.out
 *.gcno
 *.gcda
+web/inc/tpl_cache/*.php
+web/inc/tpl_compile/*.php
+web/vids
+web/inc/external/*
+m4/*.m4

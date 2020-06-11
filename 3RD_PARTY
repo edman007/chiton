@@ -1,0 +1,5 @@
+Third Party Sources We Require:
+
+Smarty
+https://www.smarty.net/
+The libs/ directory is web/inc/external/smarty/

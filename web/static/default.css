@@ -1,0 +1,26 @@
+ul.vselector {
+    width:20%;
+    padding-left:2%;
+    float:left;
+    height:80%;
+    overflow-y:scroll;
+}
+
+
+.singleViewer {
+    width:75%;
+    float:left;
+}
+
+.singleViewer video {
+    width:95%;
+}
+.tiledViewer {
+    float:left;
+    width:30%;
+    padding:1%;
+    
+}
+.tiledViewer video {
+    width:90%;
+}
