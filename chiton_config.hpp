@@ -54,7 +54,7 @@
  */
 
 //default config values that absolutly must be set, we define defaults in case we get a bad value
-const long DEFAULT_SECONDS_PER_FILE = 360;
+const long DEFAULT_SECONDS_PER_FILE = 6;//Apple recommends 6 seconds per file to make live streaming reasonable
 const long DEFAULT_MIN_FREE_SPACE = 1073741824;//1G in bytes
 
 class Config {

@@ -148,6 +148,7 @@ bool StreamWriter::write(const AVPacket &packet){
     out_pkt.duration = av_rescale_q(out_pkt.duration, in_stream->time_base, out_stream->time_base);
     out_pkt.pos = -1;
 
+    /* This should actually be used only for exporting video
     //correct for the offset, it is intentional that we base the offset on DTS (always first), and subtract it from DTS and PTS to
     //preserve any difference between them
     if (stream_offset[stream_mapping[out_pkt.stream_index]] < 0){
@@ -155,7 +156,8 @@ bool StreamWriter::write(const AVPacket &packet){
     }
     out_pkt.dts -= stream_offset[stream_mapping[out_pkt.stream_index]];
     out_pkt.pts -= stream_offset[stream_mapping[out_pkt.stream_index]];
-
+    */
+    
     //guarentee that they have an increasing DTS
     if (out_pkt.dts <= last_dts[stream_mapping[out_pkt.stream_index]]){
         LWARN("Shifting frame timestamp due to out of order issue");

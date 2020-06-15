@@ -36,7 +36,7 @@ $video_info = array();
 if ($res){
     while ($row = $res->fetch_assoc()){
         $info['url'] = 'vids/' . $row['path'] . $row['id'] . '.mp4';
-        $info['starttime'] = dbtime_to_DateTime($row['starttime'], $cfg)->format('r');
+        $info['starttime'] = dbtime_to_DateTime($row['starttime'])->format('r');
         $info['id'] = $row['id'];
         $video_info[] = $info;
     }

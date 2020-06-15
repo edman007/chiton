@@ -58,9 +58,7 @@ void Camera::run(void){
 
     LINFO("Camera " + std::to_string(id) + " connected...");
     long int file_id;
-    struct timeval start;
-    Util::get_videotime(start);
-    std::string new_output = fm.get_next_path(file_id, id, start);
+    std::string new_output = fm.get_next_path(file_id, id, stream.get_start_time());
 
     StreamWriter out = StreamWriter(cfg, new_output, stream);
     out.open();
@@ -75,18 +73,26 @@ void Camera::run(void){
         seconds_per_file_raw = DEFAULT_SECONDS_PER_FILE;
     }
     AVRational seconds_per_file = av_make_q(seconds_per_file_raw, 1);
-    
+
+    //used for calculating shutdown time for the last segment
+    long last_pts;
+    long last_stream_index;
     while (!shutdown && stream.get_next_frame(pkt)){
         watchdog = true;
-
+        last_pts = pkt.pts;
+        last_stream_index = pkt.stream_index;
+        
         if (pkt.flags & AV_PKT_FLAG_KEY && stream.get_format_context()->streams[pkt.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){
             //calculate the seconds:
             AVRational sec = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);//current time..
             sec = av_sub_q(sec, last_cut);
             if (av_cmp_q(sec, seconds_per_file) == 1){
                 //cutting the video
+                struct timeval start;
+                Util::compute_timestamp(stream.get_start_time(), start, pkt.pts, stream.get_format_context()->streams[pkt.stream_index]->time_base);
                 out.close();
-                Util::get_videotime(start);//should actually compute a more accurate time...we will be off by the reorder buffer
+                fm.update_file_metadata(file_id, start);
+                
                 new_output = fm.get_next_path(file_id, id, start);
                 out.change_path(new_output);
                 out.open();
@@ -105,7 +111,13 @@ void Camera::run(void){
         stream.unref_frame(pkt);
     }
     LINFO("Camera " + std::to_string(id)+ " is exiting");
+
+    struct timeval end;
+    Util::compute_timestamp(stream.get_start_time(), end, last_pts, stream.get_format_context()->streams[last_stream_index]->time_base);
     out.close();
+    fm.update_file_metadata(file_id, end);
+    
+
     alive = false;
 }
 

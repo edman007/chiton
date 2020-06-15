@@ -25,7 +25,7 @@
 #include <iostream>
 #include <mutex>
 #include <time.h>
-
+#include "chiton_ffmpeg.hpp"
 
 enum LOG_LEVEL {
     LOG_DEBUG,
@@ -65,12 +65,13 @@ public:
 
     static void get_videotime(struct timeval &time);//write the current time out
 
-    static void get_time_parts(struct timeval &time, struct VideoDate &date);//write the time out to date format
+    static void get_time_parts(const struct timeval &time, struct VideoDate &date);//write the time out to date format
 
     //pack and unpack time for database storage, spits out a 64-bit unsigned int
     static unsigned long long int pack_time(const struct timeval &time);
     static void unpack_time(const unsigned long long int packed_time, struct timeval &time);
-    
+
+    static void compute_timestamp(const struct timeval &connect_time, struct timeval &out_time, long pts, AVRational &time_base);
 private:
     static std::mutex lock;//lock for actually printing messages
 };

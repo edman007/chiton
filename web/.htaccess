@@ -1,0 +1,5 @@
+<Files *.ts>
+Header set Access-Control-Allow-Origin "*"
+Header set Access-Control-Expose-Headers Content-Length
+Header set Access-Control-Allow-Headers Range
+</Files>

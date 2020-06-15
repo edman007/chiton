@@ -31,7 +31,7 @@ public:
     FileManager(Database &db, Config &cfg) : db(db), cfg(cfg) {};
 
     //returns a valid path starting at start_time, writes out it's ID to int &file_id
-    std::string get_next_path(long int &file_id, int camera, struct timeval &start_time);
+    std::string get_next_path(long int &file_id, int camera, const struct timeval &start_time);
 
     //returns the path for the file referenced as id
     std::string get_path(long int file_id);

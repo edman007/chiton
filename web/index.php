@@ -30,8 +30,8 @@ $res = $db->query($sql);
 $video_info = array();
 if ($res){
     while ($row = $res->fetch_assoc()){
-        $info['url'] = 'vids/' . $row['path'] . $row['id'] . '.mp4';
-        $info['starttime'] = dbtime_to_DateTime($row['starttime'], $cfg)->format('r');
+        $info['url'] = 'stream.php?live=1&id=' . $row['camera'];
+        $info['starttime'] = dbtime_to_DateTime($row['starttime'])->format('r');
         $info['camera'] = $row['camera'];
         $video_info[] = $info;
     }

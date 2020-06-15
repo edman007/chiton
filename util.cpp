@@ -42,7 +42,7 @@ void Util::get_videotime(struct timeval &time){
     
 }
 
-void Util::get_time_parts(struct timeval &time, struct VideoDate &date){
+void Util::get_time_parts(const struct timeval &time, struct VideoDate &date){
     struct tm out;
     date.ms = time.tv_usec / 1000;
     localtime_r(&time.tv_sec, &out);
@@ -67,4 +67,18 @@ unsigned long long int Util::pack_time(const struct timeval &time){
 void Util::unpack_time(const unsigned long long int packed_time, struct timeval &time){
     time.tv_usec = (packed_time % 1000) * 1000;
     time.tv_sec = packed_time / 1000;
+}
+
+void Util::compute_timestamp(const struct timeval &connect_time, struct timeval &out_time, long pts, AVRational &time_base){
+    double delta = av_q2d(time_base) * pts;
+    double usec = delta - ((long)delta);
+    usec *= 1000000;
+    out_time.tv_sec = connect_time.tv_sec + delta;
+    out_time.tv_usec = connect_time.tv_usec + usec;
+    if (out_time.tv_usec >= 1000000){
+        out_time.tv_usec -= 1000000;
+        out_time.tv_sec++;
+    }
+    
+    
 }

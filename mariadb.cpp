@@ -36,7 +36,10 @@ MariaDB::~MariaDB(){
 int MariaDB::connect(const std::string& server, const std::string& db, const std::string& user, const std::string& pass, const int port, const std::string& socket){
     int flags = 0;
     const char *sock;
-
+    my_bool reconnect = 1;
+    
+    mysql_options(conn, MYSQL_OPT_RECONNECT, &reconnect);
+    
     //doesn't work with an empty string
     if (socket.compare("")){
         sock = socket.c_str();

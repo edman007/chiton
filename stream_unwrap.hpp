@@ -43,6 +43,8 @@ public:
     AVCodecContext* alloc_decode_context(unsigned int stream);//alloc and return the codec context for the stream, caller must free it
     bool get_next_frame(AVPacket &packet);//writes the next frame out to packet, returns true on success, false on error (end of file)
     void unref_frame(AVPacket &packet);//free resources from frame
+    const struct timeval& get_start_time(void);
+    
 private:
     const std::string url;//the URL of the camera we are connecting to
     Config& cfg;
@@ -58,6 +60,8 @@ private:
     unsigned int reorder_len;
     std::vector<long> stream_max_dts;//max DTS encountered so far, we reorder the fames when DTS is greater than this
     std::list<AVPacket> reorder_queue;
+
+    struct timeval connect_time;
 };
 
 #endif

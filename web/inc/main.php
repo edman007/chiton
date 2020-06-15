@@ -27,28 +27,39 @@ require_once('./inc/external/smarty/Smarty.class.php');
 require_once('./inc/util.php');
 
 require_once('./inc/web_config.php');
-
-$smarty = new Smarty;
-//$smarty->force_compile = true;
-//$smarty->debugging = true;
-$smarty->caching = false;//caching never makes sense for use, it's updated live all the time and outside of PHP
-//$smarty->cache_lifetime = 120;
-$smarty->setTemplateDir('./inc/tpl')
-       ->setCompileDir('./inc/tpl_compile')
-       ->setCacheDir('./inc/tpl_cache')
-       ->setConfigDir('./inc/smarty_cfg');
-
+if (empty($suppress_smarty)){
+    $smarty = new Smarty;
+    //$smarty->force_compile = true;
+    //$smarty->debugging = true;
+    $smarty->caching = false;//caching never makes sense for use, it's updated live all the time and outside of PHP
+    //$smarty->cache_lifetime = 120;
+    $smarty->setTemplateDir('./inc/tpl')
+        ->setCompileDir('./inc/tpl_compile')
+        ->setCacheDir('./inc/tpl_cache')
+        ->setConfigDir('./inc/smarty_cfg');
+}
 $db = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_DB);
 
 //we need to do something to talk to the server soon....
 
 if ($db->connect_error){
-    $smarty->assign('error_msg', 'Database Connect Error (' . $db->connect_errno . ') '
-    . $db->connect_error);
-    $smarty->display('error.tpl');
+    if (empty($suppress_smarty)){
+        $smarty->assign('error_msg', 'Database Connect Error (' . $db->connect_errno . ') '
+            . $db->connect_error);
+        $smarty->display('error.tpl');
+    } else {
+        echo 'Database Connect Error (' . $db->connect_errno . ') ' . $db->connect_error;
+    }
+        
     die();
 }
 
 $cfg = new WebConfig($db);
+
+if ($cfg->get_value('timezone') != ''){
+    $tz = new DateTimeZone($cfg->get_value('timezone'));
+} else {
+    $tz = new DateTimeZone(date_default_timezone_get());
+}
 
 ?>

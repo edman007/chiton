@@ -59,6 +59,11 @@ bool StreamUnwrap::connect(void) {
         av_dict_free(&opts);
         return false;
     }
+
+    
+    Util::get_videotime(connect_time);
+
+    
     if (av_dict_count(opts)){
         LWARN("Invalid Options:");
         dump_options(opts);
@@ -75,13 +80,8 @@ bool StreamUnwrap::connect(void) {
     input_format_context->flags |= AVFMT_FLAG_GENPTS;//fix the timestamps...
     //initise stream DTS mapping
     stream_max_dts.insert(stream_max_dts.end(), input_format_context->nb_streams, 0);
-    /*
-    if (!(input_codec = avcodec_find_decoder(input_format_context->streams[0]->codecpar->codec_id))) {
-        LERROR("Could not find input codec\n");
-        avformat_close_input(input_format_context);
-        return false;
-    }
-    */
+    
+    
     //start reading frames
     reorder_len = cfg.get_value_int("reorder-queue-len");
     return charge_reorder_queue();
@@ -236,6 +236,22 @@ bool StreamUnwrap::read_frame(void){
         reorder_queue.back().pts = 0;
     }
 
+    struct timeval recv_time;
+    Util::get_videotime(recv_time);
+    recv_time.tv_sec -= connect_time.tv_sec;
+    
     sort_reorder_queue();
+
+    //check the time of the youngest packet...
+    double delta = recv_time.tv_sec;
+    delta -= av_q2d(input_format_context->streams[reorder_queue.back().stream_index]->time_base) * reorder_queue.back().dts;
+    if (delta > 60 || delta < -60){
+        LWARN("Input stream has drifted " + std::to_string(delta) + "s from wall time");
+    }
+    
     return true;
+}
+
+const struct timeval& StreamUnwrap::get_start_time(void){
+    return connect_time;
 }

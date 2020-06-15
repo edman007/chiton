@@ -1,10 +1,10 @@
 <?php
 
-function dbtime_to_DateTime($timestamp, $cfg){
+function dbtime_to_DateTime($timestamp){
+    global $cfg, $tz;
     $datetime = new DateTime();
     $datetime->setTimeStamp($timestamp/1000);
-    if ($cfg->get_value('timezone') != ''){
-        $tz = new DateTimeZone($cfg->get_value('timezone'));
+    if (!empty($tz)){
         $datetime->setTimeZone($tz);
     }
 

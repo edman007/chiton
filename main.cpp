@@ -55,7 +55,7 @@ void load_sys_cfg(Config &cfg) {
     if (timezone.compare("")){
         LINFO("Setting Timezone to " + timezone);
         timezone = "TZ=" + timezone;
-        auto len = timezone.copy(timezone_env, 0, sizeof(timezone_env) -1 );
+        auto len = timezone.copy(timezone_env, sizeof timezone_env, 0);
         timezone_env[len] = '\0';
         putenv(timezone_env);
     }

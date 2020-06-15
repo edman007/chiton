@@ -28,7 +28,10 @@
 #include <dirent.h>
 #include "util.hpp"
 
-std::string FileManager::get_next_path(long int &file_id, int camera, struct timeval &start_time){
+
+const std::string FILE_EXT = ".ts";
+
+std::string FileManager::get_next_path(long int &file_id, int camera, const struct timeval &start_time){
     const std::string &base = cfg.get_value("output-dir");
     VideoDate date;
     Util::get_time_parts(start_time, date);
@@ -55,7 +58,7 @@ std::string FileManager::get_next_path(long int &file_id, int camera, struct tim
     DatabaseResult* res = db.query(sql, NULL, &file_id);
     delete res;
     
-    return path + "/" + std::to_string(file_id) + ".mp4";
+    return path + "/" + std::to_string(file_id) + FILE_EXT;
 }
 
 //returns the path for the file referenced as id
@@ -64,7 +67,7 @@ std::string FileManager::get_path(long int id){
     std::string sql = "SELECT path from videos WHERE id = " + std::to_string(id);
     DatabaseResult *res = db.query(sql);
     if (res->next_row()){
-        path = std::string(res->get_field(0)) + std::to_string(id) + ".mp4";
+        path = std::string(res->get_field(0)) + std::to_string(id) + FILE_EXT;
     }
     delete res;
     return path;
@@ -114,7 +117,7 @@ void FileManager::clean_disk(void){
             target_file += std::string(res->get_field(1));
             std::string target_dir = target_file;//copy the parent directory for after we delete all the content
             
-            target_file += std::string(res->get_field(0)) + ".mp4";
+            target_file += std::string(res->get_field(0)) + FILE_EXT;
             LINFO("Target: " + target_file);
             if (!stat(target_file.c_str(), &statbuf)){
                 target_clear -= statbuf.st_size;
@@ -198,4 +201,15 @@ void FileManager::rmdir_r(const std::string &path){
     } else {
         LWARN("Could not open directory " + path + " to delete it (" +std::to_string(errno) + ")");
     }
+}
+
+bool FileManager::update_file_metadata(long int file_id, struct timeval &end_time){
+    long affected;
+    std::string ptime = std::to_string(Util::pack_time(end_time));
+    std::string sql = "UPDATE videos SET endtime = " + ptime + " WHERE id = " + std::to_string(file_id) + " ";    
+    DatabaseResult* res = db.query(sql, &affected, NULL);
+    delete res;
+
+    return affected == 1;
+    
 }
