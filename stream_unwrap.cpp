@@ -26,6 +26,7 @@
 
 StreamUnwrap::StreamUnwrap(Config& cfg) : cfg(cfg) {
     input_format_context = NULL;
+    LINFO("Unwrap is loaded" + cfg.get_value("camera-id"));
 }
 
 StreamUnwrap::~StreamUnwrap(){
@@ -39,6 +40,7 @@ StreamUnwrap::~StreamUnwrap(){
 }
 
 bool StreamUnwrap::connect(void) {
+    LINFO("Reorder queue was first set at " + cfg.get_value_int("reorder-queue-len"));
     const std::string& url = cfg.get_value("video-url");
     if (!url.compare("")){
         Util::log_msg(LOG_ERROR, "Camera was not supplied with a URL" + url);
@@ -78,12 +80,11 @@ bool StreamUnwrap::connect(void) {
     }
     LINFO("Video Stream has " + std::to_string(input_format_context->nb_streams) + " streams");
     input_format_context->flags |= AVFMT_FLAG_GENPTS;//fix the timestamps...
-    //initise stream DTS mapping
-    stream_max_dts.insert(stream_max_dts.end(), input_format_context->nb_streams, 0);
     
     
     //start reading frames
     reorder_len = cfg.get_value_int("reorder-queue-len");
+    LINFO("Reorder queue was set at " + cfg.get_value("reorder-queue-len"));
     return charge_reorder_queue();
 }
 
@@ -148,7 +149,7 @@ void StreamUnwrap::unref_frame(AVPacket &packet){
     av_packet_unref(&packet);
 }
 
-//reorder_queue_size = 500
+
 AVDictionary *StreamUnwrap::get_options(void){
     AVDictionary *dict = NULL;
     if (cfg.get_value("ffmpeg-demux-options") == ""){
@@ -178,9 +179,18 @@ bool StreamUnwrap::charge_reorder_queue(void){
 }
 
 void StreamUnwrap::sort_reorder_queue(void){
-    if (reorder_queue.back().dts < stream_max_dts[reorder_queue.back().stream_index]){
+    auto av_old_back = reorder_queue.end();
+    std::advance(av_old_back, -2);
+    AVPacket &old_back = *av_old_back;
+    long back_dts_in_old_back = av_rescale_q_rnd(reorder_queue.back().dts,
+                                                 input_format_context->streams[reorder_queue.back().stream_index]->time_base,
+                                                 input_format_context->streams[old_back.stream_index]->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+    
+    
+    if (old_back.dts > back_dts_in_old_back){
         //need to walk the queue and insert it in the right spot...
         bool back_is_video = input_format_context->streams[reorder_queue.back().stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
+        //FIXME: this loop should be optimized to run back to front, as that's the short direction
         for (std::list<AVPacket>::iterator itr = reorder_queue.begin(); itr != reorder_queue.end() ; itr++){
             long back_dts_in_itr = av_rescale_q_rnd(reorder_queue.back().dts,
                                                     input_format_context->streams[reorder_queue.back().stream_index]->time_base,
@@ -188,8 +198,7 @@ void StreamUnwrap::sort_reorder_queue(void){
             if ((itr->dts > reorder_queue.back().dts && itr->stream_index == reorder_queue.back().stream_index) || //same stream and dts is out of order
                 (itr->stream_index != reorder_queue.back().stream_index && itr->dts > back_dts_in_itr) || // different stream and out of order
                 (itr->stream_index != reorder_queue.back().stream_index && itr->dts == back_dts_in_itr && back_is_video)){ //different stream and video and same time
-                if (itr == reorder_queue.begin()){
-                    LWARN("Reorder queue does not appear to be big enough, received out of order packet");
+                if (itr == reorder_queue.begin() && reorder_queue.size() == reorder_len){
                     //itr is the front here
                     //estimate what it would take
                     long dts_itr_to_front = itr->dts - back_dts_in_itr;//this is how far ahead the packet was from the queue
@@ -207,8 +216,8 @@ void StreamUnwrap::sort_reorder_queue(void){
                     double que_lent = av_q2d(input_format_context->streams[itr->stream_index]->time_base) * ( back_dts_in_itr - front_dts_in_itr);
                     double target_addational_lent = av_q2d(input_format_context->streams[itr->stream_index]->time_base) * ( dts_itr_to_front );
                     double target_change = (target_addational_lent/que_lent) + 1.0;
-                    LINFO("Queue is short by " + std::to_string(target_addational_lent) + "s, recommend making reorder-queue-len at least " +
-                          std::to_string((int)(target_change * reorder_queue.size())));
+                    LINFO("Reorder queue is short by " + std::to_string(target_addational_lent) + "s, recommend making reorder-queue-len at least " +
+                          std::to_string((int)(target_change * reorder_queue.size())) + " for camera " /*+ cfg.get_value("camera-id") */);
                     
                     
                 }
@@ -216,8 +225,6 @@ void StreamUnwrap::sort_reorder_queue(void){
                 break;
             }
         }
-    } else {
-        stream_max_dts[reorder_queue.back().stream_index] = reorder_queue.back().dts;
     }
 
 }
@@ -246,7 +253,7 @@ bool StreamUnwrap::read_frame(void){
     double delta = recv_time.tv_sec;
     delta -= av_q2d(input_format_context->streams[reorder_queue.back().stream_index]->time_base) * reorder_queue.back().dts;
     if (delta > 60 || delta < -60){
-        LWARN("Input stream has drifted " + std::to_string(delta) + "s from wall time");
+        LWARN("Input stream has drifted " + std::to_string(delta) + "s from wall time on camera " + cfg.get_value("camera-id"));
     }
     
     return true;

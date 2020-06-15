@@ -22,10 +22,14 @@
 #include "stream_writer.hpp"
 #include "util.hpp"
 #include "chiton_ffmpeg.hpp"
+#include <assert.h>
+
+StreamWriter::StreamWriter(Config& cfg, std::string path, StreamUnwrap &unwrap) : cfg(cfg), path(path), unwrap(unwrap) {
+    //nothing!
+}
 
 bool StreamWriter::open(void){
     int error;
-
     
     avformat_alloc_output_context2(&output_format_context, NULL, NULL, path.c_str());
     if (!output_format_context) {
@@ -118,7 +122,7 @@ StreamWriter::~StreamWriter(){
 void StreamWriter::close(void){
     //flush it...
     if (0 > av_interleaved_write_frame(output_format_context, NULL)){
-        LERROR("Error flushing muxing output");
+        LERROR("Error flushing muxing output for camera " + cfg.get_value("camera-id"));
     }
 
     av_write_trailer(output_format_context);
@@ -160,7 +164,7 @@ bool StreamWriter::write(const AVPacket &packet){
     
     //guarentee that they have an increasing DTS
     if (out_pkt.dts <= last_dts[stream_mapping[out_pkt.stream_index]]){
-        LWARN("Shifting frame timestamp due to out of order issue");
+        LWARN("Shifting frame timestamp due to out of order issue in camera " + cfg.get_value("camera-id") +", old dts was: " + std::to_string(out_pkt.dts));
         last_dts[stream_mapping[out_pkt.stream_index]]++;
         long pts_delay = out_pkt.pts - out_pkt.dts;
         out_pkt.dts = last_dts[stream_mapping[out_pkt.stream_index]];
@@ -171,7 +175,7 @@ bool StreamWriter::write(const AVPacket &packet){
 
     int ret = av_interleaved_write_frame(output_format_context, &out_pkt);
     if (ret < 0) {
-        LERROR("Error muxing packet");
+        LERROR("Error muxing packet for camera " + cfg.get_value("camera-id"));
         return false;
     }
 

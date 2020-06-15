@@ -26,7 +26,7 @@
 
 class StreamWriter {
 public:
-    StreamWriter(Config cfg, std::string path, StreamUnwrap &unwrap) : cfg(cfg), path(path), unwrap(unwrap) {};
+    StreamWriter(Config &cfg, std::string path, StreamUnwrap &unwrap);
     ~StreamWriter();
     
     bool  open();//open the file for writing, returns true on success
@@ -35,6 +35,8 @@ public:
     void change_path(std::string &new_path);
 private:
     Config &cfg;
+    Config *cfg1;
+    Config *cfg2;
     std::string path;
     StreamUnwrap &unwrap;
     

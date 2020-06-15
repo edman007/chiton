@@ -24,6 +24,10 @@
 #include <fstream>
 #include "config_parser.hpp"
 
+Config::Config(){
+    set_value("camera-id", std::string("-1"));//set the camera ID so other tools can use it
+}
+
 bool Config::load_default_config(void){
     return load_config("config/chiton.cfg");
 }
@@ -41,15 +45,15 @@ bool Config::load_config(const std::string& path){
 }
 
     
-const std::string Config::get_value(const std::string& key){
+const std::string& Config::get_value(const std::string& key){
     if (!key.compare("")){
         Util::log_msg(LOG_WARN, "Code is requesting a null key");
-        return "";
+        return EMPTY_STR;
     }
 
     auto ret = cfg_db.find(key);
     if (ret == cfg_db.end()){
-        return "";
+        return EMPTY_STR;
     } else {
         return ret->second;
     }

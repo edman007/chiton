@@ -27,14 +27,13 @@
 Camera::Camera(int camera, Database& db) : id(camera), db(db), stream(cfg), fm(db, cfg) {
     //load the config
     load_cfg();
-    //stream = StreamUnwrap(cfg);
     shutdown = false;
     alive = true;
     watchdog = false;
     startup = true;
 }
 Camera::~Camera(){
-
+    
 }
 
 void Camera::load_cfg(void){
@@ -44,6 +43,7 @@ void Camera::load_cfg(void){
         cfg.set_value(res->get_field(0), res->get_field(1));
     }
     delete res;
+    cfg.set_value("camera-id", std::to_string(id));//to allow us to pull this later
 }
     
 void Camera::run(void){
@@ -75,8 +75,8 @@ void Camera::run(void){
     AVRational seconds_per_file = av_make_q(seconds_per_file_raw, 1);
 
     //used for calculating shutdown time for the last segment
-    long last_pts;
-    long last_stream_index;
+    long last_pts = 0;
+    long last_stream_index = 0;
     while (!shutdown && stream.get_next_frame(pkt)){
         watchdog = true;
         last_pts = pkt.pts;
@@ -104,8 +104,6 @@ void Camera::run(void){
             out.write(pkt);//log it
             valid_keyframe = true;
             //LINFO("Got Frame " + std::to_string(id));
-        } else {
-            LINFO("Waiting for a keyframe...");
         }
         
         stream.unref_frame(pkt);
