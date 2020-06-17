@@ -86,13 +86,16 @@ void Camera::run(void){
             //calculate the seconds:
             AVRational sec = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);//current time..
             sec = av_sub_q(sec, last_cut);
-            if (av_cmp_q(sec, seconds_per_file) == 1){
+            if (av_cmp_q(sec, seconds_per_file) == 1 || sec.num < 0){
                 //cutting the video
                 struct timeval start;
                 Util::compute_timestamp(stream.get_start_time(), start, pkt.pts, stream.get_format_context()->streams[pkt.stream_index]->time_base);
                 out.close();
                 fm.update_file_metadata(file_id, start);
-                
+                if (sec.num < 0){
+                    //this will cause a discontinuity which will be picked up and cause it to play correctly
+                    start.tv_usec += 1000;
+                }
                 new_output = fm.get_next_path(file_id, id, start);
                 out.change_path(new_output);
                 out.open();
