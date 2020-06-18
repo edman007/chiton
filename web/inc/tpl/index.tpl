@@ -1,4 +1,4 @@
-{config_load file="main.conf" section="setup"}
+{config_load file="main.conf" section="home"}
 {include file="header.tpl" title=Home}
 
 {foreach from=$video_info item=video name=player_loop}

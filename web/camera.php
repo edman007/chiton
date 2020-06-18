@@ -30,9 +30,12 @@ if (!isset($_GET['id'])){
     die();
 }
 //query the most recent video from the DB
+/*
 $sql = 'SELECT id, path, starttime, endtime FROM videos WHERE camera = ' . ((int)$_GET['id']).' ORDER BY starttime DESC';
 $res = $db->query($sql);
-$video_info = array();
+*/
+$video_info = array('url' => 'stream.php?id=' . (int)$_GET['id']);
+/*
 if ($res){
     while ($row = $res->fetch_assoc()){
         $info['url'] = 'vids/' . $row['path'] . $row['id'] . '.mp4';
@@ -40,9 +43,10 @@ if ($res){
         $info['id'] = $row['id'];
         $video_info[] = $info;
     }
-    $smarty->assign('video_info', $video_info);
 }
+*/
 
+$smarty->assign('video_info', $video_info);
 
 $smarty->display('camera.tpl');
 
