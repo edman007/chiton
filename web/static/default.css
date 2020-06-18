@@ -24,3 +24,7 @@ ul.vselector {
 .tiledViewer video {
     width:90%;
 }
+
+.dateSwitch {
+    float:left;
+}

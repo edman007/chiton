@@ -29,23 +29,50 @@ if (!isset($_GET['id'])){
     $smarty->display('error.tpl');
     die();
 }
-//query the most recent video from the DB
-/*
-$sql = 'SELECT id, path, starttime, endtime FROM videos WHERE camera = ' . ((int)$_GET['id']).' ORDER BY starttime DESC';
-$res = $db->query($sql);
-*/
-$video_info = array('url' => 'stream.php?id=' . (int)$_GET['id']);
-/*
-if ($res){
-    while ($row = $res->fetch_assoc()){
-        $info['url'] = 'vids/' . $row['path'] . $row['id'] . '.mp4';
-        $info['starttime'] = dbtime_to_DateTime($row['starttime'])->format('r');
-        $info['id'] = $row['id'];
-        $video_info[] = $info;
-    }
-}
-*/
 
+$smarty->assign('camera_id', (int)$_GET['id']);
+
+//the following queries are timezone sensitive, so lets tell the server our configured timezone
+$tz_offset = $tz->getOffset(new DateTime('now'))/60;
+$tz_min = $tz_offset%60;
+if ($tz_min < 10){
+    $tz_min = '0' . $tz_min;
+}
+$tz_offset = (int)$tz_offset/60 . ':' . $tz_min;
+$sql = "SET timezone = '$tz_offset'";
+$db->query($sql);
+
+
+//get the oldest possible date
+$sql = "SELECT FROM_UNIXTIME(starttime/1000, '%Y-%m-%d') as day, COUNT(id) FROM videos WHERE  camera = ".((int)$_GET['id']).' GROUP BY day ORDER BY starttime DESC';
+$res = $db->query($sql);
+if ($res){
+    $available_days = array();
+    $found_selected = false;
+    while ($row = $res->fetch_assoc()){
+        $avail_info = array();
+        $avail_date = new DateTime($row['day'], $tz);
+        $avail_info['long'] = $avail_date->format('D M jS');
+        $avail_info['timestamp'] = $avail_date->getTimestamp();
+        $avail_info['stream'] = 'stream.php?id='.((int)$_GET['id']). '&start=' . $avail_date->getTimestamp();
+        if (!$found_selected && empty($_GET['start'])){
+            $avail_info['selected'] = 1;
+            $found_selected = true;
+        } else if (!$found_selected && !empty($_GET['start']) && $_GET['start'] == $avail_info['timestamp']){
+            $avail_info['selected'] = 1;
+            $found_selected = true;
+        } else {
+            $avail_info['selected'] = 0;
+        }
+        $available_days[] = $avail_info;
+    }
+    $smarty->assign('avail_days', $available_days);
+}
+
+$video_info = array('url' => 'stream.php?id=' . (int)$_GET['id']);
+if (!empty($_GET['start'])){
+    $video_info['url'] .= '&start='. (int)$_GET['start'];
+}
 $smarty->assign('video_info', $video_info);
 
 $smarty->display('camera.tpl');

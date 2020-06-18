@@ -141,7 +141,8 @@ if (isset($_SERVER['HTTP_RANGE'])){
     echo substr($full_page, $range[0][0], $len);
 
 
+} else {
+    header("Content-length: ".ob_get_length());
 }
-header("Content-length: ".ob_get_length());
 ob_end_flush();
 ?>
