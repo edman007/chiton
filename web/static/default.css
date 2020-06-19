@@ -13,13 +13,13 @@ ul.vselector {
 }
 
 .singleViewer video {
-    width:95%;
+    width:100%;
 }
 .tiledViewer {
     float:left;
     width:30%;
+    height:40vh;
     padding:1%;
-    
 }
 .tiledViewer video {
     width:90%;
@@ -27,4 +27,16 @@ ul.vselector {
 
 .dateSwitch {
     float:left;
+}
+
+.video_viewport {
+    width:100%;
+    overflow:hidden;
+    position:relative;
+    height:90%;
+
+}
+
+.video_wrapper {
+    position:relative;
 }

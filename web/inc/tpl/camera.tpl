@@ -20,4 +20,7 @@
 </div>
 {/if}
 
+Shift+Scroll: Zoom<br/>
+Scroll: Skip<br/>
+
 {include file="footer.tpl"}
