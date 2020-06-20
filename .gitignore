@@ -29,8 +29,9 @@ web/inc/tpl_cache/*.php
 web/inc/tpl_compile/*.php
 web/vids
 web/inc/external/smarty
-web/static/hls-demo.*
+web/static/breeze
 web/static/hls.*
 m4/*.m4
 LICENSE.smarty
 LICENSE.hls
+LICENSE.breeze-icons

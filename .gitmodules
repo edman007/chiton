@@ -1,6 +1,9 @@
 [submodule "web/inc/external/smarty.git"]
-	path = web/inc/external/smarty.git
+	path = external/smarty.git
 	url = https://github.com/smarty-php/smarty.git
 [submodule "web/inc/external/hls.js.git"]
-	path = web/inc/external/hls.js.git
+	path = external/hls.js.git
 	url = https://github.com/video-dev/hls.js.git
+[submodule "external/breeze-icons.git"]
+	path = external/breeze-icons.git
+	url = https://github.com/KDE/breeze-icons.git
