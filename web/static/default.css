@@ -22,7 +22,7 @@ ul.vselector {
     padding:1%;
 }
 .tiledViewer video {
-    width:90%;
+    width:100%;
 }
 
 .dateSwitch {
@@ -33,10 +33,39 @@ ul.vselector {
     width:100%;
     overflow:hidden;
     position:relative;
-    height:90%;
+    margin-left:auto;
+    margin-right:auto;
 
 }
 
 .video_wrapper {
     position:relative;
 }
+
+.hidden {
+    visibility:hidden;
+    display:none;
+}
+
+.vcontrol {
+    height:32px;
+    width:100%;
+    position:absolute;
+    bottom:0px;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+
+.progress {
+    height:10%;
+    width:100%;
+}
+
+.vcontrol > div {
+    float:left;
+}
+
+.vcontrol .volume, .vcontrol .fullscreen {
+    float:right;
+}
+

@@ -9,41 +9,52 @@ function loadPlayer(){
         for (var i = 0; i < vtargets.length; i++){
             loadHLS(vtargets[i]);
             loadShortcuts(vtargets[i]);
-            var promise = vtargets[i].play();
-            if (promise !== undefined) {
-                promise.then(_ => {
-                    //playing?
-                    //console.log("Playing?");
-                }).catch(error => {
-                    // Autoplay was prevented.
-                    // console.log("Denied?");
-                    // Show a "Play" button so that user can start playback.
-                });
-            }
-
         }
     }    
     
 }
 
 function loadHLS(video){
-    var hls = new Hls();
-    // bind them together
-    hls.attachMedia(video);
-    hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-        console.log("video and hls.js are now bound together !");
-        var source = video.getElementsByTagName("source");
-        if (source.length >= 1){
-            hls.loadSource(source[0].src);
-            hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
-                console.log("manifest loaded, found " + data.levels.length + " quality level");
-            });
-        }
-    });
+    if (Hls.isSupported()) {
+        // bind them together
+        var hls = new Hls();
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+            console.log("video and hls.js are now bound together !");
+            var source = video.getElementsByTagName("source");
+            if (source.length >= 1){
+                hls.loadSource(source[0].src);
+                hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+                    console.log("manifest loaded, found " + data.levels.length + " quality level");
+                    playVideo(video, vcontrol);
+                });
+            }
+        });
+        var videoWrapper = video.parentElement;
+        var videoViewPort = videoWrapper.parentElement;
+        var vcontrol = videoViewPort.getElementsByClassName("vcontrol")[0];
+        var firstFrag = true;
+        hls.on(Hls.Events.FRAG_BUFFERED, function () {
+            if (firstFrag){
+                firstFrag = false;
+                //lock in the viewport height
+                console.log("F:" + videoWrapper.scrollHeight);
+                videoViewPort.style.height = videoWrapper.scrollHeight + "px";
+            }
+        });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = videoSrc;
+        video.addEventListener('loadedmetadata', function() {
+            video.play();
+            playVideo(video, vcontrol);
+            //lock in the viewport height
+            videoViewPort.style.height = videoWrapper.offsetHeight + "px";
+        });
+    }
 }
-
     
-
+    
+    
 function loadShortcuts(video){
     //get the parent div
     var videoWrapper = video.parentElement;
@@ -52,7 +63,8 @@ function loadShortcuts(video){
     var maxWidth = startWidth*8;
     var lastOffsetX = 0;
     var lastOffsetY = 0;
-
+    var vcontrol = videoViewPort.getElementsByClassName("vcontrol")[0];
+    loadControls(video, vcontrol);
     function applyOffSet(node, newX, newY){
         var maxDeltaX = videoWrapper.offsetWidth - videoViewPort.offsetWidth;
         var maxDeltaY = videoWrapper.offsetHeight - videoViewPort.offsetHeight;
@@ -131,6 +143,40 @@ function loadShortcuts(video){
     
     videoViewPort.addEventListener('mousewheel', mouseWheelF, false);
     videoWrapper.addEventListener('mousedown', mousedownF, false);
+    vcontrol.getElementsByClassName("playbtn")[0].addEventListener('click', (ev) => {playVideo(video, vcontrol);}, false);
+    vcontrol.getElementsByClassName("pausebtn")[0].addEventListener('click', (ev) => {pauseVideo(video, vcontrol);}, false);
+
+    
 }
 
 
+
+function loadControls(video, vcontrol){
+    //delete the video controls
+    video.controls = false;
+    vcontrol.classList.remove("hidden");
+    
+}
+
+function playVideo(video, vcontrol){    
+    var promise = video.play();
+    if (promise !== undefined) {
+        promise.then(_ => {
+            //playing?
+            vcontrol.getElementsByClassName("playbtn")[0].classList.add("hidden");
+            vcontrol.getElementsByClassName("pausebtn")[0].classList.remove("hidden");
+        }).catch(error => {
+            // Autoplay was prevented.
+            // console.log("Denied?");
+            // Show a "Play" button so that user can start playback.
+        });
+    }
+    
+}
+
+function pauseVideo(video, vcontrol){
+    var promise = video.pause();
+    vcontrol.getElementsByClassName("playbtn")[0].classList.remove("hidden");
+    vcontrol.getElementsByClassName("pausebtn")[0].classList.add("hidden");
+    
+}

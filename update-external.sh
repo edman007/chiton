@@ -30,7 +30,7 @@ if [ "x$1" == "xhls" ]; then
     #this requires npm
     #HLS.js
     cd $TOP_DIR/external/hls.js.git
-    rm -rf dist
+    #rm -rf dist
     git checout master
     git pull
     TARGET_HLS=`git tag | tail -n1`
@@ -41,7 +41,7 @@ if [ "x$1" == "xhls" ]; then
     cp dist/hls.* $TOP_DIR/web/static/
     cp LICENSE $TOP_DIR/LICENSE.hls
     #clean to stop tracking the changes the build made
-    rm -rf dist package-lock.json
+    #rm -rf dist package-lock.json
     cd $TOP_DIR
 fi
 
@@ -57,12 +57,16 @@ if [ "x$1" == "xbreeze-icons" ]; then
     mkdir -p $TOP_DIR/web/static/breeze
     cp ./icons/status/symbolic/media-*.svg $TOP_DIR/web/static/breeze
     cp ./icons/actions/symbolic/media-*.svg $TOP_DIR/web/static/breeze
+    cp ./icons/actions/symbolic/view-*.svg $TOP_DIR/web/static/breeze
+    cp ./icons/actions/symbolic/zoom-*.svg $TOP_DIR/web/static/breeze
+    cp ./icons/status/symbolic/audio-*.svg $TOP_DIR/web/static/breeze
+    cp ./icons/actions/symbolic/open-menu*.svg $TOP_DIR/web/static/breeze
     (cd $TOP_DIR/web/static/breeze/ ;
      for i in *.svg ; do
          target=`echo $i | sed -e s/media-// -e s/-symbolic// -e s/.svg/.png/`
          echo "rasterizing $i"
-         convert -density 288 $i  4x-$target &
-         convert -density 144 $i  2x-$target
+         convert -background none -density 288 $i  4x-$target &
+         convert -background none -density 144 $i  2x-$target
      done
     )
     cp COPYING.LIB $TOP_DIR/LICENSE.breeze-icons
