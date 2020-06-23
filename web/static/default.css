@@ -69,3 +69,6 @@ ul.vselector {
     float:right;
 }
 
+.fullscreen > * {
+    pointer-events:none;
+}

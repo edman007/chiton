@@ -33,15 +33,11 @@ function loadHLS(video){
         var videoWrapper = video.parentElement;
         var videoViewPort = videoWrapper.parentElement;
         var vcontrol = videoViewPort.getElementsByClassName("vcontrol")[0];
-        var firstFrag = true;
-        hls.on(Hls.Events.FRAG_BUFFERED, function () {
-            if (firstFrag){
-                firstFrag = false;
-                //lock in the viewport height
-                console.log("F:" + videoWrapper.scrollHeight);
-                videoViewPort.style.height = videoWrapper.scrollHeight + "px";
-            }
-        });
+        function lockViewPortSize(){
+            videoViewPort.style.height = videoWrapper.scrollHeight + "px";
+            hls.off(Hls.Events.FRAG_BUFFERED, lockViewPortSize);
+        }
+        hls.on(Hls.Events.FRAG_BUFFERED, lockViewPortSize);
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = videoSrc;
         video.addEventListener('loadedmetadata', function() {
@@ -146,6 +142,28 @@ function loadShortcuts(video){
     vcontrol.getElementsByClassName("playbtn")[0].addEventListener('click', (ev) => {playVideo(video, vcontrol);}, false);
     vcontrol.getElementsByClassName("pausebtn")[0].addEventListener('click', (ev) => {pauseVideo(video, vcontrol);}, false);
 
+    function clearFS(){
+        if (!document.fullscreenElement){
+            vcontrol.getElementsByClassName("fullscreen")[0].addEventListener('click', enterFS, false);
+            vcontrol.getElementsByClassName("fullscreen")[0].removeEventListener('click', exitFS);
+            document.onFullscreenChange = null;
+        }
+    }
+    
+    var exitFS;
+    var enterFS = (e) => {
+        goFullscreen(video, vcontrol);
+        vcontrol.getElementsByClassName("fullscreen")[0].removeEventListener('click', enterFS);
+        vcontrol.getElementsByClassName("fullscreen")[0].addEventListener('click', exitFS, false);
+        document.onfullscreenchange = clearFS;
+    };
+
+    var exitFS = (e) => {
+        clearFS();
+        exitFullscreen(video, vcontrol);
+    };
+    vcontrol.getElementsByClassName("fullscreen")[0].addEventListener('click', enterFS, false);
+
     
 }
 
@@ -179,4 +197,17 @@ function pauseVideo(video, vcontrol){
     vcontrol.getElementsByClassName("playbtn")[0].classList.remove("hidden");
     vcontrol.getElementsByClassName("pausebtn")[0].classList.add("hidden");
     
+}
+
+function goFullscreen(video, vcontrol){
+    if (!document.fullscreenElement) {
+        vcontrol.parentElement.requestFullscreen();
+    }
+    
+}
+
+function exitFullscreen(video, vcontrol){
+    if (document.exitFullscreen){
+        document.exitFullscreen(); 
+    }
 }
