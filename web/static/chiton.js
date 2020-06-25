@@ -117,8 +117,8 @@ function loadShortcuts(video){
     };
     var mousemoveF = (ev) => {
         console.log("was: " + videoWrapper.offsetLeft, ev.movementX);
-        var newX = lastOffsetX + ev.movementX;
-        var newY = lastOffsetY + ev.movementY;
+        var newX = lastOffsetX + ev.movementX/2;
+        var newY = lastOffsetY + ev.movementY/2;
         applyOffSet(videoWrapper, newX, newY);
         ev.preventDefault();
         return false;
