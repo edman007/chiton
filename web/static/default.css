@@ -56,10 +56,27 @@ ul.vselector {
 }
 
 
-.progress {
+.progress, .progress * {
     height:10%;
     width:100%;
+    background-color: rgb(255, 255, 255);
+    float:left;
+    padding:0px;
+    margin:0px;
 }
+
+.progress * {
+    height:100%;
+    position:relative;
+}
+.progress .gap {
+    background-color:rgb(255, 0, 0);
+}
+
+.progress .future {
+    background-color:rgb(0, 0, 0);
+}
+
 
 .vcontrol > div {
     float:left;

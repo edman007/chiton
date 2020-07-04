@@ -69,10 +69,11 @@ if ($res){
     $smarty->assign('avail_days', $available_days);
 }
 
-$video_info = array('url' => 'stream.php?id=' . (int)$_GET['id']);
-if (!empty($_GET['start'])){
-    $video_info['url'] .= '&start='. (int)$_GET['start'];
-}
+$start_ts = empty($_GET['start']) ? (new DateTime('midnight', $tz))->getTimeStamp() : (int)$_GET['start'];
+$video_info = array('url' => 'stream.php?id=' . (int)$_GET['id'] . '&start='. $start_ts,
+    'camera' => (int)$_GET['id'],
+    'start_ts' => $start_ts
+);
 $smarty->assign('video_info', $video_info);
 
 $smarty->display('camera.tpl');

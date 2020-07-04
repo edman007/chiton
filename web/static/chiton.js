@@ -20,12 +20,10 @@ function loadHLS(video){
         var hls = new Hls();
         hls.attachMedia(video);
         hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-            console.log("video and hls.js are now bound together !");
             var source = video.getElementsByTagName("source");
             if (source.length >= 1){
                 hls.loadSource(source[0].src);
                 hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
-                    console.log("manifest loaded, found " + data.levels.length + " quality level");
                     playVideo(video, vcontrol);
                 });
             }
@@ -61,6 +59,8 @@ function loadShortcuts(video){
     var lastOffsetY = 0;
     var vcontrol = videoViewPort.getElementsByClassName("vcontrol")[0];
     loadControls(video, vcontrol);
+
+    //these are callbacks to allow zooming and panning of the video
     function applyOffSet(node, newX, newY){
         var maxDeltaX = videoWrapper.offsetWidth - videoViewPort.offsetWidth;
         var maxDeltaY = videoWrapper.offsetHeight - videoViewPort.offsetHeight;
@@ -116,7 +116,6 @@ function loadShortcuts(video){
         return false;
     };
     var mousemoveF = (ev) => {
-        console.log("was: " + videoWrapper.offsetLeft, ev.movementX);
         var newX = lastOffsetX + ev.movementX/2;
         var newY = lastOffsetY + ev.movementY/2;
         applyOffSet(videoWrapper, newX, newY);
@@ -139,9 +138,12 @@ function loadShortcuts(video){
     
     videoViewPort.addEventListener('mousewheel', mouseWheelF, false);
     videoWrapper.addEventListener('mousedown', mousedownF, false);
+
+    //play/pause callbacks
     vcontrol.getElementsByClassName("playbtn")[0].addEventListener('click', (ev) => {playVideo(video, vcontrol);}, false);
     vcontrol.getElementsByClassName("pausebtn")[0].addEventListener('click', (ev) => {pauseVideo(video, vcontrol);}, false);
 
+    //callback to manage switching out of fullscreen both through the exif fullscreen or if the browser forced it
     function clearFS(){
         if (!document.fullscreenElement){
             vcontrol.getElementsByClassName("fullscreen")[0].addEventListener('click', enterFS, false);
@@ -162,9 +164,13 @@ function loadShortcuts(video){
         clearFS();
         exitFullscreen(video, vcontrol);
     };
+
+    //add fullscreen callback
     vcontrol.getElementsByClassName("fullscreen")[0].addEventListener('click', enterFS, false);
 
-    
+
+    //load the video timestamps
+    loadVideoTS(video, vcontrol);
 }
 
 
@@ -176,6 +182,7 @@ function loadControls(video, vcontrol){
     
 }
 
+//play video, and update controls if successful
 function playVideo(video, vcontrol){    
     var promise = video.play();
     if (promise !== undefined) {
@@ -199,6 +206,7 @@ function pauseVideo(video, vcontrol){
     
 }
 
+//brings a video fullscreen
 function goFullscreen(video, vcontrol){
     if (!document.fullscreenElement) {
         vcontrol.parentElement.requestFullscreen();
@@ -206,8 +214,155 @@ function goFullscreen(video, vcontrol){
     
 }
 
+//exits fullscreen
 function exitFullscreen(video, vcontrol){
     if (document.exitFullscreen){
         document.exitFullscreen(); 
     }
+}
+
+//loads the timestamp bar and controls
+function loadVideoTS(video, vcontrol){
+    var jsonData = Array();
+    var fullDay = 3600*24;
+    var totalGaps = 0;
+    
+    //query the camera ID and starttime
+    var camera = parseInt(vcontrol.getElementsByClassName("cameraid")[0].innerHTML);
+    var start_ts = parseInt(vcontrol.getElementsByClassName("starttime")[0].innerHTML);
+
+    //query the info...
+    getCameraInfo(camera, start_ts, (jdata) => {
+        jsonData = jdata;        
+        //console.log(jsonData);
+        totalGaps = drawGaps(camera, vcontrol, jsonData);
+    });
+
+    var tsBox = vcontrol.getElementsByClassName("tsbox")[0];
+    tsBox.innerHTML = getTSHTML(0, 3600*24);
+
+    video.addEventListener('timeupdate', (ev) => {
+        var actualTime = convertTSToTime(video.currentTime, jsonData);
+        var actualDuration = convertTSToTime(video.duration, jsonData)
+        tsBox.innerHTML = getTSHTML(actualTime, actualDuration);
+        if (vcontrol.getElementsByClassName("future").length == 1){
+            var barWidth = vcontrol.getElementsByClassName("progress")[0].offsetWidth;
+            var newEnd = (actualDuration/fullDay*barWidth);
+            vcontrol.getElementsByClassName("future")[0].style.left =  newEnd - totalGaps+"px";
+            vcontrol.getElementsByClassName("future")[0].style.width =  (barWidth - newEnd)+"px";
+        }
+    });
+    
+}
+
+function getCameraInfo(camera, ts, cbk){
+    var url = 'info.php?start=' + ts + '&id=' + camera;
+
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            var data = JSON.parse(this.responseText);
+            cbk(data);
+        }
+    };
+    xmlhttp.open("GET", url, true);
+    xmlhttp.send();
+}
+
+function drawGaps(camera, vcontrol, jsonData){
+    var bar = vcontrol.getElementsByClassName("progress")[0];
+    var width = bar.offsetWidth;
+    var fullDay = 3600*24;
+    var newHTML = "";
+    var gapWidth = (jsonData.offset / fullDay) * width;
+    var total_offset = gapWidth;
+
+    newHTML += '<div class="gap" style="width:' + gapWidth+ 'px; left:0px;">'
+    newHTML += '</div>';
+    for (var i = 0; i < jsonData.gaps.length; i++){
+        if (i == 0 && jsonData.gaps[i].len > jsonData.offset){
+            continue;//do not double count the offset if the video is discontinous over midnight
+        }
+        gapWidth = (jsonData.gaps[i].len / fullDay) * width;
+        if (gapWidth <= 1){
+            gapWidth = 1;
+        }
+        var left = (jsonData.gaps[i].start_ts / fullDay) * width - total_offset;
+        total_offset += gapWidth;
+        newHTML += '<div class="gap" style="width:' + gapWidth+ 'px; left:'+ left+';">'
+        newHTML += '</div>';
+    }
+    newHTML += '<div class="future"></div>';
+    bar.innerHTML = newHTML;
+    return total_offset;
+}
+
+//compute a TimeStamp from a float (0-1) representing the period displayed
+function convertToTS(clickFraction, jsonData){
+    var fullDay = 3600*24;
+    var targetTime = clickFraction*fullDay;
+    var totalGaps = jsonData.offset;
+    if (totalGaps === undefined){
+        totalGaps = 0;
+    }
+    if (jsonData.gaps === undefined){
+        return targetTime - totalGaps;
+    }
+    for (var i; i < jsonData.gaps.length; i++){
+        if (jsonData.gaps[i].actual_start_ts < targetTime){
+            totalGaps += jsonData.gaps[i].len;
+        } else {
+            //only works if we guarentee gaps is in order, which it should be
+            break;
+        }
+    }
+    return targetTime - totalGaps;
+}
+
+//convert a video timestamp to Time
+function convertTSToTime(ts, jsonData){
+    var fullDay = 3600*24;
+    var totalGaps = jsonData.offset;
+    if (totalGaps === undefined){
+        totalGaps = 0;
+    }
+    if (jsonData.gaps === undefined){
+        return ts + totalGaps;
+    }
+    for (var i; i < jsonData.gaps.length; i++){
+        if (jsonData.gaps[i].actual_start_ts < ts){
+            totalGaps += jsonData.gaps[i].len;
+        } else {
+            //only works if we guarentee gaps is in order, which it should be
+            break;
+        }
+    }
+    return ts + totalGaps;
+
+
+}
+
+function getTSHTML(ts, len){
+    return tsToStr(ts) + " / " + tsToStr(len);
+}
+
+function tsToStr(ts){
+    var hours = Math.floor(ts / 3600);
+    ts -= hours*3600;
+    var min = Math.floor(ts / 60);
+    ts -= min*60;
+
+    //and zero pad...
+    if (hours < 10){
+        hours = "0" + hours;
+    }
+    if (min < 10) {
+        min = "0" + min;
+    }
+    if (ts < 10){
+        ts =  "0" + ts.toFixed(3);
+    } else {
+        ts = ts.toFixed(3);
+    }
+    return hours +":" + min + ":" + ts;
 }

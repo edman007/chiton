@@ -25,13 +25,14 @@ require_once('./inc/main.php');
 $smarty->assign('pagename', 'Home');
 
 //query the most recent video from the DB
-$sql = 'SELECT id, camera, path, starttime, endtime FROM videos GROUP BY camera ORDER BY camera ASC, starttime DESC';
+$sql = "SELECT camera FROM config WHERE name='active' ORDER BY camera ASC";
 $res = $db->query($sql);
 $video_info = array();
+$starttime = new Datetime('-45 seconds', $tz);
 if ($res){
     while ($row = $res->fetch_assoc()){
-        $info['url'] = 'stream.php?live=1&id=' . $row['camera'];
-        $info['starttime'] = dbtime_to_DateTime($row['starttime'])->format('r');
+        $info['url'] = 'stream.php?start=' . $starttime->getTimeStamp() . '&id=' . $row['camera'];
+        $info['start_ts'] = $starttime->getTimeStamp();
         $info['camera'] = $row['camera'];
         $video_info[] = $info;
     }
