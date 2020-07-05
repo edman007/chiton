@@ -30,6 +30,7 @@ web/inc/tpl_compile/*.php
 web/vids
 web/inc/external/smarty
 web/static/breeze
+web/static/*-bottom-cursor.png
 web/static/hls.*
 m4/*.m4
 LICENSE.smarty

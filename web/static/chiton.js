@@ -230,28 +230,87 @@ function loadVideoTS(video, vcontrol){
     //query the camera ID and starttime
     var camera = parseInt(vcontrol.getElementsByClassName("cameraid")[0].innerHTML);
     var start_ts = parseInt(vcontrol.getElementsByClassName("starttime")[0].innerHTML);
+    var pointer = null;
 
+    var pointerMoved = false;
+    var pointerDelta = 0;
+    var pointerStartPos = 0;
+    function cursorDragEnable(ev){
+        pointerMoved = false;
+        pointerDelta = 0;
+        pointerStartPos = pointer.offsetLeft + ev.offsetX;
+        document.addEventListener('mousemove', cursorDrag, false);
+        document.addEventListener('mouseup', cursorDragDisable, false);
+        ev.preventDefault();
+        return false;
+    }
+    
+    function cursorDrag(ev){
+        pointerMoved = true;
+        pointerDelta += ev.movementX;
+        var newPos = pointerStartPos + pointerDelta;
+        var newTS = convertToTS(newPos/progressBar.offsetWidth, jsonData);
+        video.currentTime = newTS;
+        ev.preventDefault();
+    }
+
+    function cursorDragDisable(ev){
+        document.removeEventListener('mousemove', cursorDrag);
+        document.removeEventListener('mouseup', cursorDragDisable);
+        if (pointerMoved == false){
+
+        }
+        ev.preventDefault();
+        return false;
+    }
+
+    function cursorClick(ev){
+        var newPos = pointer.offsetLeft + ev.offsetX;
+        var newTS = convertToTS(newPos/progressBar.offsetWidth, jsonData);
+        video.currentTime = newTS;
+        ev.preventDefault();
+        ev.stopPropagation();
+    }
+    
     //query the info...
     getCameraInfo(camera, start_ts, (jdata) => {
         jsonData = jdata;        
         //console.log(jsonData);
         totalGaps = drawGaps(camera, vcontrol, jsonData);
+        pointer = vcontrol.getElementsByClassName("cursor")[0]
+        pointer.addEventListener('mousedown', cursorDragEnable, false);
+        pointer.addEventListener('click', cursorClick, false);
     });
 
     var tsBox = vcontrol.getElementsByClassName("tsbox")[0];
     tsBox.innerHTML = getTSHTML(0, 3600*24);
 
+    var progressBar = vcontrol.getElementsByClassName("progress")[0];
+    
     video.addEventListener('timeupdate', (ev) => {
         var actualTime = convertTSToTime(video.currentTime, jsonData);
         var actualDuration = convertTSToTime(video.duration, jsonData)
         tsBox.innerHTML = getTSHTML(actualTime, actualDuration);
+        var barWidth = progressBar.offsetWidth;
+        var newEnd = (actualDuration/fullDay*barWidth);
+
         if (vcontrol.getElementsByClassName("future").length == 1){
-            var barWidth = vcontrol.getElementsByClassName("progress")[0].offsetWidth;
-            var newEnd = (actualDuration/fullDay*barWidth);
             vcontrol.getElementsByClassName("future")[0].style.left =  newEnd - totalGaps+"px";
             vcontrol.getElementsByClassName("future")[0].style.width =  (barWidth - newEnd)+"px";
         }
+        if (pointer !== null){
+            pointer.style.left = (actualTime/fullDay*barWidth) - pointer.offsetWidth/2 + "px";
+        }
     });
+
+    progressBar.addEventListener('click', (ev)=>{
+        var offset = ev.offsetX;
+        if (ev.target !== progressBar){
+            offset += ev.target.offsetLeft;
+        }
+        var requestedTime = convertToTS(offset/progressBar.offsetWidth, jsonData);
+        video.currentTime = requestedTime;
+    }, true);
     
 }
 
@@ -277,8 +336,7 @@ function drawGaps(camera, vcontrol, jsonData){
     var gapWidth = (jsonData.offset / fullDay) * width;
     var total_offset = gapWidth;
 
-    newHTML += '<div class="gap" style="width:' + gapWidth+ 'px; left:0px;">'
-    newHTML += '</div>';
+    newHTML += '<div class="gap" style="width:' + gapWidth+ 'px; left:0px;"></div>';
     for (var i = 0; i < jsonData.gaps.length; i++){
         if (i == 0 && jsonData.gaps[i].len > jsonData.offset){
             continue;//do not double count the offset if the video is discontinous over midnight
@@ -289,10 +347,12 @@ function drawGaps(camera, vcontrol, jsonData){
         }
         var left = (jsonData.gaps[i].start_ts / fullDay) * width - total_offset;
         total_offset += gapWidth;
-        newHTML += '<div class="gap" style="width:' + gapWidth+ 'px; left:'+ left+';">'
-        newHTML += '</div>';
+        newHTML += '<div class="gap" style="width:' + gapWidth+ 'px; left:'+ left+';"></div>';
     }
     newHTML += '<div class="future"></div>';
+
+    //the current cursor
+    newHTML += '<div class="cursor"></div>';
     bar.innerHTML = newHTML;
     return total_offset;
 }
