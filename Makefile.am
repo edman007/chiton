@@ -26,7 +26,10 @@ PRGM = chiton
 bin_PROGRAMS = $(PRGM)
 chiton_SOURCES = main.cpp config.cpp config_parser.cpp database.cpp mariadb.cpp \
 	util.cpp mariadb_result.cpp camera.cpp stream_unwrap.cpp file_manager.cpp \
-	chiton_ffmpeg.cpp stream_writer.cpp
+	chiton_ffmpeg.cpp stream_writer.cpp \
+	camera.hpp chiton_ffmpeg.hpp database.hpp file_manager.hpp mariadb.hpp \
+	stream_unwrap.hpp util.hpp chiton_config.hpp config_parser.hpp \
+	database_result.hpp main.hpp mariadb_result.hpp stream_writer.hpp
 
 chiton_CXXFLAGS = $(AM_CXXFLAGS)
 
@@ -35,12 +38,25 @@ LICENSE_FILES=COPYING $(EXTERNAL_LICENSE)
 
 CLEANFILES=$(EXTERNAL_LICENSE)
 EXTRA_DIST=web external
-dist_web_DATA=web
-webdir=$(datadir)/web/
 
 dist-hook:
-	chmod u+w $(distdir)/external/*/.git
-	rm -rf $(distdir)/external/*/.git
+	-chmod u+w $(distdir)/external/*/.git
+	-rm -rf $(distdir)/external/*/.git
+	-rm $(distdir)/web/inc/tpl_cache/* $(distdir)/web/inc/tpl_compile/* $(distdir)/web/vids
+	find $(distdir) -name .placeholder -delete
+
+#install the web directory with some cp commands...
+#too much to try and track all the files, at least right now
+install-data-local:
+	$(mkdir_p) $(DESTDIR)$(pkgdatadir)
+	cp -r $(srcdir)/web $(DESTDIR)$(pkgdatadir)
+	-chmod  u+w $(DESTDIR)$(pkgdatadir)/web/ $(DESTDIR)$(pkgdatadir)/web/inc
+	-rm -rf $(DESTDIR)$(pkgdatadir)/web/vids
+	rm -rf $(DESTDIR)$(pkgdatadir)/web/inc/tpl_cache $(DESTDIR)$(pkgdatadir)/web/inc/tpl_compile
+	chmod -R ug-w $(DESTDIR)$(pkgdatadir)/web
+
+uninstall-hook:
+	if test -d $(DESTDIR)$(pkgdatadir); then chmod -R u+w $(DESTDIR)$(pkgdatadir) ; rm -rf $(DESTDIR)$(pkgdatadir); fi
 
 #imagemagick command...should pull from ./configure
 CONVERT=convert
@@ -51,8 +67,8 @@ clean-local:
 	-rm -rf web/inc/tpl_{cache,compile}/*
 
 #rules for external packages, we use their license files as build hooks
-dist_license_DATA=$(EXTERNAL_LICENSE)
-licensedir=$(datadir)/license/
+dist_license_DATA=$(LICENSE_FILES)
+licensedir=$(pkgdatadir)/license/
 
 
 #
