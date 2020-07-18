@@ -34,7 +34,13 @@ EXTERNAL_LICENSE=LICENSE.breeze-icons  LICENSE.hls  LICENSE.smarty
 LICENSE_FILES=COPYING $(EXTERNAL_LICENSE)
 
 CLEANFILES=$(EXTERNAL_LICENSE)
-DIST_SUBDIRS=external web
+EXTRA_DIST=web external
+dist_web_DATA=web
+webdir=$(datadir)/web/
+
+dist-hook:
+	chmod u+w $(distdir)/external/*/.git
+	rm -rf $(distdir)/external/*/.git
 
 #imagemagick command...should pull from ./configure
 CONVERT=convert

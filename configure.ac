@@ -23,7 +23,7 @@ define([BUILDVER], [git])
 AC_INIT([Chiton Security], BUILDVER, [edman007@edman007.com], [chiton], [http://edman007.com/])
 AC_CONFIG_SRCDIR([main.cpp])
 AC_CONFIG_MACRO_DIR([m4])
-AM_INIT_AUTOMAKE([subdir-objects])
+AM_INIT_AUTOMAKE([subdir-objects tar-pax])
 LT_INIT
 
 #pull the correct git revesion
