@@ -21,6 +21,10 @@
  #
 ###########################################################################
 
+#external git modules need to be in here
+git submodule init
+git submodule update
+
 libtoolize
 aclocal
 autoconf
