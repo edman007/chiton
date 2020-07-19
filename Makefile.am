@@ -37,7 +37,10 @@ EXTERNAL_LICENSE=LICENSE.breeze-icons  LICENSE.hls  LICENSE.smarty
 LICENSE_FILES=COPYING $(EXTERNAL_LICENSE)
 
 CLEANFILES=$(EXTERNAL_LICENSE)
-EXTRA_DIST=web external
+EXTRA_DIST=web external config/chiton.cfg.template
+
+cfg_DATA=config/chiton.cfg.template
+cfgdir=$(sysconfdir)/$(PACKAGE)
 
 dist-hook:
 	-chmod u+w $(distdir)/external/*/.git
