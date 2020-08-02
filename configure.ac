@@ -95,6 +95,15 @@ PKG_CHECK_MODULES([FFMPEG], [libavformat libavcodec libavutil],
                              [AS_VAR_APPEND([[CPPFLAGS]], [" $FFMPEG_CFLAGS"])
                              AS_VAR_APPEND([[LIBS]], [" $FFMPEG_LIBS "])])
 
+AC_ARG_WITH([apacheconfigdir],
+  [AS_HELP_STRING([--with-apacheconfigdir=DIR], [Directory to install apache config])],
+  [apacheconfdir=$withval],
+  [apacheconfdir="\${sysconfdir}/apache2/sites-available/"])
+AC_SUBST([pkgapacheconfdir], [$apachconfdir])
+
+AC_ARG_VAR([IMAGEMAGICK_CONVERT], [The path to imagemagick's convert])
+AC_CHECK_PROG([IMAGEMAGICK_CONVERT], [convert], [convert], [false])
+AS_IF([test x"$IMAGEMAGICK_CONVERT" = x"false"], [AC_MSG_ERROR([Could not find imagemagick, required for building])])
 
 AC_CONFIG_FILES(Makefile)
 AC_OUTPUT

@@ -27,6 +27,7 @@ gmon.out
 *.gcda
 web/inc/tpl_cache/*.php
 web/inc/tpl_compile/*.php
+web/inc/config.php
 web/vids
 web/inc/external/smarty
 web/static/breeze
@@ -38,3 +39,4 @@ LICENSE.hls
 LICENSE.breeze-icons
 chiton-*.tar.*
 chiton-*.zip
+chiton-git

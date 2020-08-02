@@ -20,7 +20,16 @@
  *
  **************************************************************************
  */
-require_once('./inc/config.php');
+
+//Find the config file
+$cfg_path = getenv('CFG_DIR');
+if ($cfg_path === FALSE){
+    $cfg_path = './inc/config.php';
+} else {
+    $cfg_path .= '/config.php';
+}
+
+require_once($cfg_path);
 
 require_once('./inc/external/smarty/Smarty.class.php');
 
@@ -34,8 +43,8 @@ if (empty($suppress_smarty)){
     $smarty->caching = false;//caching never makes sense for use, it's updated live all the time and outside of PHP
     //$smarty->cache_lifetime = 120;
     $smarty->setTemplateDir('./inc/tpl')
-        ->setCompileDir('./inc/tpl_compile')
-        ->setCacheDir('./inc/tpl_cache')
+        ->setCompileDir(SMARTY_COMPILE_DIR)
+        ->setCacheDir(SMARTY_CACHE_DIR)
         ->setConfigDir('./inc/smarty_cfg');
 }
 $db = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_DB);

@@ -1,0 +1,190 @@
+#!/bin/bash
+
+#database settings
+MYSQL_HOST="localhost"
+MYSQL_DB=@PKGNAME@
+MYSQL_INSTALL_USER="root"
+MYSQL_INSTALL_PW=""
+MYSQL_USER=@PKGNAME@
+
+#make a decent default PW
+MYSQL_USER_PW=
+PW_ENCODE=`which mimencode`
+if [ $? -eq 0 ]; then
+    MYSQL_USER_PW=`dd if=/dev/random bs=1 count=15 2>/dev/null  | $PW_ENCODE`
+else
+    PW_ENCODE=`which base64`
+    if [ $? -eq 0 ]; then
+        MYSQL_USER_PW=`dd if=/dev/random bs=1 count=15 2>/dev/null  | $PW_ENCODE`
+    fi
+fi
+
+
+HTML_SRC_DIR=@pkgdatadir@/web
+STATE_DIR=@localstatedir@/@PKGNAME@
+APACHE_CFG_DIR=@apachecfgdir@
+
+SKIP_ALL=N
+
+# Check all our options
+while getopts "hH:d:U:P:u:p:S:s:c:y" opt
+do
+    case $opt in
+        (h) #help
+            echo "$0 [args]"
+            echo "$0 will setup chiton"
+            echo "args:"
+            echo "  -h"
+            echo -e "\tThis help message"
+            echo "  -H <host>"
+            echo -e "\tSet the Database Hostname"
+            echo "  -d <database>"
+            echo -e "\tSet the database to use"
+            echo "  -U <user>"
+            echo -e "\tSet the database administrator user (root, usually)"
+            echo "  -P <pass>"
+            echo -e "\tSet the database administrator password"
+            echo "  -u <user>"
+            echo -e "\tSet the user for chiton"
+            echo "  -p <pass>"
+            echo -e "\tSet the databse password for chiton"
+            echo "  -S <dir>"
+            echo -e "\tSet the directory that contains the web files"
+            echo "  -s <dir>"
+            echo -e "\tSet the state file directory"
+            echo "  -c <dir>"
+            echo -e "\tSet the configuration directory"
+            echo "  -y"
+            echo -e "\tSelect the default answer to everything"
+            ;;
+        (H)
+            MYSQL_HOST="$OPTARG"
+            ;;
+        (d)
+            MYSQL_DB="$OPTARG"
+            ;;
+        (U)
+            MYSQL_INSTALL_USER="$OPTARG"
+            ;;
+        (P)
+            MYSQL_INSTALL_PW="$OPTARG"
+            ;;
+        (u)
+            MYSQL_USER="$OPTARG"
+            ;;
+        (p)
+            MYSQL_USER_PW="$OPTARG"
+            ;;
+        (S)
+            HTML_SRC_DIR="$OPTARG"
+            ;;
+        (s)
+            STATE_DIR="$OPTARG"
+            ;;
+        (c)
+            APACHE_CFG_DIR="$OPTARG"
+            ;;
+        (y)
+            SKIP_ALL="Y"
+            ;;
+    esac
+done
+
+echo "This will guide you through setting up chiton"
+echo
+
+var=""
+echo "Database Host [$MYSQL_HOST]:"
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -p '> ' var
+fi
+if [[ -n $var ]]; then
+    MYSQL_HOST="$var"
+fi
+
+echo "Database DB [$MYSQL_DB]:"
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -p '> ' var
+fi
+if [[ -n $var ]]; then
+    MYSQL_DB="$var"
+fi
+
+echo "Database Administrator User [$MYSQL_INSTALL_USER]:"
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -p '> ' var
+fi
+if [[ -n $var ]]; then
+    MYSQL_INSTALL_USER="$var"
+fi
+
+
+echo "Database Administrator Password [$MYSQL_INSTALL_PW]:"
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -s -p '> ' var
+fi
+if [[ -n $var ]]; then
+    MYSQL_INSTALL_PW="$var"
+fi
+
+echo "Database User [$MYSQL_USER]:"
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -p '> ' var
+fi
+if [[ -n $var ]]; then
+    MYSQL_USER="$var"
+fi
+
+echo "Database User's Password [$MYSQL_USER_PW]:"
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -s -p '> ' var
+fi
+if [[ -n $var ]]; then
+    MYSQL_USER_PW="$var"
+fi
+
+echo "Web Source Directory [$HTML_SRC_DIR]:"
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -p '> ' var
+fi
+if [[ -n $var ]]; then
+    HTML_SRC_DIR="$var"
+fi
+
+echo "State Directory [$STATE_DIR]:"
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -p '> ' var
+fi
+if [[ -n $var ]]; then
+    STATE_DIR="$var"
+fi
+
+echo "Apache Configuration Directory [$APACHE_CFG_DIR]:"
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -p '> ' var
+fi
+if [[ -n $var ]]; then
+    APACHE_CFG_DIR="$var"
+fi
+
+echo "Should I create the database? [y/n]: "
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -p '> ' var
+fi
+if [[ "$var" == "y" || "$SKIP_ALL" == "Y" ]]; then
+    
+    mysql -u "$MYSQL_INSTALL_USER" -h "$MYSQL_HOST" "-p$MYSQL_INSTALL_PW" <<EOF
+CREATE DATABASE `$MYSQL_DB`;
+EOF
+fi
+
+echo "Should I create the database user? [y/n]: "
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -p '> ' var
+fi
+if [[ "$var" == "y" || "$SKIP_ALL" == "Y" ]]; then
+    mysql -u "$MYSQL_INSTALL_USER" -h "$MYSQL_HOST" "-p$MYSQL_INSTALL_PW" <<EOF
+CREATE USER '$MYSQL_USER'@QUOTE(@@hostname) IDENTIFIED BY '$PW_ESC';
+FLUSH PRIVILEGES;
+EOF
+fi
