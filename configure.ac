@@ -26,6 +26,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([subdir-objects tar-pax dist-xz dist-zip])
 LT_INIT
 
+
 #pull the correct git revesion
 git_version=$(echo $(git log --oneline --no-walk || echo Unknown) | head -1 | cut -d ' ' -f 1 )
 AS_IF([test "x$git_version" == "xUnknown"],
@@ -37,6 +38,8 @@ AS_IF([test "x$git_version" == "xUnknown"],
 
 git_version_str=$(echo '"'git_$git_version'"')
 define([GITVERSION], [$git_version_str])
+AC_SUBST([DIST_VERSION], [$git_version])
+
 AC_DEFINE_UNQUOTED([GIT_VER], GITVERSION, [Git version])
 
 AS_IF([test "x$git_version" != "xUnknown"],
@@ -99,7 +102,13 @@ AC_ARG_WITH([apacheconfigdir],
   [AS_HELP_STRING([--with-apacheconfigdir=DIR], [Directory to install apache config])],
   [apacheconfdir=$withval],
   [apacheconfdir="\${sysconfdir}/apache2/sites-available/"])
-AC_SUBST([pkgapacheconfdir], [$apachconfdir])
+AC_SUBST([apacheconfdir])
+
+AC_ARG_WITH([runuser],
+  [AS_HELP_STRING([--with-runuser=user], [Username to run the daemon as])],
+  [runuser=$withval],
+  [runuser=$PACKAGE_TARNAME])
+AC_SUBST([runuser])
 
 AC_ARG_VAR([IMAGEMAGICK_CONVERT], [The path to imagemagick's convert])
 AC_CHECK_PROG([IMAGEMAGICK_CONVERT], [convert], [convert], [false])

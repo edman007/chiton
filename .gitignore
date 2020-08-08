@@ -40,3 +40,6 @@ LICENSE.breeze-icons
 chiton-*.tar.*
 chiton-*.zip
 chiton-git
+chiton-install
+packaging/scripts/rc.chiton
+dist-version

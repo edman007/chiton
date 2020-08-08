@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+      |-----handy-ruler------------------------------------------------------|
+chiton: chiton (Network Video Recorder)
+chiton:
+chiton: Chiton is a network video recorder that attempts to be fast and 
+chiton: lightweight. It provides a web based interface to view live video of
+chiton: all camera feeds and performs video recording and will avoid
+chiton: transcoding whenever possible to maximize performance
+chiton:
+chiton:
+chiton: homepage: http://edman007.com
+chiton:
+chiton:

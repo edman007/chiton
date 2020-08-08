@@ -31,22 +31,38 @@ chiton_SOURCES = main.cpp config.cpp config_parser.cpp database.cpp mariadb.cpp 
 	stream_unwrap.hpp util.hpp chiton_config.hpp config_parser.hpp \
 	database_result.hpp main.hpp mariadb_result.hpp stream_writer.hpp
 
+bin_SCRIPTS = chiton-install
+dist_bin_SCRIPTS = chiton-install.in
+noinst_DATA=dist-version
 chiton_CXXFLAGS = $(AM_CXXFLAGS)
 
 EXTERNAL_LICENSE=LICENSE.breeze-icons  LICENSE.hls  LICENSE.smarty
 LICENSE_FILES=COPYING $(EXTERNAL_LICENSE)
 
+PACKAGING_FILES=packaging/scripts/rc.chiton.in \
+	packaging/slackware/chiton.SlackBuild \
+	packaging/slackware/slack-desc
 
-EXTRA_DIST=external
+noinst_SCRIPTS=packaging/scripts/rc.chiton
+
+EXTRA_DIST=external chiton-install.in $(PACKAGING_FILES) dist-version
 
 dist_cfg_DATA=config/chiton.cfg.template web/inc/config.template.php
 cfgdir=$(sysconfdir)/$(PACKAGE)
 
 dist_apachecfg_DATA=config/apache-chiton.conf
-apachecfgdir=@pkgapacheconfdir@
+apachecfgdir=@apacheconfdir@
 
 #man1_MANS = man/chiton.1 man/chiton-install.1
 dist_man1_MANS = man/chiton.1 man/chiton-install.1
+
+do_subst = sed -e 's,[@]PKGNAME[@],$(PRGM),g' \
+	-e 's,[@]pkgdatadir[@],$(pkgdatadir),g' \
+	-e 's,[@]localstatedir[@],$(localstatedir),g' \
+	-e 's,[@]runstatedir[@],$(runstatedir),g' \
+	-e 's,[@]apachecfgdir[@],$(apachecfgdir),g' \
+	-e 's,[@]bindir[@],$(bindir),g' \
+	-e 's,[@]runuser[@],$(runuser),g'
 
 dist-hook:
 	-chmod u+w $(distdir)/external/*/.git
@@ -67,7 +83,6 @@ uninstall-hook:
 CONVERT=@IMAGEMAGICK_CONVERT@
 
 clean-local:
-	echo "Cleaning, but not $(distdir) or " $$dc_install_base
 	-rm -rf web/inc/external/*
 	-rm -rf web/inc/tpl_{cache,compile}/*
 
@@ -79,7 +94,7 @@ licensedir=$(pkgdatadir)/license/
 #
 # Breeze has some rasterization work and we pick only some files
 #
-BREEZE_FILES=$(wildcard $(top_srcdir)/external/breeze-icons.git/icons/actions/symbolic/media-*.svg \
+BREEZE_FILES=$(wildcard $(top_srcdir)/external/breeze-icons.git/icons/actions/symbolic/media-*-symbolic.svg \
 	$(top_srcdir)/external/breeze-icons.git/icons/actions/symbolic/view-*.svg \
 	$(top_srcdir)/external/breeze-icons.git/icons/actions/symbolic/zoom-*.svg \
 	$(top_srcdir)/external/breeze-icons.git/icons/status/symbolic/audio-*.svg \
@@ -131,6 +146,19 @@ web/static/2x-bottom-cursor.png: $(top_srcdir)/web/static/bottom-cursor.svg
 
 web/static/4x-bottom-cursor.png: $(top_srcdir)/web/static/bottom-cursor.svg
 	$(CONVERT) -background none -density 288 $<  $@
+
+chiton-install: chiton-install.in Makefile
+	$(do_subst) < $(srcdir)/chiton-install.in > chiton-install
+	chmod +x chiton-install
+
+packaging/scripts/rc.chiton: packaging/scripts/rc.chiton.in
+	$(MKDIR_P) packaging/scripts
+	$(do_subst) < $(srcdir)/packaging/scripts/rc.chiton.in > packaging/scripts/rc.chiton
+	chmod +x packaging/scripts/rc.chiton
+
+dist-version:
+	echo @DIST_VERSION@ > dist-version
+
 #all the web files
 dist_web_DATA=web/camera.php  web/index.php  web/info.php  web/settings.php  web/stream.php
 webdir=$(pkgdatadir)/web
@@ -152,4 +180,9 @@ web_statichlsdir=$(pkgdatadir)/web/static
 web_static_breeze_DATA=$(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG)
 web_static_breezedir=$(pkgdatadir)/web/static/breeze
 
-CLEANFILES=$(EXTERNAL_LICENSE) $(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG) web/external/smarty $(HLS_BUILD_FILES)
+CLEANFILES=$(EXTERNAL_LICENSE) $(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG) web/external/smarty \
+	$(HLS_BUILD_FILES) $(bin_SCRIPTS) \
+	web/static/2x-bottom-cursor.png web/static/4x-bottom-cursor.png \
+	packaging/scripts/rc.chiton
+
+MAINTAINERCLEANFILES=dist-version

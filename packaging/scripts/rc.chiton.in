@@ -1,0 +1,42 @@
+#!/bin/sh
+#
+# /etc/rc.d/rc.@PKGNAME@
+#
+# Start/stop/restart the @PKGNAME@ daemon
+ 
+@PKGNAME@_start() {
+  if [ -x @bindir@/@PKGNAME@ ]; then
+    echo "Starting @PKGNAME@:  @bindir@/@PKGNAME@"
+    su @runuser@ -c @bindir@/@PKGNAME@ 2>&1 > @localstatedir@/@PKGNAME@/@PKGNAME@.log &
+    echo $? > @runstatedir@/@PKGNAME@.pid
+  fi
+}
+
+@PKGNAME@_stop() {
+  if [ -r @runstatedir@/@PKGNAME@d.pid ]; then
+    kill $(cat @runstatedir@/@PKGNAME@.pid)
+  else
+    killall @PKGNAME@
+  fi
+  rm @runstatedir@/@PKGNAME@.pid
+}
+
+@PKGNAME@_restart() {
+  @PKGNAME@_stop
+  sleep 1
+  @PKGNAME@_start
+}
+
+case "$1" in
+'start')
+  @PKGNAME@_start
+  ;;
+'stop')
+  @PKGNAME@_stop
+  ;;
+'restart')
+  @PKGNAME@_restart
+  ;;
+*)
+  echo "Usage: $0 {start|stop|restart}"
+esac

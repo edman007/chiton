@@ -10,7 +10,39 @@ chiton-install \- run the chiton daemon
 .SH DESCRIPTION
 chiton-install performs the initial configuration for chiton(1)
 .SH OPTIONS
-chiton-install does not take any options.
+.TP
+\fB\-h\fR
+Print a help message
+.TP
+\fB\-H <host>\fR
+Set the Database Hostname
+.TP
+\fB\-d <database>\fR
+Set the database to use
+.TP
+\fB\-U <user>\fR
+Set the database administrator user (root, usually)
+.TP
+\fB\-P <pass>\fR
+Set the database administrator password, if this is blank then you will be prompted for your password
+.TP
+\fB\-u <user>\fR
+Set the user for chiton
+.TP
+\fB\-p <pass>\fR
+Set the databse password for chiton
+.TP
+\fB\-S <dir>\fR
+Set the directory that contains the web files
+.TP
+\fB\-s <dir>\fR
+Set the state file directory
+.TP
+\fB\-c <dir>\fR
+Set the configuration directory
+.TP
+\fB\-y\fR
+Select the default answer to everything, if a database administrator password is not provided you will still be prompted for this
 .SH COPYRIGHT
 Copyright © 2020 Ed Martin <edman007@edman007.com>.  License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>. This is free software: you are free to change and redistribute it.  There is NO WARRANTY, to the extent permitted by law.
 .SH SEE ALSO
