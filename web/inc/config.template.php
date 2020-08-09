@@ -22,10 +22,10 @@
  */
 
 
-define('DB_HOST', '@DB_HOST@');
-define('DB_DB', '@DB_DB@');
-define('DB_USER', '@DB_USER@');
-define('DB_PASS', '@DB_PASS@');
+define('DB_HOST', @DB_HOST@);
+define('DB_DB', @DB_DB@);
+define('DB_USER', @DB_USER@);
+define('DB_PASS', @DB_PASS@);
 define('SMARTY_COMPILE_DIR', '@SMARTY_COMPILE_DIR@');
 define('SMARTY_CACHE_DIR', '@SMARTY_CACHE_DIR@');
 ?>

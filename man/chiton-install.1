@@ -41,6 +41,18 @@ Set the state file directory
 \fB\-c <dir>\fR
 Set the configuration directory
 .TP
+\fb\-b <backend user>\fR
+Set the user to run the backend as (if this is set, the startup script may need to be changed), this will also create a matching group under this name as well
+.TP
+\fb\-w <webdir>\fR
+Set the path on the webserver to use (setting this to /chiton will place the web interface at http://localhost/chiton)
+.TP
+\fb\-a <user>\fR
+Set the user that apache uses, this user will be added to the chiton group
+.TP
+\fb\-v <dir>\fR
+Set the default directory for saving videos
+.TP
 \fB\-y\fR
 Select the default answer to everything, if a database administrator password is not provided you will still be prompted for this
 .SH COPYRIGHT

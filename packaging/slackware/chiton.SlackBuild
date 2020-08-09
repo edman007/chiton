@@ -74,13 +74,13 @@ cd build
 
 CFLAGS="$SLKCFLAGS" \
 CXXFLAGS="$SLKCFLAGS" \
-./configure \
+../configure \
   --prefix=/usr \
   --libdir=/usr/lib${LIBDIRSUFFIX} \
   --sysconfdir=/etc \
   --localstatedir=/var \
   --mandir=/usr/man \
-  --with-apacheconfigdir=/etc/httpd/extra/
+  --with-apacheconfigdir=/etc/httpd/extra
 
 make -j15
 make install DESTDIR=$PKG
@@ -91,12 +91,18 @@ find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | gr
   | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
 
 mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
-cp -a README.md COPYING LICENSE.* $PKG/usr/doc/$PRGNAM-$VERSION
+cp -a README.md COPYING build/LICENSE.* $PKG/usr/doc/$PRGNAM-$VERSION
 cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
+mkdir -p $PKG/etc/rc.d
+cp build/packaging/scripts/rc.chiton $PKG/etc/rc.d/rc.chiton
 
 mkdir -p $PKG/install
 
 cat $CWD/slack-desc > $PKG/install/slack-desc
 
+REV=""
+if [ -r dist-version ]; then
+    REV=_$(cat dist-version)
+fi
 cd $PKG
-/sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.${PKGTYPE:-txz}
+/sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION$REV-$ARCH-$BUILD$TAG.${PKGTYPE:-txz}

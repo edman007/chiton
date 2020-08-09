@@ -22,7 +22,8 @@
 
 
 # database Settings
-db-host = localhost
-db-user = chiton
-db-password = changeme
-db-database = chiton
+db-host = @DB_HOST@
+db-user = @DB_USER@
+db-password = @DB_PASS@
+db-database = @DB_DB@
+output-dir = @VID_DIR@

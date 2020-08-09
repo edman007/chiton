@@ -21,6 +21,8 @@
  #
  ########################################################################
 
+set -e
+export PATH="/sbin:/usr/sbin:$PATH"
 
 #database settings
 MYSQL_HOST="localhost"
@@ -28,6 +30,7 @@ MYSQL_DB=@PKGNAME@
 MYSQL_INSTALL_USER="root"
 MYSQL_INSTALL_PW=""
 MYSQL_USER=@PKGNAME@
+BACKEND_USER=@PKGNAME@
 
 #make a decent default PW
 MYSQL_USER_PW=
@@ -45,11 +48,24 @@ fi
 HTML_SRC_DIR=@pkgdatadir@/web
 STATE_DIR=@localstatedir@/@PKGNAME@
 APACHE_CFG_DIR=@apachecfgdir@
-
+CFGDIR=@cfgdir@
 SKIP_ALL=N
+WEBDIR=/
+VID_DIR=$STATE_DIR/vids
+
+#Packaging scripts might want to change this
+APACHE_USER=apache
+
+#take a couple of guesses
+if ! getent passwd $APACHE_USER > /dev/null ; then
+    APACHE_USER=httpd
+    if ! getent passwd $APACHE_USER > /dev/null ; then
+        APACHE_USER=www-data
+    fi
+fi
 
 # Check all our options
-while getopts "hH:d:U:P:u:p:S:s:c:y" opt
+while getopts "hH:d:U:P:u:p:S:s:c:yb:w:a:v:" opt
 do
     case $opt in
         (h) #help
@@ -78,7 +94,16 @@ do
             echo -e "\tSet the configuration directory"
             echo "  -y"
             echo -e "\tSelect the default answer to everything"
+            echo "  -b <backend user>"
+            echo -e "\tSet the user to run the backend under"
+            echo "  -w <webdir>"
+            echo -e "\tSet the path on the webserver to use"
+            echo "  -a <user>"
+            echo -e "\tSet the user that apache uses on your system"
+            echo "  -v <dir>"
+            echo -e "\tSet the default location for saving videos"
             ;;
+
         (H)
             MYSQL_HOST="$OPTARG"
             ;;
@@ -109,6 +134,19 @@ do
         (y)
             SKIP_ALL="Y"
             ;;
+        (b)
+            BACKEND_USER="$OPTARG"
+            ;;
+        (w)
+            WEBDIR="$OPTARG"
+            ;;
+        (a)
+            APACHE_USER="$OPTARG"
+            ;;
+        (v)
+            VID_DIR="$OPTARG"
+            ;;
+
     esac
 done
 
@@ -141,7 +179,7 @@ if [[ -n $var ]]; then
 fi
 
 
-echo "Database Administrator Password [$MYSQL_INSTALL_PW]:"
+echo "Database Administrator Password (Leave blank to be prompted later) [$MYSQL_INSTALL_PW]:"
 if [ "$SKIP_ALL" != "Y" ]; then
     read -s -p '> ' var
 fi
@@ -189,24 +227,150 @@ if [[ -n $var ]]; then
     APACHE_CFG_DIR="$var"
 fi
 
+echo "Apache User [$APACHE_USER]:"
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -p '> ' var
+fi
+if [[ -n $var ]]; then
+    APACHE_USER="$var"
+fi
+
+echo "User to run the backend as [$BACKEND_USER]:"
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -p '> ' var
+fi
+if [[ -n $var ]]; then
+    BACKEND_USER="$var"
+fi
+
+echo "URL path on webserver (with leading slash) [$WEBDIR]:"
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -p '> ' var
+fi
+if [[ -n $var ]]; then
+    WEBDIR="$var"
+fi
+
+
+echo "Location for saving videos [$VID_DIR]:"
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -p '> ' var
+fi
+if [[ -n $var ]]; then
+    VID_DIR="$var"
+fi
+
 echo "Should I create the database? [y/n]: "
 if [ "$SKIP_ALL" != "Y" ]; then
     read -p '> ' var
 fi
-if [[ "$var" == "y" || "$SKIP_ALL" == "Y" ]]; then
-    
+if [[ "$var" == "y" || "$var" == "" || "$SKIP_ALL" == "Y" ]]; then
     mysql -u "$MYSQL_INSTALL_USER" -h "$MYSQL_HOST" "-p$MYSQL_INSTALL_PW" <<EOF
-CREATE DATABASE `$MYSQL_DB`;
+          CREATE DATABASE \`${MYSQL_DB}\`;
 EOF
 fi
 
-echo "Should I create the database user? [y/n]: "
+echo "Should I create the database user '$MYSQL_USER'@'localhost' and grant all privs on $MYSQL_DB? [y/n]: "
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -p '> ' var
+fi
+
+MYSQL_USER_PW_ESC=${MYSQL_USER_PW//\'/\\\'}
+if [[ "$var" == "y" || "$var" == "" || "$SKIP_ALL" == "Y" ]]; then
+    MYSQL_INSTALL_PW_ESC=${MYSQL_INSTALL_PW//\'/\\\'}
+    mysql -u "$MYSQL_INSTALL_USER" -h "$MYSQL_HOST" "-p${MYSQL_INSTALL_PW}" <<EOF
+          CREATE USER '${MYSQL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_PASS}';
+          GRANT ALL PRIVILEGES ON \`${MYSQL_DB}\`.* TO '${MYSQL_USER}'@'localhost';
+          FLUSH PRIVILEGES;
+EOF
+fi
+
+
+#create the user if they don't already exist
+echo "Should I create the system user \`$BACKEND_USER\`? [Y/n]: "
 if [ "$SKIP_ALL" != "Y" ]; then
     read -p '> ' var
 fi
 if [[ "$var" == "y" || "$SKIP_ALL" == "Y" ]]; then
-    mysql -u "$MYSQL_INSTALL_USER" -h "$MYSQL_HOST" "-p$MYSQL_INSTALL_PW" <<EOF
-CREATE USER '$MYSQL_USER'@QUOTE(@@hostname) IDENTIFIED BY '$PW_ESC';
-FLUSH PRIVILEGES;
-EOF
+    if getent passwd $BACKEND_USER > /dev/null ; then
+        echo "The user $BACKEND_USER already exists"
+    else
+        useradd $BACKEND_USER -d $STATE_DIR -r -U
+    fi
 fi
+
+echo "Should I add \`$APACHE_USER\` to the group $BACKEND_USER? [Y/n]: "
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -p '> ' var
+fi
+if [[ "$var" == "y" || "$SKIP_ALL" == "Y" ]]; then
+    if getent passwd $APACHE_USER > /dev/null ; then
+        usermod -a -G $BACKEND_USER $APACHE_USER
+    else
+        echo "The user $APACHE_USER does not exist"
+    fi
+fi
+
+echo "Creating the configs..."
+#escape all these variables (PW was escaped for single quotes eariler)
+MYSQL_HOST_ESC=${MYSQL_HOST//\'/\\\'}
+MYSQL_DB_ESC=${MYSQL_DB//\'/\\\'}
+MYSQL_USER_ESC=${MYSQL_USER//\'/\\\'}
+
+#and for sed...
+MYSQL_HOST_SED=${MYSQL_HOST_ESC//,/\\,}
+MYSQL_DB_SED=${MYSQL_DB_ESC//,/\\,}
+MYSQL_USER_SED=${MYSQL_USER_ESC//,/\\,}
+MYSQL_USER_PW_SED=${MYSQL_USER_PW_ESC//,/\\,}
+
+if [ -r $CFGDIR/chiton.cfg ]; then
+    mv $CFGDIR/chiton.cfg $CFGDIR/chiton.cfg.bak
+fi
+sed -e "s,[@]DB_HOST[@],'$MYSQL_HOST_SED',g" \
+    -e "s,[@]DB_USER[@],'$MYSQL_USER_SED',g" \
+    -e "s,[@]DB_PASS[@],'$MYSQL_USER_PW_SED',g" \
+    -e "s,[@]DB_DB[@],'$MYSQL_DB_SED',g" \
+    -e "s,[@]VID_DIR[@],'$VID_DIR',g" \
+    $CFGDIR/chiton.cfg > $CFGDIR/chiton.cfg
+
+if [ -r $CFGDIR/config.php ]; then
+    mv $CFGDIR/config.php $CFGDIR/config.php.bak
+fi
+sed -e "s,[@]DB_HOST[@],'$MYSQL_HOST_SED',g" \
+    -e "s,[@]DB_USER[@],'$MYSQL_USER_SED',g" \
+    -e "s,[@]DB_PASS[@],'$MYSQL_USER_PW_SED',g" \
+    -e "s,[@]DB_DB[@],'$MYSQL_DB_SED',g" \
+    -e "s,[@]SMARTY_COMPILE_DIR[@],$STATE_DIR/compile,g" \
+    -e "s,[@]SMARTY_CACHE_DIR[@],$STATE_DIR/cache,g" \
+    $CFGDIR/config.template.php > $CFGDIR/config.php
+
+#secure our passwords
+chown root:$BACKEND_USER $CFGDIR/config.php $CFGDIR/chiton.cfg
+chmod 640 $CFGDIR/config.php $CFGDIR/chiton.cfg
+
+#make sure all the directories we need also exist
+mkdir -p $STATE_DIR/compile
+mkdir -p $STATE_DIR/cache
+mkdir -p $VID_DIR
+chown $BACKEND_USER:$BACKEND_USER -R $STATE_DIR $VID_DIR
+chmod 770 $STATE_DIR/compile $STATE_DIR/cache $VID_DIR
+
+#and configure apache
+if [ -r $APACHE_CFG_DIR/apache-chiton.conf ]; then
+    mv $APACHE_CFG_DIR/apache-chiton.conf $APACHE_CFG_DIR/apache-chiton.conf.bak
+fi
+
+sed -e "s,[@]root_path[@],\"$WEBDIR\",g" \
+    -e "s,[@]vid_path[@],\"$WEBDIR/vids\",g" \
+    -e "s,[@]webdir[@],\"@pkgdatadir@/web\",g" \
+    -e "s,[@]cfgdir[@],\"$CFGDIR\",g" \
+    -e "s,[@]viddir[@],\"$VID_DIR\",g" \
+    @pkgdatadir@/apache/apache-chiton.conf > $APACHE_CFG_DIR/apache-chiton.conf
+
+
+echo "$APACHE_CFG_DIR/apache-chiton.conf has been created, you may need to put:"
+echo -e "\n\n\tInclude \"$APACHE_CFG_DIR/apache-chiton.conf\"\n\n"
+echo "into your httpd.conf if your distro does not automatically include it"
+
+echo "You may now start the backend and restart apache, the URL for your server is:"
+echo "http://localhost$WEBDIR"

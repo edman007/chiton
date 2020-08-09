@@ -31,8 +31,8 @@ chiton_SOURCES = main.cpp config.cpp config_parser.cpp database.cpp mariadb.cpp 
 	stream_unwrap.hpp util.hpp chiton_config.hpp config_parser.hpp \
 	database_result.hpp main.hpp mariadb_result.hpp stream_writer.hpp
 
-bin_SCRIPTS = chiton-install
-dist_bin_SCRIPTS = chiton-install.in
+sbin_SCRIPTS = chiton-install
+
 noinst_DATA=dist-version
 chiton_CXXFLAGS = $(AM_CXXFLAGS)
 
@@ -45,13 +45,13 @@ PACKAGING_FILES=packaging/scripts/rc.chiton.in \
 
 noinst_SCRIPTS=packaging/scripts/rc.chiton
 
-EXTRA_DIST=external chiton-install.in $(PACKAGING_FILES) dist-version
+EXTRA_DIST=external chiton-install.in $(PACKAGING_FILES) dist-version README.md
 
 dist_cfg_DATA=config/chiton.cfg.template web/inc/config.template.php
 cfgdir=$(sysconfdir)/$(PACKAGE)
 
 dist_apachecfg_DATA=config/apache-chiton.conf
-apachecfgdir=@apacheconfdir@
+apachecfgdir=$(pkgdatadir)/apache/
 
 #man1_MANS = man/chiton.1 man/chiton-install.1
 dist_man1_MANS = man/chiton.1 man/chiton-install.1
@@ -59,10 +59,11 @@ dist_man1_MANS = man/chiton.1 man/chiton-install.1
 do_subst = sed -e 's,[@]PKGNAME[@],$(PRGM),g' \
 	-e 's,[@]pkgdatadir[@],$(pkgdatadir),g' \
 	-e 's,[@]localstatedir[@],$(localstatedir),g' \
-	-e 's,[@]runstatedir[@],$(runstatedir),g' \
-	-e 's,[@]apachecfgdir[@],$(apachecfgdir),g' \
+	-e 's,[@]runstatedir[@],$(localstatedir),g' \
+	-e 's,[@]apachecfgdir[@],@apacheconfdir@,g' \
 	-e 's,[@]bindir[@],$(bindir),g' \
-	-e 's,[@]runuser[@],$(runuser),g'
+	-e 's,[@]runuser[@],$(runuser),g' \
+	-e 's,[@]cfgdir[@],$(cfgdir),g'
 
 dist-hook:
 	-chmod u+w $(distdir)/external/*/.git
@@ -157,7 +158,7 @@ packaging/scripts/rc.chiton: packaging/scripts/rc.chiton.in
 	chmod +x packaging/scripts/rc.chiton
 
 dist-version:
-	echo @DIST_VERSION@ > dist-version
+	echo $(shell echo $(shell git log --oneline --no-walk  || echo Unknown) | head -1 | cut -d ' ' -f 1) > dist-version
 
 #all the web files
 dist_web_DATA=web/camera.php  web/index.php  web/info.php  web/settings.php  web/stream.php
@@ -170,6 +171,10 @@ dist_web_inc_tpl_DATA=web/inc/tpl/camera.tpl web/inc/tpl/error.tpl web/inc/tpl/f
 	web/inc/tpl/index.tpl web/inc/tpl/player.tpl web/inc/tpl/settings.tpl
 web_inc_tpldir=$(pkgdatadir)/web/inc/tpl
 
+dist_web_inc_cfg_DATA=web/inc/smarty_cfg/main.conf
+web_inc_cfgdir=$(pkgdatadir)/web/inc/smarty_cfg
+
+
 dist_web_static_DATA=web/static/bottom-cursor.svg web/static/chiton.js web/static/default.css
 web_static_DATA=web/static/2x-bottom-cursor.png web/static/4x-bottom-cursor.png
 web_staticdir=$(pkgdatadir)/web/static
@@ -181,8 +186,8 @@ web_static_breeze_DATA=$(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG)
 web_static_breezedir=$(pkgdatadir)/web/static/breeze
 
 CLEANFILES=$(EXTERNAL_LICENSE) $(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG) web/external/smarty \
-	$(HLS_BUILD_FILES) $(bin_SCRIPTS) \
+	$(HLS_BUILD_FILES) $(sbin_SCRIPTS) \
 	web/static/2x-bottom-cursor.png web/static/4x-bottom-cursor.png \
-	packaging/scripts/rc.chiton
+	packaging/scripts/rc.chiton chiton-install
 
 MAINTAINERCLEANFILES=dist-version
