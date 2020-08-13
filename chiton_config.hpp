@@ -23,8 +23,8 @@
  */
 #include <string>
 #include <map>
-
-
+/* Autoconf parameters */
+#include "config_build.hpp"
 
 /*
  * List of global config values:

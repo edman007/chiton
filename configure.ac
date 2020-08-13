@@ -115,4 +115,5 @@ AC_CHECK_PROG([IMAGEMAGICK_CONVERT], [convert], [convert], [false])
 AS_IF([test x"$IMAGEMAGICK_CONVERT" = x"false"], [AC_MSG_ERROR([Could not find imagemagick, required for building])])
 
 AC_CONFIG_FILES(Makefile)
+AC_CONFIG_HEADERS([config_build.hpp])
 AC_OUTPUT

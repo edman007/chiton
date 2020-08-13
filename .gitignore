@@ -43,3 +43,5 @@ chiton-git
 chiton-install
 packaging/scripts/rc.chiton
 dist-version
+config_build.hpp
+stamp-h1

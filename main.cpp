@@ -149,6 +149,7 @@ void run(void){
 
 
 }
+
 int main (int argc, char **argv){
     Util::log_msg(LOG_INFO, "Starting Chiton...");
     Util::log_msg(LOG_INFO, std::string("\tVersion ") + GIT_VER);
