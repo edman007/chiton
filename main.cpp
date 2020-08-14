@@ -165,7 +165,7 @@ void process_args(Config& arg_cfg, int argc, char **argv){
     arg_cfg.set_value("cfg-path", SYSCFGPATH);
     arg_cfg.set_value("verbosity", "5");
 
-    char options[] = "c:vdq";
+    char options[] = "c:vdqs";//update man/chiton.1 if you touch this!
     char opt;
     while ((opt = getopt(argc, argv, options)) != -1){
             switch (opt) {
@@ -181,6 +181,9 @@ void process_args(Config& arg_cfg, int argc, char **argv){
             case 'q':
                 arg_cfg.set_value("verbosity", "0");
                 break;
+            case 's':
+                Util::enable_syslog();
+                break;
             }
     }
 }
@@ -191,9 +194,9 @@ int main (int argc, char **argv){
     if (args.get_value("verbosity") != ""){
         Util::set_log_level(args.get_value_int("verbosity"));
     }
-    Util::log_msg(LOG_INFO, "Starting Chiton...");
-    Util::log_msg(LOG_INFO, std::string("\tVersion ") + GIT_VER);
-    Util::log_msg(LOG_INFO, std::string("\tBuilt ") + BUILD_DATE);
+    LINFO("Starting Chiton...");
+    LINFO(std::string("\tVersion ") + GIT_VER);
+    LINFO(std::string("\tBuilt ") + BUILD_DATE);
     load_ffmpeg();
     //load the signal handlers
     std::signal(SIGINT, shutdown_signal);
@@ -203,6 +206,7 @@ int main (int argc, char **argv){
         reload_requested = false;
         run(args);
     }
+    Util::disable_syslog();//does nothing if it's not open
 
     return 0;
 }

@@ -193,5 +193,5 @@ bool ConfigParser::next(void){
 }
 
 void ConfigParser::report_parse_error(void){
-    Util::log_msg(LOG_WARN, "Parse error in config file, line " + std::to_string(line) + ", char " + std::to_string(pos));
+    LWARN( "Parse error in config file, line " + std::to_string(line) + ", char " + std::to_string(pos));
 }

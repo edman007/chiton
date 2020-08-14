@@ -43,7 +43,7 @@ bool StreamUnwrap::connect(void) {
     LINFO("Reorder queue was first set at " + cfg.get_value_int("reorder-queue-len"));
     const std::string& url = cfg.get_value("video-url");
     if (!url.compare("")){
-        Util::log_msg(LOG_ERROR, "Camera was not supplied with a URL" + url);
+        LERROR( "Camera was not supplied with a URL" + url);
         return false;
     }
 
@@ -56,7 +56,7 @@ bool StreamUnwrap::connect(void) {
         dump_options(opts);
     }
     if ((error = avformat_open_input(&input_format_context, url.c_str(), NULL, &opts)) < 0) {
-        Util::log_msg(LOG_ERROR, "Could not open camera url '" + url + "' (error '" + std::string(av_err2str(error)) +")");
+        LERROR( "Could not open camera url '" + url + "' (error '" + std::string(av_err2str(error)) +")");
         input_format_context = NULL;
         av_dict_free(&opts);
         return false;
@@ -74,7 +74,7 @@ bool StreamUnwrap::connect(void) {
     
     /* Get information on the input file (number of streams etc.). */
     if ((error = avformat_find_stream_info(input_format_context, NULL)) < 0) {
-        Util::log_msg(LOG_ERROR, "Could not open find stream info (error '" + std::string(av_err2str(error)) + "')");
+        LERROR( "Could not open find stream info (error '" + std::string(av_err2str(error)) + "')");
         avformat_close_input(&input_format_context);
         return false;
     }

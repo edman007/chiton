@@ -41,7 +41,7 @@ const std::string& MariaDBResult::col_name(unsigned int col){
     try {
         return col_names.at(col);
     } catch (std::out_of_range &e){
-        Util::log_msg(LOG_WARN, "Requested Column name out of range");
+        LWARN( "Requested Column name out of range");
         return null_txt;
     }
 }
@@ -80,7 +80,7 @@ const std::string& MariaDBResult::get_field(unsigned int col){
     try {
         return col_data.at(col);
     } catch (std::out_of_range &e){
-        Util::log_msg(LOG_WARN, "Requested column  out of range");
+        LWARN( "Requested column  out of range");
         return null_txt;
     }
 }
@@ -95,9 +95,9 @@ const long MariaDBResult::get_field_long(unsigned int col){
     try {
         return std::stol(val);
     } catch (const std::invalid_argument& ia){
-        Util::log_msg(LOG_WARN, "database  value " + std::to_string(col) + " ( " + val + " ) must be an integer");
+        LWARN( "database  value " + std::to_string(col) + " ( " + val + " ) must be an integer");
     } catch (const std::out_of_range& ia) {
-        Util::log_msg(LOG_WARN, "database value " + std::to_string(col) + " ( " + val + " ) is out of range ");
+        LWARN( "database value " + std::to_string(col) + " ( " + val + " ) is out of range ");
     }
     
     return 0;
@@ -114,9 +114,9 @@ const double MariaDBResult::get_field_double(unsigned int col){
     try {
         return std::stod(val);
     } catch (const std::invalid_argument& ia){
-        Util::log_msg(LOG_WARN, "database value " + std::to_string(col) + " ( " + val + " ) must be a double");
+        LWARN( "database value " + std::to_string(col) + " ( " + val + " ) must be a double");
     } catch (const std::out_of_range& ia) {
-        Util::log_msg(LOG_WARN, "database value " + std::to_string(col) + " ( " + val + " ) is out of range ");
+        LWARN( "database value " + std::to_string(col) + " ( " + val + " ) is out of range ");
     }
     
     return 0;
@@ -127,6 +127,6 @@ bool MariaDBResult::field_is_null(unsigned int col){
     if (col < col_count && col_count != 0){
         return row[col] == NULL;
     }
-    Util::log_msg(LOG_WARN, "Requesting NULL status of field that doesn't exist");
+    LWARN( "Requesting NULL status of field that doesn't exist");
     return true;
 }

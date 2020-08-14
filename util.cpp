@@ -21,7 +21,7 @@
  */
 #include "util.hpp"
 #include <sys/time.h>
-
+#include <syslog.h>
 
 std::mutex Util::lock;
 #ifdef DEBUG
@@ -29,19 +29,43 @@ unsigned int Util::log_level = 5;
 #else
 unsigned int Util::log_level = 3;
 #endif
+bool Util::use_syslog = false;
 
 void Util::log_msg(const LOG_LEVEL lvl, const std::string& msg){
     if (lvl > log_level){
         return;//drop any message above our current logging level
     }
-    if (lvl == LOG_ERROR || lvl == LOG_FATAL){
-        lock.lock();
-        std::cerr << msg << std::endl;
-        lock.unlock();
+    if (use_syslog){
+        int priority = LOG_DEBUG;
+        switch (lvl){
+        case CH_LOG_FATAL:
+            priority = LOG_CRIT;
+            break;
+        case CH_LOG_ERROR:
+            priority = LOG_ERR;
+            break;
+        case CH_LOG_WARN:
+            priority = LOG_WARNING;
+            break;
+        case CH_LOG_INFO:
+            priority = LOG_INFO;
+            break;
+        case CH_LOG_DEBUG:
+            priority = LOG_DEBUG;
+            break;
+        }
+        syslog(priority, "%s", msg.c_str());
+
     } else {
-        lock.lock();
-        std::cout << msg << std::endl;
-        lock.unlock();
+        if (lvl == CH_LOG_ERROR || lvl == CH_LOG_FATAL){
+            lock.lock();
+            std::cerr << msg << std::endl;
+            lock.unlock();
+        } else {
+            lock.lock();
+            std::cout << msg << std::endl;
+            lock.unlock();
+        }
     }
 }
 
@@ -54,7 +78,7 @@ void Util::get_time_parts(const struct timeval &time, struct VideoDate &date){
     struct tm out;
     date.ms = time.tv_usec / 1000;
     localtime_r(&time.tv_sec, &out);
-    
+
     //copy it into our format
     date.year = out.tm_year + 1900;
     date.month = out.tm_mon + 1;
@@ -93,4 +117,18 @@ void Util::compute_timestamp(const struct timeval &connect_time, struct timeval 
 
 void Util::set_log_level(unsigned int level){
     log_level = level;
+}
+
+bool Util::enable_syslog(void){
+    openlog("chiton", LOG_PID, LOG_USER);
+    use_syslog = true;
+    return use_syslog;
+}
+
+bool Util::disable_syslog(void){
+    if (use_syslog){
+        closelog();
+        use_syslog = false;
+    }
+    return !use_syslog;
 }

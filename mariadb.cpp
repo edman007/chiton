@@ -47,10 +47,10 @@ int MariaDB::connect(const std::string& server, const std::string& db, const std
         sock = 0;
     }
     if (!mysql_real_connect(conn, server.c_str(), user.c_str(), pass.c_str(), db.c_str(), port, sock, flags)){
-        Util::log_msg(LOG_ERROR, "Failed to connect to database: Error: " + std::string(mysql_error(conn)));
+        LERROR( "Failed to connect to database: Error: " + std::string(mysql_error(conn)));
         return (int)mysql_errno(conn);
     }
-    Util::log_msg(LOG_INFO, "Connected to Database");
+    LINFO( "Connected to Database");
     return 0;
 }
 
@@ -67,7 +67,7 @@ MariaDBResult* MariaDB::query_nolock(const std::string& sql){
     int ret = mysql_real_query(conn, sql.c_str(), sql.length());
     if (ret){
         //error
-        Util::log_msg(LOG_WARN, "Query Failed: " + std::string(mysql_error(conn)));
+        LWARN( "Query Failed: " + std::string(mysql_error(conn)));
         return NULL;
     }
     MYSQL_RES *res = mysql_store_result(conn);

@@ -28,20 +28,20 @@
 #include "chiton_ffmpeg.hpp"
 
 enum LOG_LEVEL {
-    LOG_FATAL = 0,
-    LOG_ERROR,
-    LOG_WARN,
-    LOG_INFO,
-    LOG_DEBUG,
+    CH_LOG_FATAL = 0,
+    CH_LOG_ERROR,
+    CH_LOG_WARN,
+    CH_LOG_INFO,
+    CH_LOG_DEBUG,
 };
 
 
 //basic macros
-#define LDEBUG(str) Util::log_msg(LOG_DEBUG, str)
-#define LINFO(str) Util::log_msg(LOG_INFO, str)
-#define LWARN(str) Util::log_msg(LOG_WARN, str)
-#define LERROR(str) Util::log_msg(LOG_ERROR, str)
-#define LFATAL(str) Util::log_msg(LOG_FATAL, str)
+#define LDEBUG(str) Util::log_msg(CH_LOG_DEBUG, str)
+#define LINFO(str) Util::log_msg(CH_LOG_INFO, str)
+#define LWARN(str) Util::log_msg(CH_LOG_WARN, str)
+#define LERROR(str) Util::log_msg(CH_LOG_ERROR, str)
+#define LFATAL(str) Util::log_msg(CH_LOG_FATAL, str)
 
 
 
@@ -74,9 +74,14 @@ public:
     static void compute_timestamp(const struct timeval &connect_time, struct timeval &out_time, long pts, AVRational &time_base);
 
     static void set_log_level(unsigned int level);//set the amount of logging that we do..
+
+    static bool enable_syslog(void);
+    static bool disable_syslog(void);
+
 private:
     static std::mutex lock;//lock for actually printing messages
     static unsigned int log_level;//the output logging level
+    static bool use_syslog;
 };
 
 #endif

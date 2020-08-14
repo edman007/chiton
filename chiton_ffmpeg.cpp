@@ -27,16 +27,16 @@ void ffmpeg_log_callback(void * avcl, int level, const char * fmt, va_list vl){
     //compute the level first...
     enum LOG_LEVEL chiton_level;
     if (level <= AV_LOG_FATAL){
-        chiton_level = LOG_FATAL;
+        chiton_level = CH_LOG_FATAL;
     } else if (level <= AV_LOG_ERROR){
-        chiton_level = LOG_ERROR;
+        chiton_level = CH_LOG_ERROR;
     } else if (level <= AV_LOG_WARNING){
-        chiton_level = LOG_WARN;
+        chiton_level = CH_LOG_WARN;
     } else if (level <= AV_LOG_INFO){
-        chiton_level = LOG_INFO;
+        chiton_level = CH_LOG_INFO;
     //}else if (level <= AV_LOG_VERBOSE){//we do not have a "verbose"
     } else {
-        chiton_level = LOG_DEBUG;
+        chiton_level = CH_LOG_DEBUG;
     }
 
     //format the message
