@@ -20,8 +20,44 @@
  **************************************************************************
  */
 #include "chiton_ffmpeg.hpp"
+#include "util.hpp"
+#include <cstdio>
+
+void ffmpeg_log_callback(void * avcl, int level, const char * fmt, va_list vl){
+    //compute the level first...
+    enum LOG_LEVEL chiton_level;
+    if (level <= AV_LOG_FATAL){
+        chiton_level = LOG_FATAL;
+    } else if (level <= AV_LOG_ERROR){
+        chiton_level = LOG_ERROR;
+    } else if (level <= AV_LOG_WARNING){
+        chiton_level = LOG_WARN;
+    } else if (level <= AV_LOG_INFO){
+        chiton_level = LOG_INFO;
+    //}else if (level <= AV_LOG_VERBOSE){//we do not have a "verbose"
+    } else {
+        chiton_level = LOG_DEBUG;
+    }
+
+    //format the message
+    char buf[1024];
+    int len = std::vsnprintf(buf, sizeof(buf), fmt, vl);
+    if (len > 1){
+        //strip out the \n...
+        if (buf[len - 1] == '\n'){
+            buf[len - 1] = '\0';
+        }
+        //and write it
+        Util::log_msg(chiton_level, buf);
+
+    }
+}
 
 void load_ffmpeg(void){
+#ifdef DEBUG
     av_log_set_level(AV_LOG_DEBUG);
-    //probably should call  av_log_set_callback	(	void(*)(void *, int, const char *, va_list) callback	)	
+#else
+    av_log_set_level(AV_LOG_INFO);
+#endif
+    av_log_set_callback(ffmpeg_log_callback);
 }
