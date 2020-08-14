@@ -28,11 +28,11 @@
 #include "chiton_ffmpeg.hpp"
 
 enum LOG_LEVEL {
-    LOG_DEBUG,
-    LOG_INFO,
-    LOG_WARN,
+    LOG_FATAL = 0,
     LOG_ERROR,
-    LOG_FATAL,
+    LOG_WARN,
+    LOG_INFO,
+    LOG_DEBUG,
 };
 
 
@@ -72,8 +72,11 @@ public:
     static void unpack_time(const unsigned long long int packed_time, struct timeval &time);
 
     static void compute_timestamp(const struct timeval &connect_time, struct timeval &out_time, long pts, AVRational &time_base);
+
+    static void set_log_level(unsigned int level);//set the amount of logging that we do..
 private:
     static std::mutex lock;//lock for actually printing messages
+    static unsigned int log_level;//the output logging level
 };
 
 #endif

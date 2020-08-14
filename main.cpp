@@ -69,6 +69,12 @@ void run(Config& args){
         exit_requested = true;//this is a fatal error
         return;
     }
+
+    //set the correct verbosity if it is not supplied on the command line
+    if (args.get_value("verbosity") == "" && cfg.get_value("verbosity") != ""){
+        Util::set_log_level(cfg.get_value_int("verbosity"));
+    }
+
     MariaDB db;
     db.connect(cfg.get_value("db-host"), cfg.get_value("db-database"), cfg.get_value("db-user"), cfg.get_value("db-password"),
                cfg.get_value_int("db-port"), cfg.get_value("db-socket"));
@@ -182,6 +188,9 @@ void process_args(Config& arg_cfg, int argc, char **argv){
 int main (int argc, char **argv){
     Config args;
     process_args(args, argc, argv);
+    if (args.get_value("verbosity") != ""){
+        Util::set_log_level(args.get_value_int("verbosity"));
+    }
     Util::log_msg(LOG_INFO, "Starting Chiton...");
     Util::log_msg(LOG_INFO, std::string("\tVersion ") + GIT_VER);
     Util::log_msg(LOG_INFO, std::string("\tBuilt ") + BUILD_DATE);

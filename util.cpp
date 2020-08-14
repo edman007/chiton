@@ -24,8 +24,16 @@
 
 
 std::mutex Util::lock;
+#ifdef DEBUG
+unsigned int Util::log_level = 5;
+#else
+unsigned int Util::log_level = 3;
+#endif
 
 void Util::log_msg(const LOG_LEVEL lvl, const std::string& msg){
+    if (lvl > log_level){
+        return;//drop any message above our current logging level
+    }
     if (lvl == LOG_ERROR || lvl == LOG_FATAL){
         lock.lock();
         std::cerr << msg << std::endl;
@@ -81,4 +89,8 @@ void Util::compute_timestamp(const struct timeval &connect_time, struct timeval 
     }
     
     
+}
+
+void Util::set_log_level(unsigned int level){
+    log_level = level;
 }
