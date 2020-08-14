@@ -71,3 +71,5 @@
 
 /* Version number of package */
 #undef VERSION
+
+/* ok @sysconfdir@ @bindir@*/

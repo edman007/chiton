@@ -63,9 +63,12 @@ void load_sys_cfg(Config &cfg) {
 
 }
 
-void run(void){
+void run(Config& args){
     Config cfg;
-    cfg.load_default_config();
+    if (!cfg.load_config(args.get_value("cfg-path"))){
+        exit_requested = true;//this is a fatal error
+        return;
+    }
     MariaDB db;
     db.connect(cfg.get_value("db-host"), cfg.get_value("db-database"), cfg.get_value("db-user"), cfg.get_value("db-password"),
                cfg.get_value_int("db-port"), cfg.get_value("db-socket"));
@@ -150,7 +153,35 @@ void run(void){
 
 }
 
+//this reads the arguments, writes the Config object for received parameters
+void process_args(Config& arg_cfg, int argc, char **argv){
+    //any system wide defaults...these are build-time defaults
+    arg_cfg.set_value("cfg-path", SYSCFGPATH);
+    arg_cfg.set_value("verbosity", "5");
+
+    char options[] = "c:vdq";
+    char opt;
+    while ((opt = getopt(argc, argv, options)) != -1){
+            switch (opt) {
+            case 'c':
+                arg_cfg.set_value("cfg-path", optarg);
+                break;
+            case 'v':
+                arg_cfg.set_value("verbosity", "4");
+                break;
+            case 'd':
+                arg_cfg.set_value("verbosity", "5");
+                break;
+            case 'q':
+                arg_cfg.set_value("verbosity", "0");
+                break;
+            }
+    }
+}
+
 int main (int argc, char **argv){
+    Config args;
+    process_args(args, argc, argv);
     Util::log_msg(LOG_INFO, "Starting Chiton...");
     Util::log_msg(LOG_INFO, std::string("\tVersion ") + GIT_VER);
     Util::log_msg(LOG_INFO, std::string("\tBuilt ") + BUILD_DATE);
@@ -161,13 +192,8 @@ int main (int argc, char **argv){
     
     while (!exit_requested){
         reload_requested = false;
-        run();
+        run(args);
     }
 
     return 0;
 }
-
-
-
-
-

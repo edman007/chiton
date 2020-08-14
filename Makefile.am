@@ -20,7 +20,7 @@
  ########################################################################
 
 ACLOCAL_AMFLAGS = -I m4
-AM_CXXFLAGS = -std=gnu++11 -Wall
+AM_CXXFLAGS = -std=gnu++11 -Wall -DSYSCFGPATH='"$(sysconfdir)/$(PACKAGE)/chiton.cfg"'
 PRGM = chiton
 
 bin_PROGRAMS = $(PRGM)

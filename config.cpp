@@ -28,10 +28,6 @@ Config::Config(){
     set_value("camera-id", std::string("-1"));//set the camera ID so other tools can use it
 }
 
-bool Config::load_default_config(void){
-    return load_config("config/chiton.cfg");
-}
-
 bool Config::load_config(const std::string& path){
     std::ifstream ifs;
     ifs.open(path);

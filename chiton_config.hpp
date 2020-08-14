@@ -23,11 +23,14 @@
  */
 #include <string>
 #include <map>
+
 /* Autoconf parameters */
 #include "config_build.hpp"
 
 /*
  * List of global config values:
+ * === Config options that cannot be set anywhere but the command line ===
+ * cfg-path - path to the cfg file to load
  * === Config options required in the .cfg if default is unnacceptable) ===
  * db-host - string for DB server
  * db-user - user for DB server
@@ -37,6 +40,7 @@
  * db-port - port of the DB server
  *
  * === Can be set essentially anywhere (.cfg or database) ==
+ * verbosity - logging verbosity
  * timezone (defaults to system timezone)
  * output-dir - the location to store videos
  * ffmpeg-demux-options - options for the demuxer
@@ -60,7 +64,6 @@ const long DEFAULT_MIN_FREE_SPACE = 1073741824;//1G in bytes
 class Config {
 public:
     Config();
-    bool load_default_config();
     bool load_config(const std::string& path);
 
     

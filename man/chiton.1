@@ -2,13 +2,24 @@
 .\" Contact edman007@edman007.com to correct errors or typos.
 .TH CHITON 1 "2020-07-19" Linux "chiton man page"
 .SH NAME
-chiton \- run the chiton daemon
+chiton [options] \- run the chiton daemon
 .SH SYNOPSIS
 .B chiton
 .SH DESCRIPTION
 chiton is a performance optimized NVR (Network Video Recorder). It focuses on passing through recorded video and avoiding transcoding whenever possible, instead using the network camera to perform all compression optitions.
 .SH OPTIONS
-chiton does not take any options.
+.TP
+\fB\-c <config-path>\fR
+Set the path to the configuration file to load
+.TP
+\fB\-v\fR
+Enable Verbose output
+.TP
+\fB\-d\fR
+Enable Debug output
+.TP
+\fB\-q\fR
+Quite mode (no output)
 .SH COPYRIGHT
 Copyright © 2020 Ed Martin <edman007@edman007.com>.  License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>. This is free software: you are free to change and redistribute it.  There is NO WARRANTY, to the extent permitted by law.
 .SH SEE ALSO
