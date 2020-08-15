@@ -50,6 +50,9 @@ EXTRA_DIST=external chiton-install.in $(PACKAGING_FILES) dist-version README.md
 dist_cfg_DATA=config/chiton.cfg.template web/inc/config.template.php
 cfgdir=$(sysconfdir)/$(PACKAGE)
 
+dist_syslogcfg_DATA=config/syslog-chiton.conf
+syslogcfgdir=$(sysconfdir)/syslog.d
+
 dist_apachecfg_DATA=config/apache-chiton.conf
 apachecfgdir=$(pkgdatadir)/apache/
 

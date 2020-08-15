@@ -31,6 +31,9 @@
  * List of global config values:
  * === Config options that cannot be set anywhere but the command line ===
  * cfg-path - path to the cfg file to load
+ * pid-file - path to write the PID to
+ * fork - non-zero to fork to the background
+ * privs-user - username to drop privs to
  * === Config options required in the .cfg if default is unnacceptable) ===
  * db-host - string for DB server
  * db-user - user for DB server

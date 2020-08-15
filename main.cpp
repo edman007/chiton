@@ -32,6 +32,10 @@
 #include <csignal>
 #include <atomic>
 #include <chrono>
+#include <sys/types.h>
+#include <pwd.h>
+#include <fstream>
+#include <iostream>
 
 static char timezone_env[256];//if timezone is changed from default, we need to store it in memory for putenv()
 static std::atomic_bool exit_requested(false);
@@ -159,13 +163,73 @@ void run(Config& args){
 
 }
 
+
+//fork to the background (returns false if fork failed or this is the parent process)
+bool fork_background(void){
+    pid_t pid = fork();
+    if (pid < 0){
+        LFATAL("Failed to fork");
+    }
+    if (pid != 0){
+        return false;
+    }
+    pid_t sid = setsid();
+    if (sid < 0){
+        LFATAL("Failed to setsid()");
+        return false;
+    }
+    chdir("/");
+    //Close stdin. stdout and stderr
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+    return true;
+}
+
+bool drop_privs(const std::string& username){
+    if (getuid() != 0){
+        LFATAL("Cannot drop privleges because you are not root!");
+        return false;
+    }
+
+    struct passwd* user = getpwnam(username.c_str());
+    if (user == NULL){
+        LFATAL("Could not find user " + username);
+        return false;
+    }
+
+    if (setgid(user->pw_gid)){
+        LFATAL("Could not switch group " + std::to_string(user->pw_gid) + ", " + strerror(errno));
+        return false;
+    }
+
+    if (setuid(user->pw_uid)){
+        LFATAL("Could not switch user");
+        return false;
+    }
+
+
+    return true;
+}
+//write the pid to a file
+bool write_pid(const std::string& path){
+    pid_t pid = getpid();
+    std::ofstream out;
+    out.open(path, std::ofstream::out | std::ofstream::trunc);
+    if (out.rdstate() & std::ifstream::failbit){
+        LWARN("Could not open pid file: " + path);
+    }
+    out << pid;
+    out.close();
+    return true;
+}
 //this reads the arguments, writes the Config object for received parameters
 void process_args(Config& arg_cfg, int argc, char **argv){
     //any system wide defaults...these are build-time defaults
     arg_cfg.set_value("cfg-path", SYSCFGPATH);
     arg_cfg.set_value("verbosity", "5");
 
-    char options[] = "c:vdqs";//update man/chiton.1 if you touch this!
+    char options[] = "c:vdqsp:fP:";//update man/chiton.1 if you touch this!
     char opt;
     while ((opt = getopt(argc, argv, options)) != -1){
             switch (opt) {
@@ -184,6 +248,17 @@ void process_args(Config& arg_cfg, int argc, char **argv){
             case 's':
                 Util::enable_syslog();
                 break;
+            case 'p':
+                arg_cfg.set_value("pid-file", optarg);
+                break;
+            case 'f':
+                arg_cfg.set_value("fork", "1");
+                Util::enable_syslog();
+                break;
+            case 'P':
+                arg_cfg.set_value("privs-user", optarg);
+                break;
+
             }
     }
 }
@@ -191,6 +266,23 @@ void process_args(Config& arg_cfg, int argc, char **argv){
 int main (int argc, char **argv){
     Config args;
     process_args(args, argc, argv);
+
+    if (args.get_value("privs-user") != ""){
+        if (!drop_privs(args.get_value("privs-user"))){
+            return 1;//exit
+        }
+    }
+
+    if (args.get_value_int("fork")){
+        if (!fork_background()){
+            return 1;//exit!
+        }
+    }
+
+    if (args.get_value("pid-file") != ""){
+        write_pid(args.get_value("pid-file"));
+    }
+
     if (args.get_value("verbosity") != ""){
         Util::set_log_level(args.get_value_int("verbosity"));
     }
