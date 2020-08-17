@@ -19,7 +19,7 @@
  #
  ##########################################################################
 
-define([BUILDVER], [git])
+define([BUILDVER], [0.1.0git])
 AC_INIT([Chiton Security], BUILDVER, [edman007@edman007.com], [chiton], [http://edman007.com/])
 AC_CONFIG_SRCDIR([main.cpp])
 AC_CONFIG_MACRO_DIR([m4])
@@ -105,10 +105,16 @@ AC_ARG_WITH([apacheconfigdir],
 AC_SUBST([apacheconfdir])
 
 AC_ARG_WITH([runuser],
-  [AS_HELP_STRING([--with-runuser=user], [Username to run the daemon as])],
+  [AS_HELP_STRING([--with-runuser=USER], [Username to run the daemon as [$PACKAGE_TARNAME]])],
   [runuser=$withval],
   [runuser=$PACKAGE_TARNAME])
 AC_SUBST([runuser])
+
+AC_ARG_WITH([SYSLOGCONFDIR],
+  [AS_HELP_STRING([--with-sysconfdir=DIR], [Directory to install the syslog config  [SYSCONFDIR/syslog.d]])],
+  [SYSLOGCONFDIR=$withval],
+  [SYSLOGCONFDIR=syslog.d])
+AC_SUBST([SYSLOGCONFDIR])
 
 AC_ARG_VAR([IMAGEMAGICK_CONVERT], [The path to imagemagick's convert])
 AC_CHECK_PROG([IMAGEMAGICK_CONVERT], [convert], [convert], [false])

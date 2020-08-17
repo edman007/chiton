@@ -22,6 +22,7 @@
 ACLOCAL_AMFLAGS = -I m4
 AM_CXXFLAGS = -std=gnu++11 -Wall -DSYSCFGPATH='"$(sysconfdir)/$(PACKAGE)/chiton.cfg"'
 PRGM = chiton
+MAINTAINER=Ed Martin <edman007@edman007.com>
 
 bin_PROGRAMS = $(PRGM)
 chiton_SOURCES = main.cpp config.cpp config_parser.cpp database.cpp mariadb.cpp \
@@ -39,11 +40,18 @@ chiton_CXXFLAGS = $(AM_CXXFLAGS)
 EXTERNAL_LICENSE=LICENSE.breeze-icons  LICENSE.hls  LICENSE.smarty
 LICENSE_FILES=COPYING $(EXTERNAL_LICENSE)
 
-PACKAGING_FILES=packaging/scripts/rc.chiton.in \
+DEBIAN_PKG_FILES= packaging/debian/control packaging/debian/copyright \
+	packaging/debian/changelog packaging/debian/rules packaging/debian/source-format \
+	packaging/debian/compat
+SLACKWARE_PACKAGE_FILES=packaging/scripts/rc.chiton.in \
 	packaging/slackware/chiton.SlackBuild \
 	packaging/slackware/slack-desc
 
+PACKAGING_FILES=$(SLACKWARE_PACKAGE_FILES) \
+	$(DEBIAN_PKG_FILES)
+
 noinst_SCRIPTS=packaging/scripts/rc.chiton
+
 
 EXTRA_DIST=external chiton-install.in $(PACKAGING_FILES) dist-version README.md
 
@@ -51,7 +59,7 @@ dist_cfg_DATA=config/chiton.cfg.template web/inc/config.template.php
 cfgdir=$(sysconfdir)/$(PACKAGE)
 
 dist_syslogcfg_DATA=config/syslog-chiton.conf
-syslogcfgdir=$(sysconfdir)/syslog.d
+syslogcfgdir=$(SYSLOGCONFDIR)
 
 dist_apachecfg_DATA=config/apache-chiton.conf
 apachecfgdir=$(pkgdatadir)/apache/
@@ -66,7 +74,18 @@ do_subst = sed -e 's,[@]PKGNAME[@],$(PRGM),g' \
 	-e 's,[@]apachecfgdir[@],@apacheconfdir@,g' \
 	-e 's,[@]bindir[@],$(bindir),g' \
 	-e 's,[@]runuser[@],$(runuser),g' \
-	-e 's,[@]cfgdir[@],$(cfgdir),g'
+	-e 's,[@]cfgdir[@],$(cfgdir),g' \
+	-e 's,[@]releaseversion[@],$(VERSION),g' \
+	-e 's,[@]fullversion[@],$(VERSION)$(VER_GITVER),g' \
+	-e 's,[@]homepage[@],$(PACKAGE_URL),g' \
+	-e 's,[@]maintainer[@],$(MAINTAINER),g'
+
+
+#the file for the debian packager source code (will be a symlink)
+DEBSRC=$(PACKAGE_TARNAME)_$(VERSION).orig.tar.gz
+#the tarball for the packaging metadata
+DEBSRCPKG=$(PACKAGE_TARNAME)_$(VERSION)-1.debian.tar.gz
+
 
 dist-hook:
 	-chmod u+w $(distdir)/external/*/.git
@@ -193,4 +212,55 @@ CLEANFILES=$(EXTERNAL_LICENSE) $(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG) w
 	web/static/2x-bottom-cursor.png web/static/4x-bottom-cursor.png \
 	packaging/scripts/rc.chiton chiton-install
 
-MAINTAINERCLEANFILES=dist-version
+MAINTAINERCLEANFILES=dist-version chiton-$(VERSION).dsc $(DEBIAN_PKG_FILES)
+
+# This is for actual release production...Creates the directory 'release' with all the files in our release
+.PHONY: release
+release: chiton-$(VERSION).dsc dist
+	-rm -rf release
+	$(MKDIR_P) release
+	mv $(PACKAGE_TARNAME)-$(VERSION).tar.* $(DEBSRC) chiton-$(VERSION).dsc \
+		$(PACKAGE_TARNAME)-$(VERSION).zip $(DEBSRCPKG) \
+		release
+
+packaging/debian/control: packaging/debian/control.in Makefile
+	$(do_subst) < $< > $@
+
+packaging/debian/copyright: COPYING
+	cp COPYING $@
+
+#kinda crappy, but i need something that works
+packaging/debian/changelog: Makefile
+	echo $(PACKAGE_TARNAME) '('$(VERSION)'-1)' unstable\; urgency=low > $@
+	git log -n 5 | sed 's/^/  /' >> $@
+	echo -n ' -- $(MAINTAINER)  ' >> $@
+	date -R >> $@
+
+packaging/debian/rules: packaging/debian/rules.in Makefile
+	$(do_subst) < $< > $@
+
+
+$(DEBSRC): dist Makefile
+	-rm -f $@
+	ln -s $(PACKAGE_TARNAME)-$(VERSION).tar.gz $@
+
+$(DEBSRCPKG): $(DEBIAN_PKG_FILES)
+	tar --transform=s,packaging/,, --transform=s,-,/,g -czf $@  $(DEBIAN_PKG_FILES)
+
+DEBSRC_FILESIZE=$(shell wc -c $(DEBSRC) | cut -d ' ' -f 1)
+DEBSRCPKG_FILESIZE=$(shell wc -c $(DEBSRCPKG) | cut -d ' ' -f 1)
+chiton-$(VERSION).dsc: packaging/debian/chiton.dsc.in $(DEBSRC) $(DEBSRCPKG) dist
+	$(do_subst) < $(srcdir)/packaging/debian/chiton.dsc.in > chiton-$(VERSION).dsc
+	echo -n -e 'Files:\n  ' >> chiton-$(VERSION).dsc
+	md5sum $(DEBSRC) | sed -e 's/ / '$(DEBSRC_FILESIZE)'/' >> chiton-$(VERSION).dsc
+	echo -n -e '  ' >> chiton-$(VERSION).dsc
+	md5sum $(DEBSRCPKG) | sed -e 's/ / '$(DEBSRCPKG_FILESIZE)'/' >> chiton-$(VERSION).dsc
+	echo -n -e 'Checksums-Sha1:\n  '  >> chiton-$(VERSION).dsc
+	sha1sum $(DEBSRC) | sed -e 's/ / '$(DEBSRC_FILESIZE)'/' >> chiton-$(VERSION).dsc
+	echo -n -e '  ' >> chiton-$(VERSION).dsc
+	sha1sum $(DEBSRCPKG) | sed -e 's/ / '$(DEBSRCPKG_FILESIZE)'/' >> chiton-$(VERSION).dsc
+	echo -n -e 'Checksums-Sha256:\n  '  >> chiton-$(VERSION).dsc
+	sha256sum $(DEBSRC) | sed -e 's/ / '$(DEBSRC_FILESIZE)'/' >> chiton-$(VERSION).dsc
+	echo -n -e '  ' >> chiton-$(VERSION).dsc
+	sha256sum $(DEBSRCPKG) | sed -e 's/ / '$(DEBSRCPKG_FILESIZE)'/' >> chiton-$(VERSION).dsc
+

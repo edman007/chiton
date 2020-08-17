@@ -1,0 +1,20 @@
+Source: @PKGNAME@
+Maintainer: @maintainer@
+Section: video
+Priority: optional
+Build-Depends: default-libmysqlclient-dev, libavcodec-dev, libavformat-dev, libavutil-dev
+Homepage: @homepage@
+Standards-Version: 4.5.0.2
+Vcs-Git: http://dev.edman007.com/git-repo/chiton.git
+
+Package: @PKGNAME@
+Architecture: any
+Section: video
+Priority: optional
+Depends: default-libmysqlclient, libavcodec, libavformat, libavutil, php-mysql, php-common, apache2
+Suggests: default-mysql-server
+Description: Chiton - Lightweight NVR
+  Chiton is a lightweight network video recorder. Chiton attempts to be fast and 
+  lightweight. It provides a web based interface to view live video of
+  all camera feeds and performs video recording and will avoid transcoding
+  whenever possible to maximize performance
