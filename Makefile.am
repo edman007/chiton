@@ -53,7 +53,8 @@ PACKAGING_FILES=$(SLACKWARE_PACKAGE_FILES) \
 noinst_SCRIPTS=packaging/scripts/rc.chiton
 
 
-EXTRA_DIST=external chiton-install.in $(PACKAGING_FILES) dist-version README.md
+EXTRA_DIST=external chiton-install.in $(PACKAGING_FILES) dist-version README.md \
+	README NEWS AUTHORS ChangeLog
 
 dist_cfg_DATA=config/chiton.cfg.template web/inc/config.template.php
 cfgdir=$(sysconfdir)/$(PACKAGE)
