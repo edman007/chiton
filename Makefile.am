@@ -221,7 +221,7 @@ release: chiton-$(VERSION).dsc dist
 	-rm -rf release
 	$(MKDIR_P) release
 	mv $(PACKAGE_TARNAME)-$(VERSION).tar.* $(DEBSRC) chiton-$(VERSION).dsc \
-		$(PACKAGE_TARNAME)-$(VERSION).zip $(DEBSRCPKG) \
+		$(DEBSRCPKG) \
 		release
 
 packaging/debian/control: packaging/debian/control.in Makefile

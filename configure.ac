@@ -23,7 +23,7 @@ define([BUILDVER], [0.1.0git])
 AC_INIT([Chiton Security], BUILDVER, [edman007@edman007.com], [chiton], [http://edman007.com/])
 AC_CONFIG_SRCDIR([main.cpp])
 AC_CONFIG_MACRO_DIR([m4])
-AM_INIT_AUTOMAKE([subdir-objects tar-pax dist-xz dist-zip])
+AM_INIT_AUTOMAKE([subdir-objects tar-pax dist-xz])
 LT_INIT
 
 
