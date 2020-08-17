@@ -1,0 +1,10 @@
+Format: 3.0 (quilt)
+Source: @PKGNAME@
+Architecture: any
+Version: @releaseversion@-1
+Maintainer: @maintainer@
+Homepage: @homepage@
+Standards-Version: 4.5.0.2
+Vcs-Git: http://dev.edman007.com/git-repo/chiton.git
+Build-Depends: default-libmysqlclient-dev libavcodec-dev libavformat-dev libavutil-dev
+Package-list: @PKGNAME@ deb video optional
