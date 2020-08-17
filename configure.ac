@@ -110,10 +110,10 @@ AC_ARG_WITH([runuser],
   [runuser=$PACKAGE_TARNAME])
 AC_SUBST([runuser])
 
-AC_ARG_WITH([SYSLOGCONFDIR],
+AC_ARG_WITH([syslogconfdir],
   [AS_HELP_STRING([--with-sysconfdir=DIR], [Directory to install the syslog config  [SYSCONFDIR/syslog.d]])],
   [SYSLOGCONFDIR=$withval],
-  [SYSLOGCONFDIR=syslog.d])
+  [SYSLOGCONFDIR=${sysconfdir}/syslog.d])
 AC_SUBST([SYSLOGCONFDIR])
 
 AC_ARG_VAR([IMAGEMAGICK_CONVERT], [The path to imagemagick's convert])
