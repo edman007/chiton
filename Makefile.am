@@ -233,9 +233,8 @@ release: chiton-$(VERSION).dsc dist
 packaging/debian/control: packaging/debian/control.in Makefile
 	$(do_subst) < $< > $@
 
-packaging/debian/copyright: COPYING
-	cp COPYING $@
-
+packaging/debian/copyright: packaging/debian/copyright.in $(LICENSE_FILES)
+		$(do_subst) < $< > $@
 #kinda crappy, but i need something that works
 packaging/debian/changelog: Makefile
 	echo $(PACKAGE_TARNAME) '('$(VERSION)'-1)' unstable\; urgency=low > $@

@@ -1,5 +1,14 @@
 Third Party Sources We Require:
 
+- All are located in external/
+
 Smarty
 https://www.smarty.net/
-The libs/ directory is web/inc/external/smarty/
+
+HLS:
+https://hls-js.netlify.app/demo/
+
+Breeze Icons:
+https://api.kde.org/frameworks/breeze-icons/html/index.html
+
+* Developer Note, update packing/debian/copyright when changing this file
