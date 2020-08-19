@@ -42,6 +42,7 @@ chiton-*.zip
 chiton-git
 chiton-install
 packaging/scripts/rc.chiton
+packaging/scripts/chiton.service
 dist-version
 config_build.hpp
 stamp-h1

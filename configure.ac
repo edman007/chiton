@@ -124,6 +124,18 @@ AC_ARG_WITH([smartydir],
 AC_SUBST([SMARTYDIR])
 AM_CONDITIONAL([INSTALLSMARTY], [test "x$SMARTYDIR" = "xno"])
 
+AC_ARG_WITH([initdir],
+  [AS_HELP_STRING([--with-initdir=DIR], [Directory of init script [/etc/systemd/system]])],
+  [initdir=$withval],
+  [initdir=/etc/systemd/system])
+AC_SUBST([initdir])
+
+AC_ARG_ENABLE([sysv],
+  [AS_HELP_STRING([--with-sysv], [Install a SysV compatible init script [disabled]])],
+  [sysv=true],
+  [sysv=false])
+AM_CONDITIONAL([ENABLESYSV], [test "x$sysv" = "xtrue"])
+
 AC_ARG_VAR([IMAGEMAGICK_CONVERT], [The path to imagemagick's convert])
 AC_CHECK_PROG([IMAGEMAGICK_CONVERT], [convert], [convert], [false])
 AS_IF([test x"$IMAGEMAGICK_CONVERT" = x"false"], [AC_MSG_ERROR([Could not find imagemagick, required for building])])

@@ -80,7 +80,9 @@ CXXFLAGS="$SLKCFLAGS" \
   --sysconfdir=/etc \
   --localstatedir=/var \
   --mandir=/usr/man \
-  --with-apacheconfigdir=/etc/httpd/extra
+  --with-apacheconfigdir=/etc/httpd/extra \
+  --enable-sysv \
+  --with-initdir=/etc/rc.d
 
 make -j15
 make install DESTDIR=$PKG
@@ -93,8 +95,6 @@ find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | gr
 mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
 cp -a README.md COPYING build/LICENSE.* $PKG/usr/doc/$PRGNAM-$VERSION
 cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
-mkdir -p $PKG/etc/rc.d
-cp build/packaging/scripts/rc.chiton $PKG/etc/rc.d/rc.chiton
 
 mkdir -p $PKG/install
 

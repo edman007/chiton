@@ -1,0 +1,18 @@
+[Unit]
+Description=Chiton NVR
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+PIDFile=@runstatedir@/@PKGNAME@.pid
+ExecStart=@bindir@/@PKGNAME@ -f -p @runstatedir@/@PKGNAME@.pid
+User=@runuser@
+ExecReload=/bin/kill -HUP $MAINPID
+KillSignal=SIGINT
+SendSIGKILL=yes
+TimeoutStopSec=15
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

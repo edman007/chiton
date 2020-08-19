@@ -43,12 +43,11 @@ LICENSE_FILES=COPYING $(EXTERNAL_LICENSE)
 DEBIAN_PKG_FILES= packaging/debian/control packaging/debian/copyright \
 	packaging/debian/changelog packaging/debian/rules packaging/debian/source-format \
 	packaging/debian/compat
-SLACKWARE_PACKAGE_FILES=packaging/scripts/rc.chiton.in \
-	packaging/slackware/chiton.SlackBuild \
+SLACKWARE_PACKAGE_FILES=packaging/slackware/chiton.SlackBuild \
 	packaging/slackware/slack-desc
 
 PACKAGING_FILES=$(SLACKWARE_PACKAGE_FILES) \
-	$(DEBIAN_PKG_FILES)
+	$(DEBIAN_PKG_FILES) packaging/scripts/rc.chiton.in packaging/scripts/chiton.service.in
 
 noinst_SCRIPTS=packaging/scripts/rc.chiton
 
@@ -181,10 +180,16 @@ chiton-install: chiton-install.in Makefile
 	$(do_subst) < $(srcdir)/chiton-install.in > chiton-install
 	chmod +x chiton-install
 
-packaging/scripts/rc.chiton: packaging/scripts/rc.chiton.in
+packages/scripts:
 	$(MKDIR_P) packaging/scripts
+
+packaging/scripts/rc.chiton: packaging/scripts/rc.chiton.in | packaging/scripts/
 	$(do_subst) < $(srcdir)/packaging/scripts/rc.chiton.in > packaging/scripts/rc.chiton
 	chmod +x packaging/scripts/rc.chiton
+
+packaging/scripts/chiton.service: packaging/scripts/chiton.service.in | packaging/scripts/
+	$(do_subst) < $(srcdir)/packaging/scripts/chiton.service.in > packaging/scripts/chiton.service
+
 
 dist-version:
 	echo $(shell echo $(shell git log --oneline --no-walk  || echo Unknown) | head -1 | cut -d ' ' -f 1) > dist-version
@@ -214,10 +219,17 @@ web_statichlsdir=$(pkgdatadir)/web/static
 web_static_breeze_DATA=$(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG)
 web_static_breezedir=$(pkgdatadir)/web/static/breeze
 
+if ENABLESYSV
+initscript_DATA=packaging/scripts/rc.chiton
+else
+initscript_DATA=packaging/scripts/chiton.service
+endif
+initscriptdir=$(initdir)
+
 CLEANFILES=$(EXTERNAL_LICENSE) $(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG) web/external/smarty \
 	$(HLS_BUILD_FILES) $(sbin_SCRIPTS) \
 	web/static/2x-bottom-cursor.png web/static/4x-bottom-cursor.png \
-	packaging/scripts/rc.chiton chiton-install
+	packaging/scripts/rc.chiton chiton-install packaging/scripts/chiton.service
 
 MAINTAINERCLEANFILES=dist-version chiton-$(VERSION).dsc $(DEBIAN_PKG_FILES)
 
