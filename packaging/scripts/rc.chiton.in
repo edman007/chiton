@@ -7,12 +7,12 @@
 @PKGNAME@_start() {
   if [ -x @bindir@/@PKGNAME@ ]; then
     echo "Starting @PKGNAME@:  @bindir@/@PKGNAME@"
-    su @runuser@ -c @bindir@/@PKGNAME@ 2>&1 > @localstatedir@/@PKGNAME@/@PKGNAME@.log &
-    echo $? > @runstatedir@/@PKGNAME@.pid
+    @bindir@/@PKGNAME@ -P @runuser@ -f -p @runstatedir@/@PKGNAME@.pid
   fi
 }
 
 @PKGNAME@_stop() {
+  echo "Stopping @PKGNAME@"
   if [ -r @runstatedir@/@PKGNAME@d.pid ]; then
     kill $(cat @runstatedir@/@PKGNAME@.pid)
   else
