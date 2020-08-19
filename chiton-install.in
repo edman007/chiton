@@ -34,13 +34,15 @@ BACKEND_USER=@PKGNAME@
 
 #make a decent default PW
 MYSQL_USER_PW=
-PW_ENCODE=`which mimencode`
-if [ $? -eq 0 ]; then
+PW_ENCODE=`which mimencode || echo false`
+if [ "x$PW_ENCODE" != "xfalse" ]; then
     MYSQL_USER_PW=`dd if=/dev/random bs=1 count=15 2>/dev/null  | $PW_ENCODE`
 else
-    PW_ENCODE=`which base64`
-    if [ $? -eq 0 ]; then
+    PW_ENCODE=`which base64 || echo false`
+    if [ "x$PW_ENCODE" != "xfalse" ]; then
         MYSQL_USER_PW=`dd if=/dev/random bs=1 count=15 2>/dev/null  | $PW_ENCODE`
+    else
+        MYSQL_USER_PW=changeme
     fi
 fi
 
