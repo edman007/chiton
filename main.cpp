@@ -169,6 +169,7 @@ bool fork_background(void){
     pid_t pid = fork();
     if (pid < 0){
         LFATAL("Failed to fork");
+        return false;
     }
     if (pid != 0){
         return false;
@@ -275,7 +276,7 @@ int main (int argc, char **argv){
 
     if (args.get_value_int("fork")){
         if (!fork_background()){
-            return 1;//exit!
+            return 0;//exit!
         }
     }
 
