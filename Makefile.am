@@ -96,9 +96,15 @@ dist-hook:
 
 #install the web directory with some cp commands...
 #too much to try and track all the files, at least right now
+#this option will not work on non-linux...
+SMARTYPATH_SYMLINK:=$(shell realpath -m --relative-to $(pkgdatadir)/web/inc/external/ $(SMARTYDIR))
 install-data-local: web/inc/external/smarty
 	$(mkdir_p) $(DESTDIR)$(pkgdatadir)/web/inc/external/
+if INSTALLSMARTY
 	cp -r web/inc/external/smarty $(DESTDIR)$(pkgdatadir)/web/inc/external/smarty
+else
+	ln -s $(SMARTYPATH_SYMLINK) $(DESTDIR)$(pkgdatadir)/web/inc/external/smarty
+endif
 
 uninstall-hook:
 	if test -d $(DESTDIR)$(pkgdatadir); then chmod -R u+w $(DESTDIR)$(pkgdatadir) ; rm -rf $(DESTDIR)$(pkgdatadir); fi
