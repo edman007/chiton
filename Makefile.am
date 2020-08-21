@@ -24,6 +24,9 @@ AM_CXXFLAGS = -std=gnu++11 -Wall -DSYSCFGPATH='"$(sysconfdir)/$(PACKAGE)/chiton.
 PRGM = chiton
 MAINTAINER=Ed Martin <edman007@edman007.com>
 
+#make things go a little faster when testing packaging
+export XZ_OPT = -e -T0
+
 bin_PROGRAMS = $(PRGM)
 chiton_SOURCES = main.cpp config.cpp config_parser.cpp database.cpp mariadb.cpp \
 	util.cpp mariadb_result.cpp camera.cpp stream_unwrap.cpp file_manager.cpp \
