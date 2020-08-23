@@ -1,0 +1,41 @@
+#!/bin/bash
+
+set -e
+
+#init for debian
+if [ -f /usr/share/debconf/confmodule ]; then
+    if [ "$1" == "purge" ]; then
+        . /usr/share/debconf/confmodule db_purge
+    else
+        . /usr/share/debconf/confmodule
+    fi
+fi
+
+if [ -f /usr/share/dbconfig-common/dpkg/postrm.mysql ]; then
+    . /usr/share/dbconfig-common/dpkg/postrm.mysql
+    dbc_go @PKGNAME@ "$@"
+fi
+
+if [ "$1" == "purge" ]; then
+    # We are deleting all our files
+    rm -f @localstatedir@/@PKGNAME@/@PKGNAME@.pid || true
+    rmdir @localstatedir@/@PKGNAME@/cache/ || true
+    rmdir @localstatedir@/@PKGNAME@/compile/ || true
+    rmdir @localstatedir@/@PKGNAME@/vids/ || true #this will likely fail if we have content, this is expected
+
+    if [ "@apachesymlinkdir@" != "no" ]; then
+        rm -f @apachesymlinkdir@/apache-chiton.conf || true
+    fi
+
+    #I don't think this can ever happen on debian, but it's here for completness
+    if [ "x@apacheappendconf@" != "zno" ]; then
+        #append an include line to @apacheappendconf@
+        if [ -f "@apacheappendconf@" && ! grep "$APACHE_CFG_DIR/apache-chiton.conf" "@apacheappendconf@" ]; then
+            sed -i -e 's,# Enable Chiton NVR,,' \
+                -e "s,Include $APACHE_CFG_DIR/apache-chiton.conf,,"  @apacheappendconf@
+        fi
+    fi
+
+    rm -f @apachecfgdir@/apache-chiton.conf || true
+    rm -f @cfgdir@/chiton.cfg @cfgdir@/config.php
+fi

@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -e
+
+#init for debian
+if [ -f /usr/share/debconf/confmodule ]; then
+    . /usr/share/debconf/confmodule
+fi
+
+if [ -f /usr/share/dbconfig-common/dpkg/prerm.mysql ]; then
+    . /usr/share/dbconfig-common/dpkg/prerm.mysql
+    dbc_go @PKGNAME@ "$@"
+fi

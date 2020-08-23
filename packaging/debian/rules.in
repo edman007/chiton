@@ -13,4 +13,5 @@ override_dh_auto_configure:
 		--with-apacheconfigdir=/etc/apache2/sites-available/ \
 		--with-syslogconfdir=/etc/rsyslog.d \
 		--with-smartydir=/usr/share/php/smarty3/ \
-		--with-initdir=/lib/systemd/system/
+		--with-initdir=/lib/systemd/system/ \
+		--with-webuser=www-data

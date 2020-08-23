@@ -50,4 +50,10 @@ packaging/debian/changelog
 packaging/debian/control
 packaging/debian/copyright
 packaging/debian/rules
+packaging/debian/prerm
+packaging/debian/postrm
+packaging/debian/preinst
+packaging/debian/postinst
+packaging/slackware/doinst.sh
+packaging/slackware/douninst.sh
 release
