@@ -8,15 +8,25 @@ whenever possible to maximize performance
 
 ## Installation
 
-It is recommended to use a binary package for your distribition. After installation run `chiton-install` to configure chiton and then start it with `systemctl enable chiton` (on a systemd based system) or executing `/etc/rc.d/rc.chiton start` on a SysV based system (like Slackware).
+It is recommended to use a binary package for your distribition. Then start it with `systemctl enable chiton` (on a systemd based system) or executing `/etc/rc.d/rc.chiton start` on a SysV based system (like Slackware).
 
 If you would like to build from source, it is recommended to run the packaging script in the packaging directory to generate a binary for your distribution. If you downloaded this via git you will need to run `./autogen.sh` first.
+
+For debian that would look something like this:
+
+```bash
+dpkg-source -x chiton-0.1.0git.dsc
+cd chiton-0.1.0git
+debuild -uc -us -i -b
+cd ..
+dpkg -i chiton_0.1.0git-1_amd64.deb
+```
 
 Alternativitly you can install directly from source:
 
 ```bash
 ./autogen.sh #only if this was cloned from git
-./configure --with-apacheconfigdir=/etc/apache2/sites-available/
+./configure --help #read the options, you do want to set your system directories
 make
 make install
 ```
