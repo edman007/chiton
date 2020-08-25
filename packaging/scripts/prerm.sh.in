@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -e
-
+#set -x
 #init for debian
 if [ -f /usr/share/debconf/confmodule ]; then
     . /usr/share/debconf/confmodule
@@ -9,5 +9,5 @@ fi
 
 if [ -f /usr/share/dbconfig-common/dpkg/prerm.mysql ]; then
     . /usr/share/dbconfig-common/dpkg/prerm.mysql
-    dbc_go @PKGNAME@ "$@"
+    dbc_go @PKGNAME@ "$@" || true
 fi

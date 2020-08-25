@@ -1,18 +1,22 @@
 #!/bin/bash
 
 set -e
+#set -x
+#dbc_debug=1
 
 export PATH="/sbin:/usr/sbin:$PATH"
-POSTINST=1
-CONFIGURE=1
+POSTINST=true
+CONFIGURE=true
+HAVEDBCONF=false
 
 #init for debian
 if [ -f /usr/share/debconf/confmodule ]; then
     . /usr/share/debconf/confmodule
+    HAVEDBCONF=true
     if [ "$1" == "configure" ]; then
-        CONFIGURE=1
+        CONFIGURE=true
     else
-        CONFIGURE=0
+        CONFIGURE=false
     fi    
 fi
 
@@ -32,12 +36,6 @@ MYSQL_INSTALL_USER="root"
 MYSQL_INSTALL_PW=""
 MYSQL_USER=@PKGNAME@
 MYSQL_USER_PW=changeme
-
-
-if [ -f /usr/share/dbconfig-common/dpkg/postinst.mysql ]; then
-    . /usr/share/dbconfig-common/dpkg/postinst.mysql
-    dbc_go @PKGNAME@ "$@"
-fi
 
 #add our group
 if ! getent passwd $BACKEND_USER > /dev/null ; then
@@ -69,15 +67,16 @@ chmod 770 $STATE_DIR/compile $STATE_DIR/cache $VID_DIR
 rm -f @localstatedir@/@PKGNAME@/cache/*.php @localstatedir@/@PKGNAME@/compile/*.php || true
 
 #configure it
-if $CONFIGURE ; then
-    #setup the database...
-    if [ -f /usr/share/dbconfig-common/dpkg/config.mysql ]; then
-        . /usr/share/dbconfig-common/dpkg/config.mysql
-        dbc_go @PKGNAME@ "$@"
-        MYSQL_HOST=$dbc_dbserver
-        MYSQL_DB=$dbc_dbnam
-        MYSQL_USER=$dbc_dbuser
-        
+if [ "$CONFIGURE" == "true" ]; then
+    #setup the database...(debian will be prompted for this stuff eariler)
+
+    if [ -f /usr/share/dbconfig-common/dpkg/postinst.mysql ]; then
+        . /usr/share/dbconfig-common/dpkg/postinst.mysql
+        dbc_go @PKGNAME@ "$@" || true
+        MYSQL_HOST="$dbc_dbserver"
+        MYSQL_DB="$dbc_dbname"
+        MYSQL_USER="$dbc_dbuser"
+        MYSQL_USER_PW="$dbc_dbpass"
     elif [ ! -f $CFGDIR/chiton.cfg && ! -f $CFGDIR/config.php ]; then
         
         echo "This will guide you through setting up chiton"
@@ -155,14 +154,38 @@ EOF
 
     fi
 
+    #And Write out our settings
+    if [ ! -f $CFGDIR/chiton.cfg ]; then
+        sed -e "s,[@]DB_HOST[@],'$MYSQL_HOST_SED',g" \
+            -e "s,[@]DB_USER[@],'$MYSQL_USER_SED',g" \
+            -e "s,[@]DB_PASS[@],'$MYSQL_USER_PW_SED',g" \
+            -e "s,[@]DB_DB[@],'$MYSQL_DB_SED',g" \
+            -e "s,[@]VID_DIR[@],'$VID_DIR',g" \
+            $CFGDIR/chiton.cfg.template > $CFGDIR/chiton.cfg
+    fi
+    if [ ! -f $CFGDIR/config.php ]; then
+        sed -e "s,[@]DB_HOST[@],'$MYSQL_HOST_SED',g" \
+            -e "s,[@]DB_USER[@],'$MYSQL_USER_SED',g" \
+            -e "s,[@]DB_PASS[@],'$MYSQL_USER_PW_SED',g" \
+            -e "s,[@]DB_DB[@],'$MYSQL_DB_SED',g" \
+            -e "s,[@]SMARTY_COMPILE_DIR[@],$STATE_DIR/compile,g" \
+            -e "s,[@]SMARTY_CACHE_DIR[@],$STATE_DIR/cache,g" \
+            $CFGDIR/config.template.php > $CFGDIR/config.php
+
+    fi
 
     #and configure apache
-    if [ ! -f $APACHE_CFG_DIR/apache-chiton.conf || "$1" == "reconfigure"  ]; then
-        
-        echo -n "What is the URL path on webserver (with leading slash), Chiton will be accessable at http://localhost</path> [$WEBDIR]:"
-        read  var
-        if [[ -n $var ]]; then
-            WEBDIR="$var"
+    if [ ! -f $APACHE_CFG_DIR/apache-chiton.conf ] || [ "$1" == "reconfigure"  ]; then
+
+        if [ "$HAVEDBCONF" == "true" ]; then
+            db_get @PKGNAME@/webdir
+            WEBDIR="/$RET"
+        else
+            echo -n "What is the URL path on webserver, Chiton will be accessable at http://localhost/<path> [$WEBDIR]:"
+            read  var
+            if [[ -n $var ]]; then
+                WEBDIR="/$var"
+            fi
         fi
 
         sed -e "s,[@]root_path[@],\"$WEBDIR\",g" \
@@ -174,14 +197,14 @@ EOF
 
         if [ "x@apacheappendconf@" != "zno" ]; then
             #append an include line to @apacheappendconf@
-            if [ -f "@apacheappendconf@" && ! grep "$APACHE_CFG_DIR/apache-chiton.conf" "@apacheappendconf@" ]; then
+            if [ -f "@apacheappendconf@" ] &&  ! grep "$APACHE_CFG_DIR/apache-chiton.conf" "@apacheappendconf@" > /dev/null ; then
                 echo '# Enable Chiton NVR' >> @apacheappendconf@
                 echo "Include $APACHE_CFG_DIR/apache-chiton.conf" >> @apacheappendconf@
             fi
         fi
 
         if [ "x@apachesymlinkdir@" != "xno" ]; then
-            if [ -d @apachesymlinkdir@ && ! -f @apachesymlinkdir@/apache-chiton.conf ]; then
+            if [ -d @apachesymlinkdir@ ] && [ ! -f @apachesymlinkdir@/apache-chiton.conf ]; then
                 ln -s $APACHE_CFG_DIR/apache-chiton.conf @apachesymlinkdir@
             fi
         fi
@@ -191,8 +214,8 @@ EOF
 
     #restart everything...
     if which deb-systemd-helper > /dev/null ; then
-        deb-systemd-helper enable apache2
-        deb-systemd-helper enable chiton
+        deb-systemd-helper enable apache2.service
+        deb-systemd-helper enable chiton.service
     else
         apachectl graceful
         chmod +x @initfile@

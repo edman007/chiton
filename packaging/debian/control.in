@@ -11,7 +11,8 @@ Package: @PKGNAME@
 Architecture: any
 Section: video
 Priority: optional
-Depends: php-mysql, php | php-cgi, smarty3, php-common, apache2, debconf, ${shlibs:Depends}, ${misc:Depends}
+Depends: php-mysql, php | php-cgi, smarty3, php-common, apache2, ${shlibs:Depends}, ${misc:Depends}
+Pre-Depends: debconf
 Suggests: default-mysql-server
 Description: Lightweight NVR (Network Video Recorder)
  A lightweight network video recorder. It provides a web based interface to

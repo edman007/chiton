@@ -1,0 +1,5 @@
+Template: chiton/webdir
+Type: string
+Default: chiton
+Description: URL path, http://localhost/<path>:
+ This is the url you will see in the path, chiton will be accessable at http://localhost/<path> or http(s)://myserver.com/<path>

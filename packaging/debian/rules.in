@@ -14,4 +14,14 @@ override_dh_auto_configure:
 		--with-syslogconfdir=/etc/rsyslog.d \
 		--with-smartydir=/usr/share/php/smarty3/ \
 		--with-initdir=/lib/systemd/system/ \
-		--with-webuser=www-data
+		--with-webuser=www-data \
+		--with-apachesymlinkdir=/etc/apache2/sites-enabled/
+
+MAINTAINER_SCRIPTS=packaging/debian/prerm packaging/debian/postrm \
+		packaging/debian/preinst packaging/debian/postinst
+
+# We extract updated maintainer scripts from the package using our own build options
+override_dh_auto_build:
+	dh_auto_build -- \
+		$(MAINTAINER_SCRIPTS)
+	cp $(MAINTAINER_SCRIPTS) debian/
