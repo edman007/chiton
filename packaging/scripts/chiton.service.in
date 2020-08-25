@@ -4,9 +4,8 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-Type=forking
-PIDFile=@runstatedir@/@PKGNAME@.pid
-ExecStart=@bindir@/@PKGNAME@ -f -p @runstatedir@/@PKGNAME@.pid
+Type=simple
+ExecStart=@bindir@/@PKGNAME@ -s
 User=@runuser@
 ExecReload=/bin/kill -HUP $MAINPID
 KillSignal=SIGINT
