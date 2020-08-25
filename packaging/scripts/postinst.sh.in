@@ -9,26 +9,6 @@ POSTINST=true
 CONFIGURE=true
 HAVEDBCONF=false
 
-#init for debian
-if [ -f /usr/share/debconf/confmodule ]; then
-    . /usr/share/debconf/confmodule
-    HAVEDBCONF=true
-    if [ "$1" == "configure" ]; then
-        CONFIGURE=true
-    else
-        CONFIGURE=false
-    fi    
-fi
-
-HTML_SRC_DIR=@pkgdatadir@/web
-STATE_DIR=@localstatedir@/@PKGNAME@
-APACHE_CFG_DIR=@apachecfgdir@
-WEBUSER=@webuser@
-CFGDIR=@cfgdir@
-WEBDIR=/chiton
-VID_DIR=$STATE_DIR/vids
-BACKEND_USER=@PKGNAME@
-
 
 MYSQL_HOST="localhost"
 MYSQL_DB=@PKGNAME@
@@ -36,6 +16,27 @@ MYSQL_INSTALL_USER="root"
 MYSQL_INSTALL_PW=""
 MYSQL_USER=@PKGNAME@
 MYSQL_USER_PW=changeme
+
+#init for debian
+if [ -f /usr/share/debconf/confmodule ]; then
+    . /usr/share/debconf/confmodule
+    HAVEDBCONF=true
+    if [ "$1" == "configure" ] || [ "$1" == "reconfigure" ]; then
+        CONFIGURE=true
+    else
+        CONFIGURE=false
+    fi
+
+fi
+
+STATE_DIR=@localstatedir@/@PKGNAME@
+WEBUSER=@webuser@
+VID_DIR=$STATE_DIR/vids
+BACKEND_USER=@PKGNAME@
+HTML_SRC_DIR=@pkgdatadir@/web
+APACHE_CFG_DIR=@apachecfgdir@
+CFGDIR=@cfgdir@
+WEBDIR=/chiton
 
 #add our group
 if ! getent passwd $BACKEND_USER > /dev/null ; then
@@ -66,161 +67,169 @@ chmod 770 $STATE_DIR/compile $STATE_DIR/cache $VID_DIR
 
 rm -f @localstatedir@/@PKGNAME@/cache/*.php @localstatedir@/@PKGNAME@/compile/*.php || true
 
-#configure it
-if [ "$CONFIGURE" == "true" ]; then
-    #setup the database...(debian will be prompted for this stuff eariler)
-
-    if [ -f /usr/share/dbconfig-common/dpkg/postinst.mysql ]; then
-        . /usr/share/dbconfig-common/dpkg/postinst.mysql
-        dbc_go @PKGNAME@ "$@" || true
-        MYSQL_HOST="$dbc_dbserver"
-        MYSQL_DB="$dbc_dbname"
-        MYSQL_USER="$dbc_dbuser"
-        MYSQL_USER_PW="$dbc_dbpass"
-    elif [ ! -f $CFGDIR/chiton.cfg && ! -f $CFGDIR/config.php ]; then
-        
-        echo "This will guide you through setting up chiton"
-        echo
-        #make a decent default PW
-        if which dd > /dev/null; then
-            PW_ENCODE=`which mimencode || echo false`
+if [ -f /usr/share/dbconfig-common/dpkg/postinst.mysql ]; then
+    . /usr/share/dbconfig-common/dpkg/postinst.mysql
+    dbc_go @PKGNAME@ "$@" || true
+    echo "postinst: $@ $dbc_dbserver"
+    MYSQL_HOST="$dbc_dbserver"
+    MYSQL_DB="$dbc_dbname"
+    MYSQL_USER="$dbc_dbuser"
+    MYSQL_USER_PW="$dbc_dbpass"
+elif [ ! -f $CFGDIR/chiton.cfg && ! -f $CFGDIR/config.php ]; then
+    
+    echo "This will guide you through setting up chiton"
+    echo
+    #make a decent default PW
+    if which dd > /dev/null; then
+        PW_ENCODE=`which mimencode || echo false`
+        if [ "x$PW_ENCODE" != "xfalse" ]; then
+            MYSQL_USER_PW=`dd if=/dev/random bs=1 count=15 2>/dev/null  | $PW_ENCODE`
+        else
+            PW_ENCODE=`which base64 || echo false`
             if [ "x$PW_ENCODE" != "xfalse" ]; then
                 MYSQL_USER_PW=`dd if=/dev/random bs=1 count=15 2>/dev/null  | $PW_ENCODE`
-            else
-                PW_ENCODE=`which base64 || echo false`
-                if [ "x$PW_ENCODE" != "xfalse" ]; then
-                    MYSQL_USER_PW=`dd if=/dev/random bs=1 count=15 2>/dev/null  | $PW_ENCODE`
-                fi
             fi
         fi
+    fi
+    
+    var=""
+    echo -n "Database Host [$MYSQL_HOST]:"
+    read  var
+    if [[ -n $var ]]; then
+        MYSQL_HOST="$var"
+    fi
 
-        var=""
-        echo -n "Database Host [$MYSQL_HOST]:"
-        read  var
-        if [[ -n $var ]]; then
-            MYSQL_HOST="$var"
-        fi
+    echo -n "Database DB [$MYSQL_DB]:"
+    read var
+    if [[ -n $var ]]; then
+        MYSQL_DB="$var"
+    fi
 
-        echo -n "Database DB [$MYSQL_DB]:"
-        read var
-        if [[ -n $var ]]; then
-            MYSQL_DB="$var"
-        fi
+    echo -n "Database Administrator User [$MYSQL_INSTALL_USER]:"
+    read var
+    if [[ -n $var ]]; then
+        MYSQL_INSTALL_USER="$var"
+    fi
 
-        echo -n "Database Administrator User [$MYSQL_INSTALL_USER]:"
-        read var
-        if [[ -n $var ]]; then
-            MYSQL_INSTALL_USER="$var"
-        fi
+    echo -n "Database Administrator Password (Leave blank to be prompted later) [$MYSQL_INSTALL_PW]:"
+    read -s var
+    if [[ -n $var ]]; then
+        MYSQL_INSTALL_PW="$var"
+    fi
 
-        echo -n "Database Administrator Password (Leave blank to be prompted later) [$MYSQL_INSTALL_PW]:"
-        read -s var
-        if [[ -n $var ]]; then
-            MYSQL_INSTALL_PW="$var"
-        fi
+    echo -n "Database User [$MYSQL_USER]:"
+    read -p '> ' var
+    if [[ -n $var ]]; then
+        MYSQL_USER="$var"
+    fi
 
-        echo -n "Database User [$MYSQL_USER]:"
-        read -p '> ' var
-        if [[ -n $var ]]; then
-            MYSQL_USER="$var"
-        fi
+    echo -n "Database User's Password [$MYSQL_USER_PW]:"
+    read -s var
+    if [[ -n $var ]]; then
+        MYSQL_USER_PW="$var"
+    fi
 
-        echo -n "Database User's Password [$MYSQL_USER_PW]:"
-        read -s var
-        if [[ -n $var ]]; then
-            MYSQL_USER_PW="$var"
-        fi
-
-        echo -n "Should I create the database? [y/n]: "
-        read var
-        if [[ "$var" == "y" || "$var" == "" || "$SKIP_ALL" == "Y" ]]; then
-            mysql -u "$MYSQL_INSTALL_USER" -h "$MYSQL_HOST" "-p$MYSQL_INSTALL_PW" <<EOF
+    echo -n "Should I create the database? [y/n]: "
+    read var
+    if [[ "$var" == "y" || "$var" == "" || "$SKIP_ALL" == "Y" ]]; then
+        mysql -u "$MYSQL_INSTALL_USER" -h "$MYSQL_HOST" "-p$MYSQL_INSTALL_PW" <<EOF
                CREATE DATABASE \`${MYSQL_DB}\`;
 EOF
-        fi
+    fi
 
-        echo -n "Should I create the database user '$MYSQL_USER'@'localhost' and grant all privs on $MYSQL_DB? [y/n]: "
-        read var
+    echo -n "Should I create the database user '$MYSQL_USER'@'localhost' and grant all privs on $MYSQL_DB? [y/n]: "
+    read var
 
-        MYSQL_USER_PW_ESC=${MYSQL_USER_PW//\'/\\\'}
-        if [[ "$var" == "y" || "$var" == "" || "$SKIP_ALL" == "Y" ]]; then
-            MYSQL_INSTALL_PW_ESC=${MYSQL_INSTALL_PW//\'/\\\'}
-            mysql -u "$MYSQL_INSTALL_USER" -h "$MYSQL_HOST" "-p${MYSQL_INSTALL_PW}" <<EOF
+    MYSQL_USER_PW_ESC=${MYSQL_USER_PW//\'/\\\'}
+    if [[ "$var" == "y" || "$var" == "" || "$SKIP_ALL" == "Y" ]]; then
+        MYSQL_INSTALL_PW_ESC=${MYSQL_INSTALL_PW//\'/\\\'}
+        mysql -u "$MYSQL_INSTALL_USER" -h "$MYSQL_HOST" "-p${MYSQL_INSTALL_PW}" <<EOF
           CREATE USER '${MYSQL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_PASS}';
           GRANT ALL PRIVILEGES ON \`${MYSQL_DB}\`.* TO '${MYSQL_USER}'@'localhost';
           FLUSH PRIVILEGES;
 EOF
-        fi
-
     fi
 
-    #And Write out our settings
-    if [ ! -f $CFGDIR/chiton.cfg ]; then
-        sed -e "s,[@]DB_HOST[@],'$MYSQL_HOST_SED',g" \
-            -e "s,[@]DB_USER[@],'$MYSQL_USER_SED',g" \
-            -e "s,[@]DB_PASS[@],'$MYSQL_USER_PW_SED',g" \
-            -e "s,[@]DB_DB[@],'$MYSQL_DB_SED',g" \
-            -e "s,[@]VID_DIR[@],'$VID_DIR',g" \
-            $CFGDIR/chiton.cfg.template > $CFGDIR/chiton.cfg
-    fi
-    if [ ! -f $CFGDIR/config.php ]; then
-        sed -e "s,[@]DB_HOST[@],'$MYSQL_HOST_SED',g" \
-            -e "s,[@]DB_USER[@],'$MYSQL_USER_SED',g" \
-            -e "s,[@]DB_PASS[@],'$MYSQL_USER_PW_SED',g" \
-            -e "s,[@]DB_DB[@],'$MYSQL_DB_SED',g" \
-            -e "s,[@]SMARTY_COMPILE_DIR[@],$STATE_DIR/compile,g" \
-            -e "s,[@]SMARTY_CACHE_DIR[@],$STATE_DIR/cache,g" \
-            $CFGDIR/config.template.php > $CFGDIR/config.php
+fi
 
-    fi
+MYSQL_HOST_ESC=${MYSQL_HOST//\'/\\\'}
+MYSQL_DB_ESC=${MYSQL_DB//\'/\\\'}
+MYSQL_USER_ESC=${MYSQL_USER//\'/\\\'}
+MYSQL_USER_PW_ESC=${MYSQL_USER_PW//\'/\\\'}
 
-    #and configure apache
-    if [ ! -f $APACHE_CFG_DIR/apache-chiton.conf ] || [ "$1" == "reconfigure"  ]; then
-
-        if [ "$HAVEDBCONF" == "true" ]; then
-            db_get @PKGNAME@/webdir
-            WEBDIR="/$RET"
-        else
-            echo -n "What is the URL path on webserver, Chiton will be accessable at http://localhost/<path> [$WEBDIR]:"
-            read  var
-            if [[ -n $var ]]; then
-                WEBDIR="/$var"
-            fi
-        fi
-
-        sed -e "s,[@]root_path[@],\"$WEBDIR\",g" \
-            -e "s,[@]vid_path[@],\"$WEBDIR/vids\",g" \
-            -e "s,[@]webdir[@],\"@pkgdatadir@/web\",g" \
-            -e "s,[@]cfgdir[@],\"$CFGDIR\",g" \
-            -e "s,[@]viddir[@],\"$VID_DIR\",g" \
-            @pkgdatadir@/apache/apache-chiton.conf > $APACHE_CFG_DIR/apache-chiton.conf
-
-        if [ "x@apacheappendconf@" != "zno" ]; then
-            #append an include line to @apacheappendconf@
-            if [ -f "@apacheappendconf@" ] &&  ! grep "$APACHE_CFG_DIR/apache-chiton.conf" "@apacheappendconf@" > /dev/null ; then
-                echo '# Enable Chiton NVR' >> @apacheappendconf@
-                echo "Include $APACHE_CFG_DIR/apache-chiton.conf" >> @apacheappendconf@
-            fi
-        fi
-
-        if [ "x@apachesymlinkdir@" != "xno" ]; then
-            if [ -d @apachesymlinkdir@ ] && [ ! -f @apachesymlinkdir@/apache-chiton.conf ]; then
-                ln -s $APACHE_CFG_DIR/apache-chiton.conf @apachesymlinkdir@
-            fi
-        fi
-
-    fi
+#and for sed...
+MYSQL_HOST_SED=${MYSQL_HOST_ESC//,/\\,}
+MYSQL_DB_SED=${MYSQL_DB_ESC//,/\\,}
+MYSQL_USER_SED=${MYSQL_USER_ESC//,/\\,}
+MYSQL_USER_PW_SED=${MYSQL_USER_PW_ESC//,/\\,}
 
 
-    #restart everything...
-    if which deb-systemd-helper > /dev/null ; then
-        deb-systemd-helper enable apache2.service
-        deb-systemd-helper enable chiton.service
+#And Write out our settings
+if [ ! -f $CFGDIR/chiton.cfg ]; then
+    sed -e "s,[@]DB_HOST[@],'$MYSQL_HOST_SED',g" \
+        -e "s,[@]DB_USER[@],'$MYSQL_USER_SED',g" \
+        -e "s,[@]DB_PASS[@],'$MYSQL_USER_PW_SED',g" \
+        -e "s,[@]DB_DB[@],'$MYSQL_DB_SED',g" \
+        -e "s,[@]VID_DIR[@],'$VID_DIR',g" \
+        $CFGDIR/chiton.cfg.template > $CFGDIR/chiton.cfg
+fi
+if [ ! -f $CFGDIR/config.php ]; then
+    sed -e "s,[@]DB_HOST[@],'$MYSQL_HOST_SED',g" \
+        -e "s,[@]DB_USER[@],'$MYSQL_USER_SED',g" \
+        -e "s,[@]DB_PASS[@],'$MYSQL_USER_PW_SED',g" \
+        -e "s,[@]DB_DB[@],'$MYSQL_DB_SED',g" \
+        -e "s,[@]SMARTY_COMPILE_DIR[@],$STATE_DIR/compile,g" \
+        -e "s,[@]SMARTY_CACHE_DIR[@],$STATE_DIR/cache,g" \
+        $CFGDIR/config.template.php > $CFGDIR/config.php
+
+fi
+
+#and configure apache
+if [ ! -f $APACHE_CFG_DIR/apache-chiton.conf ] || [ "$1" == "reconfigure"  ]; then
+
+    if [ "$HAVEDBCONF" == "true" ]; then
+        db_get @PKGNAME@/webdir
+        WEBDIR="/$RET"
     else
-        apachectl graceful
-        chmod +x @initfile@
-        @initfile@ restart
+        echo -n "What is the URL path on webserver, Chiton will be accessable at http://localhost/<path> [$WEBDIR]:"
+        read  var
+        if [[ -n $var ]]; then
+            WEBDIR="/$var"
+        fi
     fi
+
+    sed -e "s,[@]root_path[@],\"$WEBDIR\",g" \
+        -e "s,[@]vid_path[@],\"$WEBDIR/vids\",g" \
+        -e "s,[@]webdir[@],\"@pkgdatadir@/web\",g" \
+        -e "s,[@]cfgdir[@],\"$CFGDIR\",g" \
+        -e "s,[@]viddir[@],\"$VID_DIR\",g" \
+        @pkgdatadir@/apache/apache-chiton.conf > $APACHE_CFG_DIR/apache-chiton.conf
+
+    if [ "x@apacheappendconf@" != "zno" ]; then
+        #append an include line to @apacheappendconf@
+        if [ -f "@apacheappendconf@" ] &&  ! grep "$APACHE_CFG_DIR/apache-chiton.conf" "@apacheappendconf@" > /dev/null ; then
+            echo '# Enable Chiton NVR' >> @apacheappendconf@
+            echo "Include $APACHE_CFG_DIR/apache-chiton.conf" >> @apacheappendconf@
+        fi
+    fi
+
+    if [ "x@apachesymlinkdir@" != "xno" ]; then
+        if [ -d @apachesymlinkdir@ ] && [ ! -f @apachesymlinkdir@/apache-chiton.conf ]; then
+            ln -s $APACHE_CFG_DIR/apache-chiton.conf @apachesymlinkdir@
+        fi
+    fi
+
+fi
+
+
+#restart everything...
+if which deb-systemd-helper > /dev/null ; then
+    deb-systemd-helper enable apache2.service
+    deb-systemd-helper enable chiton.service
+else
+    apachectl graceful
+    chmod +x @initfile@
+    @initfile@ restart
 fi
 
 

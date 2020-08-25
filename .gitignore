@@ -54,6 +54,7 @@ packaging/debian/prerm
 packaging/debian/postrm
 packaging/debian/preinst
 packaging/debian/postinst
+packaging/debian/chiton.config
 packaging/slackware/doinst.sh
 packaging/slackware/douninst.sh
 release

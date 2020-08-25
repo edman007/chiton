@@ -44,11 +44,12 @@ EXTERNAL_LICENSE=LICENSE.breeze-icons  LICENSE.hls  LICENSE.smarty
 LICENSE_FILES=COPYING $(EXTERNAL_LICENSE)
 
 DEBIAN_PKG_FILES=packaging/debian/source-format packaging/debian/compat \
-	packaging/debian/chiton.config packaging/debian/chiton.templates
+	packaging/debian/chiton.templates
 DEBIAN_PKG_FILES_BUILT=packaging/debian/control packaging/debian/copyright \
 	packaging/debian/changelog packaging/debian/rules \
 	packaging/debian/preinst  packaging/debian/postinst \
-	packaging/debian/prerm packaging/debian/postrm
+	packaging/debian/prerm packaging/debian/postrm \
+	packaging/debian/chiton.config 
 SLACKWARE_PACKAGE_FILES=packaging/slackware/chiton.SlackBuild \
 	packaging/slackware/slack-desc 
 SLACKWARE_PACKAGE_FILES_BUILT=packaging/slackware/doinst.sh \
@@ -57,6 +58,7 @@ SLACKWARE_PACKAGE_FILES_BUILT=packaging/slackware/doinst.sh \
 PACKAGING_FILES=packaging/scripts/rc.chiton.in packaging/scripts/chiton.service.in \
 	packaging/scripts/postinst.sh.in packaging/scripts/preinst.sh.in \
 	packaging/scripts/prerm.sh.in packaging/scripts/postrm.sh.in \
+	packaging/scripts/config.sh.in \
 	$(DEBIAN_PKG_FILES) $(SLACKWARE_PACKAGE_FILES)
 
 noinst_SCRIPTS=packaging/scripts/rc.chiton
@@ -213,13 +215,16 @@ packaging/scripts/chiton.service: packaging/scripts/chiton.service.in | packagin
 
 packaging/debian/preinst: packaging/scripts/preinst.sh.in
 	$(do_subst) < $< > $@
-packaging/debian/postinst packaging/slackware/doinst.sh:  packaging/scripts/postinst.sh.in
+packaging/debian/postinst:  packaging/scripts/postinst.sh.in
 	$(do_subst) < $< > $@
 packaging/debian/prerm: packaging/scripts/prerm.sh.in
 	$(do_subst) < $< > $@
 packaging/debian/postrm packaging/slackware/douninst.sh: packaging/scripts/postrm.sh.in
 	$(do_subst) < $< > $@
-
+packaging/debian/chiton.config:  packaging/scripts/config.sh.in
+	$(do_subst) < $< > $@
+packaging/slackware/doinst.sh: packaging/scripts/postinst.sh.in packaging/scripts/config.sh.in
+	cat $^ | $(do_subst) > $@
 
 dist-version:
 	echo $(shell echo $(shell git log --oneline --no-walk  || echo Unknown) | head -1 | cut -d ' ' -f 1) > dist-version
