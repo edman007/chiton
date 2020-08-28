@@ -68,6 +68,7 @@ MariaDBResult* MariaDB::query_nolock(const std::string& sql){
     if (ret){
         //error
         LWARN( "Query Failed: " + std::string(mysql_error(conn)));
+        LINFO( "Query Was: " + sql);
         return NULL;
     }
     MYSQL_RES *res = mysql_store_result(conn);

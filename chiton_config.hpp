@@ -27,8 +27,11 @@
 /* Autoconf parameters */
 #include "config_build.hpp"
 
+
 /*
  * List of global config values:
+ * === Internal state that should never be modified by the user for any reason ===
+ * database-version - Updated to track the internal state of the database
  * === Config options that cannot be set anywhere but the command line ===
  * cfg-path - path to the cfg file to load
  * pid-file - path to write the PID to
@@ -45,6 +48,10 @@
  * === Can be set essentially anywhere (.cfg or database) ==
  * verbosity - logging verbosity
  * timezone (defaults to system timezone)
+ * === Applies to a specific camera ===
+ * video-url - ffmpeg compatible URL for camera N
+ * active - set to "1" when the camera is active
+ * camera-id - Used internally to track what is the active camera, do not use
  * output-dir - the location to store videos
  * ffmpeg-demux-options - options for the demuxer
  * reorder-queue-len - how many packets to cache to properly resort frames
@@ -52,11 +59,6 @@
  *   after this, in seconds
  * min-free-space - how many bytes of free space triggers a cleanup, if it contains a %,
  *   is is the target free-percentage of user accessable space
- * === Applies to a specific camera ===
- * video-url - ffmpeg compatible URL for camera N
- * active - set to "1" when the camera is active
- * camera-id - Used internally to track what is the active camera, do not use
- *
  *
  */
 

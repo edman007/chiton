@@ -30,7 +30,8 @@ chiton_SOURCES = main.cpp config.cpp config_parser.cpp database.cpp mariadb.cpp 
 	chiton_ffmpeg.cpp stream_writer.cpp \
 	camera.hpp chiton_ffmpeg.hpp database.hpp file_manager.hpp mariadb.hpp \
 	stream_unwrap.hpp util.hpp chiton_config.hpp config_parser.hpp \
-	database_result.hpp main.hpp mariadb_result.hpp stream_writer.hpp
+	database_result.hpp main.hpp mariadb_result.hpp stream_writer.hpp \
+	database_manager.hpp database_manager.cpp
 
 sbin_SCRIPTS = chiton-install
 
