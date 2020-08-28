@@ -24,6 +24,9 @@ AM_CXXFLAGS = -std=gnu++11 -Wall -DSYSCFGPATH='"$(sysconfdir)/$(PACKAGE)/chiton.
 PRGM = chiton
 MAINTAINER=Ed Martin <edman007@edman007.com>
 
+#make things go a little faster when testing packaging
+export XZ_OPT = -e -T0
+
 bin_PROGRAMS = $(PRGM)
 chiton_SOURCES = main.cpp config.cpp config_parser.cpp database.cpp mariadb.cpp \
 	util.cpp mariadb_result.cpp camera.cpp stream_unwrap.cpp file_manager.cpp \
@@ -41,17 +44,25 @@ chiton_CXXFLAGS = $(AM_CXXFLAGS)
 EXTERNAL_LICENSE=LICENSE.breeze-icons  LICENSE.hls  LICENSE.smarty
 LICENSE_FILES=COPYING $(EXTERNAL_LICENSE)
 
-DEBIAN_PKG_FILES= packaging/debian/control packaging/debian/copyright \
-	packaging/debian/changelog packaging/debian/rules packaging/debian/source-format \
-	packaging/debian/compat
+DEBIAN_PKG_FILES=packaging/debian/source-format packaging/debian/compat \
+	packaging/debian/chiton.templates
+DEBIAN_PKG_FILES_BUILT=packaging/debian/control packaging/debian/copyright \
+	packaging/debian/changelog packaging/debian/rules \
+	packaging/debian/preinst  packaging/debian/postinst \
+	packaging/debian/prerm packaging/debian/postrm \
+	packaging/debian/chiton.config 
 SLACKWARE_PACKAGE_FILES=packaging/slackware/chiton.SlackBuild \
-	packaging/slackware/slack-desc
+	packaging/slackware/slack-desc 
+SLACKWARE_PACKAGE_FILES_BUILT=packaging/slackware/doinst.sh \
+	 packaging/slackware/douninst.sh
 
-PACKAGING_FILES=$(SLACKWARE_PACKAGE_FILES) \
-	$(DEBIAN_PKG_FILES) packaging/scripts/rc.chiton.in packaging/scripts/chiton.service.in
+PACKAGING_FILES=packaging/scripts/rc.chiton.in packaging/scripts/chiton.service.in \
+	packaging/scripts/postinst.sh.in packaging/scripts/preinst.sh.in \
+	packaging/scripts/prerm.sh.in packaging/scripts/postrm.sh.in \
+	packaging/scripts/config.sh.in \
+	$(DEBIAN_PKG_FILES) $(SLACKWARE_PACKAGE_FILES)
 
 noinst_SCRIPTS=packaging/scripts/rc.chiton
-
 
 EXTRA_DIST=external chiton-install.in $(PACKAGING_FILES) dist-version README.md \
 	README NEWS AUTHORS ChangeLog
@@ -68,6 +79,14 @@ apachecfgdir=$(pkgdatadir)/apache/
 #man1_MANS = man/chiton.1 man/chiton-install.1
 dist_man1_MANS = man/chiton.1 man/chiton-install.1
 
+
+if ENABLESYSV
+initfile=$(initdir)/rc.chiton
+else
+initfile=$(initdir)/chiton.service
+endif
+
+
 do_subst = sed -e 's,[@]PKGNAME[@],$(PRGM),g' \
 	-e 's,[@]pkgdatadir[@],$(pkgdatadir),g' \
 	-e 's,[@]localstatedir[@],$(localstatedir),g' \
@@ -79,7 +98,11 @@ do_subst = sed -e 's,[@]PKGNAME[@],$(PRGM),g' \
 	-e 's,[@]releaseversion[@],$(VERSION),g' \
 	-e 's,[@]fullversion[@],$(VERSION)$(VER_GITVER),g' \
 	-e 's,[@]homepage[@],$(PACKAGE_URL),g' \
-	-e 's,[@]maintainer[@],$(MAINTAINER),g'
+	-e 's,[@]maintainer[@],$(MAINTAINER),g' \
+	-e 's,[@]webuser[@],$(webuser),g' \
+	-e 's,[@]apachesymlinkdir[@],$(apachesymlinkdir),g' \
+	-e 's,[@]apacheappendconf[@],$(apacheappendconf),g' \
+	-e 's,[@]initscript[@],$(initfile),g'
 
 
 #the file for the debian packager source code (will be a symlink)
@@ -191,6 +214,18 @@ packaging/scripts/rc.chiton: packaging/scripts/rc.chiton.in | packaging/scripts/
 packaging/scripts/chiton.service: packaging/scripts/chiton.service.in | packaging/scripts/
 	$(do_subst) < $(srcdir)/packaging/scripts/chiton.service.in > packaging/scripts/chiton.service
 
+packaging/debian/preinst: packaging/scripts/preinst.sh.in
+	$(do_subst) < $< > $@
+packaging/debian/postinst:  packaging/scripts/postinst.sh.in
+	$(do_subst) < $< > $@
+packaging/debian/prerm: packaging/scripts/prerm.sh.in
+	$(do_subst) < $< > $@
+packaging/debian/postrm packaging/slackware/douninst.sh: packaging/scripts/postrm.sh.in
+	$(do_subst) < $< > $@
+packaging/debian/chiton.config:  packaging/scripts/config.sh.in
+	$(do_subst) < $< > $@
+packaging/slackware/doinst.sh: packaging/scripts/postinst.sh.in packaging/scripts/config.sh.in
+	cat $^ | $(do_subst) > $@
 
 dist-version:
 	echo $(shell echo $(shell git log --oneline --no-walk  || echo Unknown) | head -1 | cut -d ' ' -f 1) > dist-version
@@ -228,11 +263,11 @@ endif
 initscriptdir=$(initdir)
 
 CLEANFILES=$(EXTERNAL_LICENSE) $(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG) web/external/smarty \
-	$(HLS_BUILD_FILES) $(sbin_SCRIPTS) \
+	$(HLS_BUILD_FILES) $(sbin_SCRIPTS) 	$(SLACKWARE_PACKAGE_FILES_BUILT) $(DEBIAN_PKG_FILES_BUILT) \
 	web/static/2x-bottom-cursor.png web/static/4x-bottom-cursor.png \
 	packaging/scripts/rc.chiton chiton-install packaging/scripts/chiton.service
 
-MAINTAINERCLEANFILES=dist-version chiton-$(VERSION).dsc $(DEBIAN_PKG_FILES)
+MAINTAINERCLEANFILES=dist-version chiton-$(VERSION).dsc
 
 # This is for actual release production...Creates the directory 'release' with all the files in our release
 .PHONY: release
@@ -247,7 +282,8 @@ packaging/debian/control: packaging/debian/control.in Makefile
 	$(do_subst) < $< > $@
 
 packaging/debian/copyright: packaging/debian/copyright.in $(LICENSE_FILES)
-		$(do_subst) < $< > $@
+	$(do_subst) < $< > $@
+
 #kinda crappy, but i need something that works
 packaging/debian/changelog: Makefile
 	echo $(PACKAGE_TARNAME) '('$(VERSION)'-1)' unstable\; urgency=low > $@
@@ -263,8 +299,8 @@ $(DEBSRC): dist Makefile
 	-rm -f $@
 	ln -s $(PACKAGE_TARNAME)-$(VERSION).tar.gz $@
 
-$(DEBSRCPKG): $(DEBIAN_PKG_FILES)
-	tar --transform=s,packaging/,, --transform=s,-,/,g -czf $@  $(DEBIAN_PKG_FILES)
+$(DEBSRCPKG): $(DEBIAN_PKG_FILES) $(DEBIAN_PKG_FILES_BUILT)
+	tar --transform=s,packaging/,, --transform=s,-,/,g -czf $@  $(DEBIAN_PKG_FILES) $(DEBIAN_PKG_FILES_BUILT)
 
 DEBSRC_FILESIZE=$(shell wc -c $(DEBSRC) | cut -d ' ' -f 1)
 DEBSRCPKG_FILESIZE=$(shell wc -c $(DEBSRCPKG) | cut -d ' ' -f 1)

@@ -67,7 +67,7 @@ if ! getent passwd $APACHE_USER > /dev/null ; then
 fi
 
 # Check all our options
-while getopts "hH:d:U:P:u:p:S:s:c:yb:w:a:v:" opt
+while getopts "hH:d:U:P:u:p:yv:" opt
 do
     case $opt in
         (h) #help
@@ -84,24 +84,10 @@ do
             echo -e "\tSet the database administrator user (root, usually)"
             echo "  -P <pass>"
             echo -e "\tSet the database administrator password"
-            echo "  -u <user>"
-            echo -e "\tSet the user for chiton"
             echo "  -p <pass>"
             echo -e "\tSet the databse password for chiton"
-            echo "  -S <dir>"
-            echo -e "\tSet the directory that contains the web files"
-            echo "  -s <dir>"
-            echo -e "\tSet the state file directory"
-            echo "  -c <dir>"
-            echo -e "\tSet the configuration directory"
             echo "  -y"
             echo -e "\tSelect the default answer to everything"
-            echo "  -b <backend user>"
-            echo -e "\tSet the user to run the backend under"
-            echo "  -w <webdir>"
-            echo -e "\tSet the path on the webserver to use"
-            echo "  -a <user>"
-            echo -e "\tSet the user that apache uses on your system"
             echo "  -v <dir>"
             echo -e "\tSet the default location for saving videos"
             ;;
@@ -124,26 +110,8 @@ do
         (p)
             MYSQL_USER_PW="$OPTARG"
             ;;
-        (S)
-            HTML_SRC_DIR="$OPTARG"
-            ;;
-        (s)
-            STATE_DIR="$OPTARG"
-            ;;
-        (c)
-            APACHE_CFG_DIR="$OPTARG"
-            ;;
         (y)
             SKIP_ALL="Y"
-            ;;
-        (b)
-            BACKEND_USER="$OPTARG"
-            ;;
-        (w)
-            WEBDIR="$OPTARG"
-            ;;
-        (a)
-            APACHE_USER="$OPTARG"
             ;;
         (v)
             VID_DIR="$OPTARG"
@@ -205,44 +173,12 @@ if [[ -n $var ]]; then
     MYSQL_USER_PW="$var"
 fi
 
-echo "Web Source Directory [$HTML_SRC_DIR]:"
-if [ "$SKIP_ALL" != "Y" ]; then
-    read -p '> ' var
-fi
-if [[ -n $var ]]; then
-    HTML_SRC_DIR="$var"
-fi
-
-echo "State Directory [$STATE_DIR]:"
-if [ "$SKIP_ALL" != "Y" ]; then
-    read -p '> ' var
-fi
-if [[ -n $var ]]; then
-    STATE_DIR="$var"
-fi
-
 echo "Apache Configuration Directory [$APACHE_CFG_DIR]:"
 if [ "$SKIP_ALL" != "Y" ]; then
     read -p '> ' var
 fi
 if [[ -n $var ]]; then
     APACHE_CFG_DIR="$var"
-fi
-
-echo "Apache User [$APACHE_USER]:"
-if [ "$SKIP_ALL" != "Y" ]; then
-    read -p '> ' var
-fi
-if [[ -n $var ]]; then
-    APACHE_USER="$var"
-fi
-
-echo "User to run the backend as [$BACKEND_USER]:"
-if [ "$SKIP_ALL" != "Y" ]; then
-    read -p '> ' var
-fi
-if [[ -n $var ]]; then
-    BACKEND_USER="$var"
 fi
 
 echo "URL path on webserver (with leading slash) [$WEBDIR]:"
@@ -333,7 +269,7 @@ sed -e "s,[@]DB_HOST[@],'$MYSQL_HOST_SED',g" \
     -e "s,[@]DB_PASS[@],'$MYSQL_USER_PW_SED',g" \
     -e "s,[@]DB_DB[@],'$MYSQL_DB_SED',g" \
     -e "s,[@]VID_DIR[@],'$VID_DIR',g" \
-    $CFGDIR/chiton.cfg > $CFGDIR/chiton.cfg
+    $CFGDIR/chiton.cfg.template > $CFGDIR/chiton.cfg
 
 if [ -r $CFGDIR/config.php ]; then
     mv $CFGDIR/config.php $CFGDIR/config.php.bak
@@ -369,6 +305,19 @@ sed -e "s,[@]root_path[@],\"$WEBDIR\",g" \
     -e "s,[@]viddir[@],\"$VID_DIR\",g" \
     @pkgdatadir@/apache/apache-chiton.conf > $APACHE_CFG_DIR/apache-chiton.conf
 
+if [ "x@apacheappendconf@" != "zno" ]; then
+    #append an include line to @apacheappendconf@
+    if [ -f "@apacheappendconf@" && ! grep "$APACHE_CFG_DIR/apache-chiton.conf" "@apacheappendconf@" ]; then
+        echo '# Enable Chiton NVR' >> @apacheappendconf@
+        echo "Include $APACHE_CFG_DIR/apache-chiton.conf" >> @apacheappendconf@
+    fi
+fi
+
+if [ "x@apachesymlinkdir@" != "xno" ]; then
+    if [ -d @apachesymlinkdir@ && ! -f @apachesymlinkdir@/apache-chiton.conf ]; then
+        ln -s $APACHE_CFG_DIR/apache-chiton.conf @apachesymlinkdir@
+    fi
+fi
 
 echo "$APACHE_CFG_DIR/apache-chiton.conf has been created, you may need to put:"
 echo -e "\n\n\tInclude \"$APACHE_CFG_DIR/apache-chiton.conf\"\n\n"

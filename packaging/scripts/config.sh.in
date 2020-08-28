@@ -1,0 +1,34 @@
+#!/bin/bash
+#On Non-debian systems, this is appended to the install script
+
+# config maintainer script for chiton
+set -e
+#set -x
+#export DEBCONF_DEBUG=developer
+
+#dbc_debug=1
+HTML_SRC_DIR=@pkgdatadir@/web
+STATE_DIR=@localstatedir@/@PKGNAME@
+APACHE_CFG_DIR=@apachecfgdir@
+WEBUSER=@webuser@
+CFGDIR=@cfgdir@
+WEBDIR=/chiton
+VID_DIR=$STATE_DIR/vids
+BACKEND_USER=@PKGNAME@
+
+
+# source debconf stuff
+if [ -f /usr/share/debconf/confmodule ]; then
+    . /usr/share/debconf/confmodule
+    if [ -f /usr/share/dbconfig-common/dpkg/config.mysql ]; then
+        . /usr/share/dbconfig-common/dpkg/config.mysql
+        db_input high chiton/webdir || true
+        dbc_go chiton "$@" || true
+    fi
+
+fi
+
+#this will force postinst to reconfigure...should we make backups?
+if [ "$1" == "reconfigure" ]; then
+    rm -f $CFGDIR/chiton.cfg CFGDIR/config.php $APACHE_CFG_DIR/apache-chiton.conf || true
+fi

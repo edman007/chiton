@@ -136,6 +136,25 @@ AC_ARG_ENABLE([sysv],
   [sysv=false])
 AM_CONDITIONAL([ENABLESYSV], [test "x$sysv" = "xtrue"])
 
+AC_ARG_WITH([webuser],
+  [AS_HELP_STRING([--with-webuser=user], [User that the webserver will run under [apache]])],
+  [webuser=$withval],
+  [webuser=apache])
+AC_SUBST([webuser])
+
+AC_ARG_WITH([apachesymlinkdir],
+  [AS_HELP_STRING([--with-apachesymlinkdir=dir], [Directory to create a symlink to the conf [no]])],
+  [apachesymlinkdir=$withval],
+  [apachesymlinkdir=no])
+AC_SUBST([apachesymlinkdir])
+
+AC_ARG_WITH([apacheappendconf],
+  [AS_HELP_STRING([--with-apacheappendconf=file], [File to include the configuration from [no]])],
+  [apacheappendconf=$withval],
+  [apacheappendconf=apache])
+AC_SUBST([apacheappendconf])
+
+
 AC_ARG_VAR([IMAGEMAGICK_CONVERT], [The path to imagemagick's convert])
 AC_CHECK_PROG([IMAGEMAGICK_CONVERT], [convert], [convert], [false])
 AS_IF([test x"$IMAGEMAGICK_CONVERT" = x"false"], [AC_MSG_ERROR([Could not find imagemagick, required for building])])

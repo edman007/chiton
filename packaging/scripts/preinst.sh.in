@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -e
+#set -x
+#export DEBCONF_DEBUG=developer
+#init for debian
+if [ -f /usr/share/debconf/confmodule ]; then
+    . /usr/share/debconf/confmodule
+fi
+
+# Apperently this is deprecated
+#if [ -f /usr/share/dbconfig-common/dpkg/preinst.mysql ]; then
+#    . /usr/share/dbconfig-common/dpkg/preinst.mysql
+#    dbc_go @PKGNAME@ "$@"
+#fi
