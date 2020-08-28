@@ -28,6 +28,7 @@
 #include <thread>
 #include <stdlib.h>
 #include "chiton_ffmpeg.hpp"
+#include "database_manager.hpp"
 
 #include <csignal>
 #include <atomic>
@@ -80,9 +81,19 @@ void run(Config& args){
     }
 
     MariaDB db;
-    db.connect(cfg.get_value("db-host"), cfg.get_value("db-database"), cfg.get_value("db-user"), cfg.get_value("db-password"),
-               cfg.get_value_int("db-port"), cfg.get_value("db-socket"));
+    if (db.connect(cfg.get_value("db-host"), cfg.get_value("db-database"), cfg.get_value("db-user"), cfg.get_value("db-password"),
+                   cfg.get_value_int("db-port"), cfg.get_value("db-socket"))){
+        LFATAL("Could not connect to the database! Check your configuration");
+        exit_requested = true;
+        return;
+    }
 
+    DatabaseManager dbm(db);
+    if (!dbm.check_database()){
+        //this is fatal, cannot get the database into a usable state
+        exit_requested = true;
+        return;
+    }
     //load the default config from the database
     DatabaseResult *res = db.query("SELECT name, value FROM config WHERE camera = -1");
     while (res && res->next_row()){
