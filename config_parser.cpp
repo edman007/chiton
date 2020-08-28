@@ -41,6 +41,11 @@ void ConfigParser::parse(void){
             continue;
         }
 
+        if (c == '\n' && !doublequote && !singlequote && state == BEFORE_KEY){
+            reset_parser();
+            continue;
+        }
+
         //check for the comment
         if (!doublequote && !singlequote && c == '#'){
             //starting a comment...
