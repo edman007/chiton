@@ -89,8 +89,8 @@ endif
 
 do_subst = sed -e 's,[@]PKGNAME[@],$(PRGM),g' \
 	-e 's,[@]pkgdatadir[@],$(pkgdatadir),g' \
-	-e 's,[@]localstatedir[@],$(localstatedir),g' \
-	-e 's,[@]runstatedir[@],$(localstatedir),g' \
+	-e 's,[@]localstatedir[@],$(localstatedir)/lib,g' \
+	-e 's,[@]runstatedir[@],$(localstatedir)/run,g' \
 	-e 's,[@]apachecfgdir[@],@apacheconfdir@,g' \
 	-e 's,[@]bindir[@],$(bindir),g' \
 	-e 's,[@]runuser[@],$(runuser),g' \
