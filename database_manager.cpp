@@ -35,7 +35,7 @@ DatabaseManager::DatabaseManager(Database &db) : db(db) {
 
 bool DatabaseManager::initilize_db(){
     const std::string config_tbl = "CREATE TABLE config ( "
-        "name varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL, "
+        "name varchar(40) COLLATE utf8mb4_unicode_ci NOT NULL, "
         "value varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL, "
         "camera int(11) NOT NULL, "
         "UNIQUE KEY camera (camera,name) "
@@ -53,14 +53,9 @@ bool DatabaseManager::initilize_db(){
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
 
     //create the config table
-    long affected_rows = 0;
-    DatabaseResult *res = db.query(config_tbl, &affected_rows, NULL);
+    DatabaseResult *res = db.query(config_tbl);
     bool ret = true;
     if (res){
-        if (!affected_rows){
-            ret = false;
-            LFATAL("Could not create config table");
-        }
         delete res;
     } else {
         LFATAL("Could not create config table");
@@ -69,14 +64,8 @@ bool DatabaseManager::initilize_db(){
 
     //create the videos table
     if (ret){
-        affected_rows = 0;
-        res = db.query(videos_tbl, &affected_rows, NULL);
-
+        res = db.query(videos_tbl);
         if (res){
-            if (!affected_rows){
-                ret = false;
-                LFATAL("Could not create videos table");
-            }
             delete res;
         } else {
             LFATAL("Could not create videos table");
@@ -145,6 +134,7 @@ bool DatabaseManager::set_latest_version(void){
     DatabaseResult *res = db.query(sql, &affected_rows, NULL);
     bool ret = false;
     if (res && affected_rows){
+        LINFO("Database Upgraded to " + CURRENT_DB_VERSION);
         ret = true;
     } else {
         LFATAL("Failed to update database version");

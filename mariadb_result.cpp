@@ -26,10 +26,16 @@
 const std::string MariaDBResult::null_txt = "NULL";
 
 MariaDBResult::~MariaDBResult(){
-    mysql_free_result(res);
+    if (res){
+        mysql_free_result(res);
+    }
 }
 
 long MariaDBResult::num_rows(){
+    if (!res){
+        return 0;
+    }
+    
     return mysql_num_rows(res);
 }
 
@@ -47,6 +53,9 @@ const std::string& MariaDBResult::col_name(unsigned int col){
 }
 
 int MariaDBResult::field_count(void){
+    if (!res){
+        return 0;
+    }
     if (!col_count){
         col_count = mysql_num_fields(res);
     }
@@ -55,12 +64,15 @@ int MariaDBResult::field_count(void){
 
 void MariaDBResult::fetch_col_names(void){
     MYSQL_FIELD *field;
-    while ((field = mysql_fetch_field(res))){
+    while (res && (field = mysql_fetch_field(res))){
         col_names.emplace_back(field->name);
     }
 }
 
 bool MariaDBResult::next_row(void){
+    if (!res){
+        return false;
+    }
     row = mysql_fetch_row(res);
     //dump it all into col_data
     if (row){

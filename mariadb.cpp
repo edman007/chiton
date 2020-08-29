@@ -72,11 +72,7 @@ MariaDBResult* MariaDB::query_nolock(const std::string& sql){
         return NULL;
     }
     MYSQL_RES *res = mysql_store_result(conn);
-    if (res){
-        return new MariaDBResult(res);
-    } else {
-        return NULL;
-    }
+    return new MariaDBResult(res);
 }
 
 
