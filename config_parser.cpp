@@ -30,7 +30,7 @@ void ConfigParser::parse(void){
             reset_parser();
             continue;//no use in continuing if we are in a comment
         }
-        if (c == '\n' && (state == IN_KEY || state == BEFORE_VAL || state == AFTER_VAL)){
+        if (c == '\n' && (state == IN_KEY || state == BEFORE_VAL || state == AFTER_KEY)){
             report_parse_error();
             return;
         }
@@ -125,6 +125,7 @@ void ConfigParser::parse(void){
                 //we are done
                 cfg.set_value(key.str(), value.str());
                 state = AFTER_VAL;
+                doublequote = false;
                 continue;
             }
 
@@ -136,6 +137,7 @@ void ConfigParser::parse(void){
                 //we are done
                 cfg.set_value(key.str(), value.str());
                 state = AFTER_VAL;
+                singlequote = false;
                 continue;
             }
 
