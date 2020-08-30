@@ -57,4 +57,5 @@ packaging/debian/postinst
 packaging/debian/chiton.config
 packaging/slackware/doinst.sh
 packaging/slackware/douninst.sh
+packaging/slackware/chiton.SlackBuild
 release

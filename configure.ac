@@ -125,9 +125,9 @@ AC_SUBST([SMARTYDIR])
 AM_CONDITIONAL([INSTALLSMARTY], [test "x$SMARTYDIR" = "xno"])
 
 AC_ARG_WITH([initdir],
-  [AS_HELP_STRING([--with-initdir=DIR], [Directory of init script [/etc/systemd/system]])],
+  [AS_HELP_STRING([--with-initdir=DIR], [Directory of init script [SYSCONFDIR/systemd/system]])],
   [initdir=$withval],
-  [initdir=/etc/systemd/system])
+  [initdir=${sysconfdir}/systemd/system])
 AC_SUBST([initdir])
 
 AC_ARG_ENABLE([sysv],

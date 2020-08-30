@@ -23,10 +23,10 @@
  #
  ########################################################################
 
-PRGNAM=chiton
-VERSION=${VERSION:-git}
+PRGNAM=@PKGNAME@
+VERSION=${VERSION:-@releaseversion@}
 BUILD=${BUILD:-1}
-TAG=${TAG:-_SBo}
+TAG=${TAG:-_chiton}
 
 if [ -z "$ARCH" ]; then
   case "$( uname -m )" in
@@ -82,7 +82,9 @@ CXXFLAGS="$SLKCFLAGS" \
   --mandir=/usr/man \
   --with-apacheconfigdir=/etc/httpd/extra \
   --enable-sysv \
-  --with-initdir=/etc/rc.d
+  --with-initdir=/etc/rc.d \
+  --with-apacheappendconf=/etc/httpd/httpd.conf \
+  --with-runuser=chiton
 
 make -j15
 make install DESTDIR=$PKG
@@ -97,8 +99,10 @@ cp -a README.md COPYING build/LICENSE.* $PKG/usr/doc/$PRGNAM-$VERSION
 cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
 
 mkdir -p $PKG/install
-
+cat $CWD/doinst.sh > $PKG/install/doinst.sh
+cat $CWD/douninst.sh > $PKG/install/douninst.sh
 cat $CWD/slack-desc > $PKG/install/slack-desc
+chmod +x $PKG/install/doinst.sh $PKG/install/dounleinst.sh
 
 REV=""
 if [ -r dist-version ]; then

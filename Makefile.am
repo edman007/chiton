@@ -51,15 +51,14 @@ DEBIAN_PKG_FILES_BUILT=packaging/debian/control packaging/debian/copyright \
 	packaging/debian/preinst  packaging/debian/postinst \
 	packaging/debian/prerm packaging/debian/postrm \
 	packaging/debian/chiton.config 
-SLACKWARE_PACKAGE_FILES=packaging/slackware/chiton.SlackBuild \
-	packaging/slackware/slack-desc 
+SLACKWARE_PACKAGE_FILES=packaging/slackware/slack-desc
 SLACKWARE_PACKAGE_FILES_BUILT=packaging/slackware/doinst.sh \
-	 packaging/slackware/douninst.sh
+	 packaging/slackware/douninst.sh packaging/slackware/chiton.SlackBuild
 
 PACKAGING_FILES=packaging/scripts/rc.chiton.in packaging/scripts/chiton.service.in \
 	packaging/scripts/postinst.sh.in packaging/scripts/preinst.sh.in \
 	packaging/scripts/prerm.sh.in packaging/scripts/postrm.sh.in \
-	packaging/scripts/config.sh.in \
+	packaging/scripts/config.sh.in packaging/slackware/chiton.SlackBuild.in \
 	$(DEBIAN_PKG_FILES) $(SLACKWARE_PACKAGE_FILES)
 
 noinst_SCRIPTS=packaging/scripts/rc.chiton
@@ -109,6 +108,7 @@ do_subst = sed -e 's,[@]PKGNAME[@],$(PRGM),g' \
 DEBSRC=$(PACKAGE_TARNAME)_$(VERSION).orig.tar.gz
 #the tarball for the packaging metadata
 DEBSRCPKG=$(PACKAGE_TARNAME)_$(VERSION)-1.debian.tar.gz
+SLACKSRCPKG=$(PACKAGE_TARNAME)-$(VERSION).slackbuild.tar.xz
 
 
 dist-hook:
@@ -204,14 +204,14 @@ chiton-install: chiton-install.in Makefile
 	$(do_subst) < $(srcdir)/chiton-install.in > chiton-install
 	chmod +x chiton-install
 
-packages/scripts:
-	$(MKDIR_P) packaging/scripts
+$(abs_builddir)/packaging/scripts/:
+	$(MKDIR_P) $(builddir)/packaging/scripts
 
-packaging/scripts/rc.chiton: packaging/scripts/rc.chiton.in | packaging/scripts/
+packaging/scripts/rc.chiton: packaging/scripts/rc.chiton.in | $(abs_builddir)/packaging/scripts/
 	$(do_subst) < $(srcdir)/packaging/scripts/rc.chiton.in > packaging/scripts/rc.chiton
 	chmod +x packaging/scripts/rc.chiton
 
-packaging/scripts/chiton.service: packaging/scripts/chiton.service.in | packaging/scripts/
+packaging/scripts/chiton.service: packaging/scripts/chiton.service.in | $(abs_builddir)/packaging/scripts/
 	$(do_subst) < $(srcdir)/packaging/scripts/chiton.service.in > packaging/scripts/chiton.service
 
 packaging/debian/preinst: packaging/scripts/preinst.sh.in
@@ -226,7 +226,9 @@ packaging/debian/chiton.config:  packaging/scripts/config.sh.in
 	$(do_subst) < $< > $@
 packaging/slackware/doinst.sh: packaging/scripts/postinst.sh.in packaging/scripts/config.sh.in
 	cat $^ | $(do_subst) > $@
-
+packaging/slackware/chiton.SlackBuild: packaging/slackware/chiton.SlackBuild.in
+	$(do_subst) < $< > $@
+	chmod +x $@
 dist-version:
 	echo $(shell echo $(shell git log --oneline --no-walk  || echo Unknown) | head -1 | cut -d ' ' -f 1) > dist-version
 
@@ -271,11 +273,11 @@ MAINTAINERCLEANFILES=dist-version chiton-$(VERSION).dsc
 
 # This is for actual release production...Creates the directory 'release' with all the files in our release
 .PHONY: release
-release: chiton-$(VERSION).dsc dist
+release: chiton-$(VERSION).dsc dist $(SLACKSRCPKG)
 	-rm -rf release
 	$(MKDIR_P) release
 	mv $(PACKAGE_TARNAME)-$(VERSION).tar.* $(DEBSRC) chiton-$(VERSION).dsc \
-		$(DEBSRCPKG) \
+		$(DEBSRCPKG) $(SLACKSRCPKG) \
 		release
 
 packaging/debian/control: packaging/debian/control.in Makefile
@@ -301,6 +303,9 @@ $(DEBSRC): dist Makefile
 
 $(DEBSRCPKG): $(DEBIAN_PKG_FILES) $(DEBIAN_PKG_FILES_BUILT)
 	tar --transform=s,packaging/,, --transform=s,-,/,g -czf $@  $(DEBIAN_PKG_FILES) $(DEBIAN_PKG_FILES_BUILT)
+$(SLACKSRCPKG): $(SLACKWARE_PACKAGE_FILES) $(SLACKWARE_PACKAGE_FILES_BUILT)
+	tar --transform=s,packaging/,, --transform=s,slackware,$(PACKAGE_TARNAME),g -czf $@  $(SLACKWARE_PACKAGE_FILES) $(SLACKWARE_PACKAGE_FILES_BUILT)
+
 
 DEBSRC_FILESIZE=$(shell wc -c $(DEBSRC) | cut -d ' ' -f 1)
 DEBSRCPKG_FILESIZE=$(shell wc -c $(DEBSRCPKG) | cut -d ' ' -f 1)
