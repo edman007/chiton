@@ -20,7 +20,7 @@ fi
 
 if [[ "$1" == "purge" || "$1" == "db_purge" ]]; then
     # We are deleting all our files
-    rm -f @localstatedir@/@PKGNAME@/@PKGNAME@.pid || true
+    rm -f @localstatedir@/@PKGNAME@/@PKGNAME@.pid 2>&1 > /dev/null || true
     rmdir @localstatedir@/@PKGNAME@/cache/ || true
     rmdir @localstatedir@/@PKGNAME@/compile/ || true
     rmdir @localstatedir@/@PKGNAME@/vids/ || true #this will likely fail if we have content, this is expected

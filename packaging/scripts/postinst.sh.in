@@ -75,12 +75,12 @@ if [ -f /usr/share/dbconfig-common/dpkg/postinst.mysql ]; then
     MYSQL_DB="$dbc_dbname"
     MYSQL_USER="$dbc_dbuser"
     MYSQL_USER_PW="$dbc_dbpass"
-elif [ ! -f $CFGDIR/chiton.cfg && ! -f $CFGDIR/config.php ]; then
+elif [ ! -f $CFGDIR/chiton.cfg ] && [ ! -f $CFGDIR/config.php ]; then
     
     echo "This will guide you through setting up chiton"
     echo
     #make a decent default PW
-    if which dd > /dev/null; then
+    if which dd > /dev/null 2>&1 ; then
         PW_ENCODE=`which mimencode || echo false`
         if [ "x$PW_ENCODE" != "xfalse" ]; then
             MYSQL_USER_PW=`dd if=/dev/random bs=1 count=15 2>/dev/null  | $PW_ENCODE`
@@ -207,7 +207,7 @@ if [ ! -f $APACHE_CFG_DIR/apache-chiton.conf ] || [ "$1" == "reconfigure"  ]; th
 
     if [ "x@apacheappendconf@" != "zno" ]; then
         #append an include line to @apacheappendconf@
-        if [ -f "@apacheappendconf@" ] &&  ! grep "$APACHE_CFG_DIR/apache-chiton.conf" "@apacheappendconf@" > /dev/null ; then
+        if [ -f "@apacheappendconf@" ] &&  ! grep "$APACHE_CFG_DIR/apache-chiton.conf" "@apacheappendconf@" > /dev/null 2>&1 ; then
             echo '# Enable Chiton NVR' >> @apacheappendconf@
             echo "Include $APACHE_CFG_DIR/apache-chiton.conf" >> @apacheappendconf@
         fi
@@ -223,13 +223,13 @@ fi
 
 
 #restart everything...
-if which deb-systemd-helper > /dev/null ; then
+if which deb-systemd-helper > /dev/null 2>&1 ; then
     deb-systemd-helper enable apache2.service
     deb-systemd-helper enable chiton.service
 else
     apachectl graceful
-    chmod +x @initfile@
-    @initfile@ restart
+    chmod +x @initscript@
+    @initscript@ restart
 fi
 
 

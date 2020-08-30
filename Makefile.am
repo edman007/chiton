@@ -206,7 +206,8 @@ chiton-install: chiton-install.in Makefile
 
 $(abs_builddir)/packaging/scripts/:
 	$(MKDIR_P) $(builddir)/packaging/scripts
-
+$(abs_builddir)/packaging/slackware:
+	$(MKDIR_P) $(builddir)/packaging/slackware
 packaging/scripts/rc.chiton: packaging/scripts/rc.chiton.in | $(abs_builddir)/packaging/scripts/
 	$(do_subst) < $(srcdir)/packaging/scripts/rc.chiton.in > packaging/scripts/rc.chiton
 	chmod +x packaging/scripts/rc.chiton
@@ -220,13 +221,13 @@ packaging/debian/postinst:  packaging/scripts/postinst.sh.in
 	$(do_subst) < $< > $@
 packaging/debian/prerm: packaging/scripts/prerm.sh.in
 	$(do_subst) < $< > $@
-packaging/debian/postrm packaging/slackware/douninst.sh: packaging/scripts/postrm.sh.in
+packaging/debian/postrm packaging/slackware/douninst.sh: packaging/scripts/postrm.sh.in | $(abs_builddir)/packaging/slackware
 	$(do_subst) < $< > $@
 packaging/debian/chiton.config:  packaging/scripts/config.sh.in
 	$(do_subst) < $< > $@
-packaging/slackware/doinst.sh: packaging/scripts/postinst.sh.in packaging/scripts/config.sh.in
+packaging/slackware/doinst.sh: packaging/scripts/postinst.sh.in packaging/scripts/config.sh.in | $(abs_builddir)/packaging/slackware
 	cat $^ | $(do_subst) > $@
-packaging/slackware/chiton.SlackBuild: packaging/slackware/chiton.SlackBuild.in
+packaging/slackware/chiton.SlackBuild: packaging/slackware/chiton.SlackBuild.in | $(abs_builddir)/packaging/slackware
 	$(do_subst) < $< > $@
 	chmod +x $@
 dist-version:
