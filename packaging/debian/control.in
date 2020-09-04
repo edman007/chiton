@@ -2,7 +2,7 @@ Source: @PKGNAME@
 Maintainer: @maintainer@
 Section: video
 Priority: optional
-Build-Depends: default-libmysqlclient-dev, libavcodec-dev, libavformat-dev, libavutil-dev, debhelper (>= 10), dh-autoreconf | debhelper (>= 9.20160403~)
+Build-Depends: default-libmysqlclient-dev, libavcodec-dev, libavformat-dev, libavutil-dev, debhelper (>= 10), dh-autoreconf | debhelper (>= 9.20160403~), imagemagick, inkscape
 Homepage: @homepage@
 Standards-Version: 4.5.0.2
 Vcs-Git: http://dev.edman007.com/git-repo/chiton.git
