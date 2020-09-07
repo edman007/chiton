@@ -8,6 +8,16 @@ if [ -f /usr/share/debconf/confmodule ]; then
     . /usr/share/debconf/confmodule
 fi
 
+#stop the service if it's running
+if [ "@inittype" == "sysv" ]; then
+    if [ -x @initscript@ ]; then
+        @initscript@ stop
+    fi
+else
+    if [ -f @initscript@ ]; then
+        deb-systemd-invoke stop chiton.service
+    fi
+fi
 # Apperently this is deprecated
 #if [ -f /usr/share/dbconfig-common/dpkg/preinst.mysql ]; then
 #    . /usr/share/dbconfig-common/dpkg/preinst.mysql

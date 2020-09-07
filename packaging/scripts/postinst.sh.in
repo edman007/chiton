@@ -221,19 +221,6 @@ if [ ! -f $APACHE_CFG_DIR/apache-chiton.conf ] || [ "$1" == "reconfigure"  ]; th
 
 fi
 
-
-#restart everything...
-if which deb-systemd-helper > /dev/null 2>&1 ; then
-    deb-systemd-helper enable apache2.service
-    deb-systemd-helper enable chiton.service
-else
-    apachectl graceful
-    chmod +x @initscript@
-    @initscript@ restart
-fi
-
-
-
 if [ -f $CFGDIR/config.php ]; then
     chown root:$BACKEND_USER $CFGDIR/config.php
     chmod 640 $CFGDIR/config.php
@@ -242,4 +229,17 @@ fi
 if [ -f $CFGDIR/chiton.cfg ]; then
     chown root:$BACKEND_USER $CFGDIR/chiton.cfg
     chmod 640 $CFGDIR/chiton.cfg
+fi
+
+
+#restart everything...
+if [ "@inittype@" == "systemd" ]; then
+    systemctl daemon-reload || true
+    deb-systemd-helper enable chiton.service || true
+    deb-systemd-invoke start chiton.service || true
+    deb-systemd-invoke restart apache2.service || true
+else
+    apachectl graceful || true
+    chmod +x @initscript@ || true
+    @initscript@ restart || true
 fi

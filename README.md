@@ -19,7 +19,16 @@ dpkg-source -x chiton-0.1.0git.dsc
 cd chiton-0.1.0git
 debuild -uc -us -i -b
 cd ..
-dpkg -i chiton_0.1.0git-1_amd64.deb
+sudo dpkg -i chiton_0.1.0git-1_amd64.deb
+```
+
+For Slackware that would look something like this:
+
+```bash
+tar -xvf chiton-0.1.0git.slackbuild.tar.xz
+mv chiton-0.1.0git.tar.xz chiton
+./chiton.SlackBuild
+sudo upgradepkg --install-new /tmp/chiton-0.1.0git*.txz
 ```
 
 Alternativitly you can install directly from source:
@@ -33,14 +42,15 @@ make install
 
 ## Usage
 
-Start the backend with `systemctl enable chiton` (on a systemd based system) or executing `/etc/rc.d/rc.chiton start` on a SysV based system (like Slackware).
+Start the backend with `systemctl start chiton` (on a systemd based system) or executing `/etc/rc.d/rc.chiton start` on a SysV based system (like Slackware).
 
 Once started, you can access it via the web interface (http://localhost/chiton by default), and you can add your cameras via the web interface
 
+To configure, go to settings, add a camera, "active" must be set to "1" and it must have a "video-url" parameter set,
+see chiton_config.hpp for documentation on the options, you can then reload the daemon to activte the new settings (`systemctl reload chiton`)
+
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-Please make sure to update tests as appropriate.
 
 ## License
 [GPLv3](https://choosealicense.com/licenses/gpl-3.0/)

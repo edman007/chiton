@@ -81,8 +81,10 @@ dist_man1_MANS = man/chiton.1 man/chiton-install.1
 
 if ENABLESYSV
 initfile=$(initdir)/rc.chiton
+inittype=sysv
 else
 initfile=$(initdir)/chiton.service
+inittype=systemd
 endif
 
 
@@ -101,7 +103,8 @@ do_subst = sed -e 's,[@]PKGNAME[@],$(PRGM),g' \
 	-e 's,[@]webuser[@],$(webuser),g' \
 	-e 's,[@]apachesymlinkdir[@],$(apachesymlinkdir),g' \
 	-e 's,[@]apacheappendconf[@],$(apacheappendconf),g' \
-	-e 's,[@]initscript[@],$(initfile),g'
+	-e 's,[@]initscript[@],$(initfile),g' \
+	-e 's,[@]inittype[@],$(inittype),g'
 
 
 #the file for the debian packager source code (will be a symlink)
