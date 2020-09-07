@@ -2,7 +2,7 @@ Source: @PKGNAME@
 Maintainer: @maintainer@
 Section: video
 Priority: optional
-Build-Depends: default-libmysqlclient-dev, libavcodec-dev, libavformat-dev, libavutil-dev, debhelper (>= 10), dh-autoreconf | debhelper (>= 9.20160403~), imagemagick, inkscape
+Build-Depends: default-libmysqlclient-dev, libavcodec-dev, libavformat-dev, libavutil-dev, debhelper (>= 10), dh-autoreconf | debhelper (>= 9.20160403~), imagemagick, inkscape | imagemagick-6-common (>= 6.9.11.30) | imagemagick-7-common (>= 7.0.10.29)
 Homepage: @homepage@
 Standards-Version: 4.5.0.2
 Vcs-Git: http://dev.edman007.com/git-repo/chiton.git
@@ -11,7 +11,7 @@ Package: @PKGNAME@
 Architecture: any
 Section: video
 Priority: optional
-Depends: php-mysql, php | php-cgi, smarty3, php-common, apache2, ${shlibs:Depends}, ${misc:Depends}
+Depends: php-mysql, php | php-cgi, smarty3, php-common, apache2, dbconfig-mysql | dbconfig-no-thanks, ${shlibs:Depends}, ${misc:Depends}
 Pre-Depends: debconf
 Suggests: default-mysql-server
 Description: Lightweight NVR (Network Video Recorder)
