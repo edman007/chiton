@@ -249,7 +249,7 @@ void process_args(Config& arg_cfg, int argc, char **argv){
                 arg_cfg.set_value("cfg-path", optarg);
                 break;
             case 'v':
-                arg_cfg.set_value("verbosity", "4");
+                arg_cfg.set_value("verbosity", "3");
                 break;
             case 'd':
                 arg_cfg.set_value("verbosity", "5");
