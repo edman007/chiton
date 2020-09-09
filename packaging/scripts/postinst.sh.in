@@ -38,12 +38,12 @@ APACHE_CFG_DIR=@apachecfgdir@
 CFGDIR=@cfgdir@
 WEBDIR=/chiton
 
-#add our group
+#add our user
 if ! getent passwd $BACKEND_USER > /dev/null ; then
     useradd $BACKEND_USER -d $STATE_DIR -r -U
 fi
 
-#add our user
+#add the webserver to our group
 if ! getent group $BACKEND_USER | grep -wq $WEBUSER > /dev/null ; then
     usermod -a -G $BACKEND_USER $WEBUSER
 fi
