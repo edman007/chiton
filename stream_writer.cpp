@@ -25,12 +25,12 @@
 #include <assert.h>
 
 StreamWriter::StreamWriter(Config& cfg, std::string path, StreamUnwrap &unwrap) : cfg(cfg), path(path), unwrap(unwrap) {
-    //nothing!
+    file_opened = false;
 }
 
 bool StreamWriter::open(void){
     int error;
-    
+    file_opened = false;
     avformat_alloc_output_context2(&output_format_context, NULL, NULL, path.c_str());
     if (!output_format_context) {
         LERROR("Could not create output context");
@@ -105,6 +105,7 @@ bool StreamWriter::open(void){
         LERROR("Error occurred: " + std::string(av_err2str(error)));
         return false;
     }
+    file_opened = true;
     return true;
 
 }
@@ -126,11 +127,16 @@ void StreamWriter::close(void){
     }
 
     av_write_trailer(output_format_context);
+    file_opened = false;
 }
 
 bool StreamWriter::write(const AVPacket &packet){
     AVStream *in_stream, *out_stream;
     AVPacket out_pkt;
+
+    if (!file_opened){
+        return false;
+    }
     if (av_packet_ref(&out_pkt, &packet)){
         LERROR("Could not allocate new output packet for writing");
         return false;

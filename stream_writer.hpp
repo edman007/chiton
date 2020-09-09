@@ -29,7 +29,7 @@ public:
     StreamWriter(Config &cfg, std::string path, StreamUnwrap &unwrap);
     ~StreamWriter();
     
-    bool  open();//open the file for writing, returns true on success
+    bool open();//open the file for writing, returns true on success
     void close(void);
     bool write(const AVPacket &pkt);//write the packet to the file
     void change_path(std::string &new_path);
@@ -47,6 +47,10 @@ private:
     //these offsets are used to shift the time when receiving something
     std::vector<long> stream_offset;
     std::vector<long> last_dts;//used to fix non-increasing DTS
+
+    //used to track if we were successful in getting a file opened (and skip writing anything if not successful)
+    //true means the file is opened
+    bool file_opened;
     
     void log_packet(const AVFormatContext *fmt_ctx, const AVPacket &pkt, const std::string &tag);
 };

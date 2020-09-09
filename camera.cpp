@@ -98,7 +98,9 @@ void Camera::run(void){
                 }
                 new_output = fm.get_next_path(file_id, id, start);
                 out.change_path(new_output);
-                out.open();
+                if (!out.open()){
+                    shutdown = true;
+                }
                 //save out this position
                 last_cut = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);
             }
