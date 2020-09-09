@@ -179,6 +179,10 @@ bool StreamUnwrap::charge_reorder_queue(void){
 }
 
 void StreamUnwrap::sort_reorder_queue(void){
+    if (reorder_queue.size() < 2){
+        //nothing to sort if it's this small
+        return;
+    }
     auto av_old_back = reorder_queue.end();
     std::advance(av_old_back, -2);
     AVPacket &old_back = *av_old_back;
