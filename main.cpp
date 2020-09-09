@@ -239,7 +239,6 @@ bool write_pid(const std::string& path){
 void process_args(Config& arg_cfg, int argc, char **argv){
     //any system wide defaults...these are build-time defaults
     arg_cfg.set_value("cfg-path", SYSCFGPATH);
-    arg_cfg.set_value("verbosity", "5");
 
     char options[] = "c:vdqsp:fP:";//update man/chiton.1 if you touch this!
     char opt;
