@@ -1,3 +1,19 @@
+body {
+    background-color:rgb(20,20,20);
+    color:rgb(190, 255, 255);
+}
+a {
+    color:rgb(150, 150, 255);
+}
+
+a:visited {
+    color:rgb(130, 150, 255);
+}
+
+input {
+    background-color: rgb(220, 220, 220);
+}
+
 ul.vselector {
     width:20%;
     padding-left:2%;
@@ -6,7 +22,26 @@ ul.vselector {
     overflow-y:scroll;
 }
 
+ul.sitemap {
+    list-style-type: none;
+    margin:0;
+    padding:0;
+    overflow:hidden;
 
+}
+
+ul.sitemap li {
+    float: left;
+    display: block;
+    text-align: center;
+    padding: 0.5em;
+}
+ul.sitemap li:hover {
+    background-color:rgb(40,40,40);
+}
+ul.sitemap li a {
+    text-decoration: none;
+}
 .singleViewer {
     width:75%;
     float:left;
@@ -99,4 +134,8 @@ ul.vselector {
 
 .fullscreen > * {
     pointer-events:none;
+}
+.license {
+    font-family: monospace;
+    overflow-vertical:scroll;
 }
