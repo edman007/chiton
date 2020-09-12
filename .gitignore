@@ -59,3 +59,4 @@ packaging/slackware/doinst.sh
 packaging/slackware/douninst.sh
 packaging/slackware/chiton.SlackBuild
 release
+web/inc/configdb.php
