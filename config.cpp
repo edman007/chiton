@@ -23,6 +23,7 @@
 #include "util.hpp"
 #include <fstream>
 #include "config_parser.hpp"
+#include "setting.hpp"
 
 Config::Config(){
     set_value("camera-id", std::string("-1"));//set the camera ID so other tools can use it
@@ -49,7 +50,7 @@ const std::string& Config::get_value(const std::string& key){
 
     auto ret = cfg_db.find(key);
     if (ret == cfg_db.end()){
-        return EMPTY_STR;
+        return get_default_value(key);
     } else {
         return ret->second;
     }
@@ -118,4 +119,15 @@ double Config::get_value_double(const std::string& key){
     
     return 0;
 
+}
+
+const std::string& Config::get_default_value(const std::string& key){
+    for (auto& itr : setting_options){
+        if (itr.key == key){\
+            LWARN("Got default value of " + itr.def);
+            return itr.def;
+        }
+    }
+    LWARN("Code used undocumented config value '" + key + "'");
+    return EMPTY_STR;
 }

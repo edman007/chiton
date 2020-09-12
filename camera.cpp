@@ -70,6 +70,7 @@ void Camera::run(void){
     AVRational last_cut = av_make_q(0, 1);
     int seconds_per_file_raw = cfg.get_value_int("seconds-per-file");
     if (seconds_per_file_raw <= 0){
+        LWARN("seconds-per-file was invalid");
         seconds_per_file_raw = DEFAULT_SECONDS_PER_FILE;
     }
     AVRational seconds_per_file = av_make_q(seconds_per_file_raw, 1);

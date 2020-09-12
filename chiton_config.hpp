@@ -27,42 +27,7 @@
 /* Autoconf parameters */
 #include "config_build.hpp"
 
-
-/*
- * List of global config values:
- * === Internal state that should never be modified by the user for any reason ===
- * database-version - Updated to track the internal state of the database
- * === Config options that cannot be set anywhere but the command line ===
- * cfg-path - path to the cfg file to load
- * pid-file - path to write the PID to
- * fork - non-zero to fork to the background
- * privs-user - username to drop privs to
- * === Config options required in the .cfg if default is unnacceptable) ===
- * db-host - string for DB server
- * db-user - user for DB server
- * db-password - password for DB server
- * db-database - database to use
- * db-socket - path to socket for db server
- * db-port - port of the DB server
- *
- * === Can be set essentially anywhere (.cfg or database) ==
- * verbosity - logging verbosity
- * timezone (defaults to system timezone)
- * === Applies to a specific camera ===
- * video-url - ffmpeg compatible URL for camera N
- * active - set to "1" when the camera is active
- * camera-id - Used internally to track what is the active camera, do not use
- * output-dir - the location to store videos
- * ffmpeg-demux-options - options for the demuxer
- * reorder-queue-len - how many packets to cache to properly resort frames
- * seconds-per-file - how long a file should be, files are split at the next opprotunity
- *   after this, in seconds
- * min-free-space - how many bytes of free space triggers a cleanup, if it contains a %,
- *   is is the target free-percentage of user accessable space
- *
- */
-
-//default config values that absolutly must be set, we define defaults in case we get a bad value
+//we have to have valid values for these, these are the defaults when the user sets a bad value
 const long DEFAULT_SECONDS_PER_FILE = 6;//Apple recommends 6 seconds per file to make live streaming reasonable
 const long DEFAULT_MIN_FREE_SPACE = 1073741824;//1G in bytes
 
@@ -78,9 +43,11 @@ public:
     double get_value_double(const std::string& key);//returns the value as an double
     
     void set_value(const std::string& key, const std::string& value);
-    
+
 private:
     std::map<std::string,std::string> cfg_db;
     const std::string EMPTY_STR = "";
+
+    const std::string & get_default_value(const std::string& key);
 };
 #endif

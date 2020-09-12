@@ -161,7 +161,8 @@ long FileManager::get_target_free_bytes(void){
         }
         
         //absolute byte mode
-        if (!min_free){
+        if (min_free <= 1024){
+            LWARN("min-free-space was set too small");
             min_free = DEFAULT_MIN_FREE_SPACE;
         }
         if (free_bytes < min_free){
