@@ -33,9 +33,12 @@ require_once($cfg_path);
 
 require_once('./inc/external/smarty/Smarty.class.php');
 
+require_once('./inc/configdb.php');
+
 require_once('./inc/util.php');
 
 require_once('./inc/web_config.php');
+
 if (empty($suppress_smarty)){
     $smarty = new Smarty;
     //$smarty->force_compile = true;

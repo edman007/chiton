@@ -139,3 +139,29 @@ ul.sitemap li a {
     font-family: monospace;
     overflow-vertical:scroll;
 }
+
+/* System Setting boxes */
+ul.settings {
+    list-style-type: none;
+    margin:0;
+    padding:0;
+    width:60em;
+}
+
+ul.settings input[type=text] {
+    margin:0;
+    padding:0;
+    width:90%;
+}
+
+ul.settings li  {
+    columns:3;
+    padding-top:1px;
+    padding-bottom:1px;
+    column-rule-width:1px;
+    column-rule-color:rgb(200,200,200);
+    column-rule-style:solid;
+    border-width:1px;
+    border-color:rgb(200,200,200);
+    border-style:solid;
+}

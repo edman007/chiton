@@ -22,11 +22,11 @@
  */
 
 //see setting.hpp
-define('READ_ONLY', 1);
-define('REQUIRED_SYSTEM', 2);
-define('OPTIONAL_SYSTEM', 3);
-define('REQUIRED_CAMERA', 4);
-define('OPTIONAL_CAMERA', 5);
+define('SETTING_READ_ONLY', 1);
+define('SETTING_REQUIRED_SYSTEM', 2);
+define('SETTING_OPTIONAL_SYSTEM', 3);
+define('SETTING_REQUIRED_CAMERA', 4);
+define('SETTING_OPTIONAL_CAMERA', 5);
 
 
 //EOF, it needs to end like this, do not edit anything below this line

@@ -24,8 +24,10 @@
 class WebConfig {
     private $settings;
     private $db;
+    private $camera_cfg;
     function __construct($db){
         $this->db = $db;
+        $this->camera_cfg = false;
         $sql = 'SELECT name, value FROM config WHERE camera = -1';
         $res = $db->query($sql);
         if ($res){
@@ -35,13 +37,77 @@ class WebConfig {
         }
     }
 
+    //makes a config that only returns the values for this
+    function __construct1($db, $camera){
+        $this->db = $db;
+        $this->camera_cfg = true;
+        $sql = 'SELECT name, value FROM config WHERE camera = ' . (int)$camera . ' ORDER BY camera DESC';
+        $res = $db->query($sql);
+        if ($res){
+            while ($row = $res->fetch_assoc()){
+                $this->settings[$row['name']] = $row['value'];
+            }
+        }
+    }
+
     function get_value($name){
+        global $cfg;
         if (!isset($this->settings[$name])){
-            return "";
+            if ($this->camera_cfg){
+                return $cfg->get_value($name);
+            } else {
+                return $this->get_default_value($name);
+            }
         }
         return $this->settings[$name];
     }
-    
-}
 
-?>
+    //returns if the value is from the database and not pulled from system defaults
+    function isset($name){
+        return isset($this->settings[$name]);
+    }
+    
+    //gets the default value of an item
+    function get_default_value($name){
+        return $this->get_default_info($name)[0];
+    }
+
+    //get the short description for this value
+    function get_short_desc($name){
+        return $this->get_default_info($name)[1];
+    }
+
+    //get the description for this
+    function get_desc($name){
+        return $this->get_default_info($name)[2];
+    }
+
+    //return VALUE is one of SETTING_READ_ONLY, SETTING_REQUIRED_SYSTEM, SETTING_OPTIONAL_SYSTEM, SETTING_REQUIRED_CAMERA, SETTING_OPTIONAL_CAMERA
+    function get_priority($name){
+        return $this->get_default_info($name)[3];
+    }
+
+    //returns the array of info for the config parameter
+    function get_default_info($name){
+        global $default_settings;
+        return $default_settings[$name];//it is an error if this is not set
+    }
+
+    //gets the info for all config of type
+    function get_defaults_of_type($type){
+        global $default_settings;
+        $ret = array();
+        foreach ($default_settings as $info){
+            if ($info[3] == $type){
+                $ret[] = $info;
+            }
+        }
+        return $ret;
+    }
+
+    //gets an array of all possible keys
+    function get_all_keys(){
+        global $default_settings;
+        return array_keys($default_settings);
+    }
+}
