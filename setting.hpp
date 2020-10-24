@@ -75,9 +75,9 @@ const std::vector<Setting> setting_options {
  {"ffmpeg-demux-options", "", "FFMPEG demux options", "Options for the ffmpeg demuxer", SETTING_OPTIONAL_CAMERA},
  {"reorder-queue-len", "0", "Reorder queue length", "How many packets to cache to properly resort frames "
          "(required for some cameras that give us out of order data even on TCP)", SETTING_OPTIONAL_CAMERA},
- {"seconds-per-file", "6", "Seconds per file", "How long a file should be, files are split at the next opprotunity after this, in seconds, Apple recommends 6", SETTING_REQUIRED_SYSTEM},
+ {"seconds-per-file", "6", "Seconds per file", "How long a file should be, files are split at the next opprotunity after this, in seconds, Apple recommends 6", SETTING_OPTIONAL_SYSTEM},
  {"min-free-space", "1073741824", "min-free-space", "How many bytes of free space triggers a cleanup, if it contains a %, "
-         "it is the target free-percentage of user accessable space", SETTING_REQUIRED_SYSTEM},
+         "it is the target free-percentage of user accessable space", SETTING_OPTIONAL_SYSTEM},
  {"display-name", "", "Camera Name", "The name of the camera used in displays", SETTING_OPTIONAL_CAMERA},
 
      };

@@ -4,7 +4,10 @@
 {if $camera_id < 0}
 <h2>System Settings</h2>
 {else}
-<h2>Camera Settings</h2>
+<h2>{if $cfg_values['display-name']['set'] == 'camera'}
+{$cfg_values['display-name']['value']|escape} Settings
+{else}Camera {$camera_id} Settings
+{/if}</h2>
 {/if}
 <form method="post" action="settings.php?camera={$camera_id}">
 <ul class="settings">
@@ -55,8 +58,23 @@
 <div class="setting_value"><input type="text" name="value[{$smarty.foreach.CFGOPT.total}]" value=""/><input type="hidden" name="camera[{$smarty.foreach.CFGOPT.total}]" value="{$camera_id}"/></div>
  </li>
 </ul>
-<input type="submit" name="Update"/>
+<input type="submit" value="Update Camera"/>
 </form>
+{if $camera_id >= 0}
+{* Delete Camera *}
+<form method="post" action="settings.php">
+<input type="checkbox" name="delete_camera" value="1"/> Delete This Camera<br />
+<input type="hidden" value="{$camera_id}" name="camera_id" />
+<input type="submit" value="Delete Camera"/>
+</form>
+{/if}
+
+{* Create Camera *}
+<form method="post" action="settings.php">
+<input type="hidden" value="1" name="create_camera"/>
+<input type="submit" value="Create New Camera"/>
+</form>
+
 <a href="settings.php">System Settings</a>
 <h2>Cameras</h2>
 <ul>

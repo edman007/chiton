@@ -24,41 +24,64 @@
 require_once('./inc/main.php');
 
 $smarty->assign('title', 'Settings');
+$camera_id = -1;
+if (!empty($_GET['camera'])){
+    $camera_id = (int)$_GET['camera'];
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST'){
     //update the DB...
     
-    foreach($_POST['name'] as $k => &$name){
-        if (!empty($name)){
-            //empty name is just ignored
-            $camera = -1;
-            if (isset($_POST['camera'][$k]) && strtoupper($_POST['camera'][$k]) != 'ALL'){
-                $camera = (int)$_POST['camera'][$k];
-            }
+    if (!empty($_POST['delete_camera']) && !empty($_POST['camera_id'])){
+        //delete this camera
+        $camera = (int)$_POST['camera_id'];
+        if ($camera >= 0){
+            $sql = 'DELETE FROM config WHERE camera = ' . $camera;
+            $db->query($sql);
+        }
 
-            if (!empty($_POST['delete'][$k])){
-                //deleting this
-                $qname = $db->real_escape_string(trim($name));
-                $sql = "DELETE FROM config WHERE camera = $camera AND name = '$qname'";
-                $db->query($sql);
-            } else {
-                //insert and update
-                $trimed_name = trim($name);
-                //we need to validate the name
-                if ($cfg->issettable($trimed_name)){
-                    $qname = $db->real_escape_string($trimed_name);
-                    $qval = $db->real_escape_string(trim($_POST['value'][$k]));
-                    $sql = "REPLACE INTO config (name, value, camera) VALUES ('$qname', '$qval', $camera)";
-                    $res = $db->query($sql);
-                    if (!$res){
-                        $smarty->assign('error_msg', 'Query Failed (' . $db->errno . ') ' . $db->error);
-                        $smarty->display('error.tpl');
-                        die();
+    } elseif (!empty($_POST['create_camera'])){
+        //create a camera
+        $sql = "INSERT INTO config (name, value, camera) SELECT 'active', '0', MAX(camera) + 1 FROM config";
+        $db->query($sql);
+        $sql = 'SELECT MAX(camera) AS new_cam FROM config';
+        $res = $db->query($sql);
+        $row = $res->fetch_assoc();
+        $camera_id = $row['new_cam'];
+    } elseif (!empty($_POST['name'])){
+        //update the camera
+        foreach($_POST['name'] as $k => &$name){
+            if (!empty($name)){
+                //empty name is just ignored
+                $camera = -1;
+                if (isset($_POST['camera'][$k]) && strtoupper($_POST['camera'][$k]) != 'ALL'){
+                    $camera = (int)$_POST['camera'][$k];
+                }
+
+                if (!empty($_POST['delete'][$k])){
+                    //deleting this
+                    $qname = $db->real_escape_string(trim($name));
+                    $sql = "DELETE FROM config WHERE camera = $camera AND name = '$qname'";
+                    $db->query($sql);
+                } else {
+                    //insert and update
+                    $trimed_name = trim($name);
+                    //we need to validate the name
+                    if ($cfg->issettable($trimed_name)){
+                        $qname = $db->real_escape_string($trimed_name);
+                        $qval = $db->real_escape_string(trim($_POST['value'][$k]));
+                        $sql = "REPLACE INTO config (name, value, camera) VALUES ('$qname', '$qval', $camera)";
+                        $res = $db->query($sql);
+                        if (!$res){
+                            $smarty->assign('error_msg', 'Query Failed (' . $db->errno . ') ' . $db->error);
+                            $smarty->display('error.tpl');
+                            die();
+                        }
                     }
                 }
             }
         }
     }
-
     //system config needs to be reloaded
     $cfg = new WebConfig($db);
 }
@@ -79,11 +102,10 @@ $cfg_keys = $cfg->get_all_keys();
 $unset_cfg_keys = array();//an array of keys not set at this level (may be set at the system level when viewing the camera)
 $set_cfg_keys = array();
 $camera_page = false;
-$camera_id = -1;
-if (isset($_GET['camera']) && $_GET['camera'] >= 0){
-    $camera_config = new WebConfig($db, (int)$_GET['camera']);
+
+if ($camera_id >= 0){
+    $camera_config = new WebConfig($db, $camera_id);
     $camera_page = true;
-    $camera_id = (int)$_GET['camera'];
     foreach ($cfg_keys as $k){
         $val = array();
         $val['key'] = $k;
@@ -103,7 +125,11 @@ if (isset($_GET['camera']) && $_GET['camera'] >= 0){
             $unset_cfg_keys[] = $k;//but it can still be added
         } else {
             $val['set'] = 'default';
-            $unset_cfg_keys[] = $k;
+            if ($val['required']){//if the value is required it's pushed to the set list even when unset
+                $set_cfg_keys[] = $k;
+            } else {
+                $unset_cfg_keys[] = $k;
+            }
         }
         $cfg_values[$k] = $val;
     }
@@ -125,7 +151,11 @@ if (isset($_GET['camera']) && $_GET['camera'] >= 0){
             $set_cfg_keys[] = $k;
         } else {
             $val['set'] = 'default';
-            $unset_cfg_keys[] = $k;
+            if ($val['required']){//if the value is required it's pushed to the set list even when unset
+                $set_cfg_keys[] = $k;
+            } else {
+                $unset_cfg_keys[] = $k;
+            }
         }
         $val['set'] = $cfg->isset($k) ? 'system' : 'default';
         $cfg_values[$k] = $val;
