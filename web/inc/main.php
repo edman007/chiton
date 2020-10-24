@@ -68,8 +68,13 @@ if ($db->connect_error){
 
 $cfg = new WebConfig($db);
 
-if ($cfg->get_value('timezone') != ''){
-    $tz = new DateTimeZone($cfg->get_value('timezone'));
+if ($cfg->get_value('timezone') != '' && $cfg->get_value('timezone') != 'system'){
+    try {
+        $tz = new DateTimeZone($cfg->get_value('timezone'));
+    } catch (Exception $e){
+        //timezone was actually bad
+        $tz = new DateTimeZone(date_default_timezone_get());
+    }
 } else {
     $tz = new DateTimeZone(date_default_timezone_get());
 }

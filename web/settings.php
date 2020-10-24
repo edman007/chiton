@@ -42,18 +42,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST'){
                 $db->query($sql);
             } else {
                 //insert and update
-                $qname = $db->real_escape_string(trim($name));
-                $qval = $db->real_escape_string(trim($_POST['value'][$k]));
-                $sql = "REPLACE INTO config (name, value, camera) VALUES ('$qname', '$qval', $camera)";
-                $res = $db->query($sql);
-                if (!$res){
-                    $smarty->assign('error_msg', 'Query Failed (' . $db->errno . ') ' . $db->error);
-                    $smarty->display('error.tpl');
-                    die();
+                $trimed_name = trim($name);
+                //we need to validate the name
+                if ($cfg->issettable($trimed_name)){
+                    $qname = $db->real_escape_string($trimed_name);
+                    $qval = $db->real_escape_string(trim($_POST['value'][$k]));
+                    $sql = "REPLACE INTO config (name, value, camera) VALUES ('$qname', '$qval', $camera)";
+                    $res = $db->query($sql);
+                    if (!$res){
+                        $smarty->assign('error_msg', 'Query Failed (' . $db->errno . ') ' . $db->error);
+                        $smarty->display('error.tpl');
+                        die();
+                    }
                 }
             }
         }
     }
+
+    //system config needs to be reloaded
+    $cfg = new WebConfig($db);
 }
 
 //the end goal is this will always be a list of all possible settings
@@ -74,7 +81,7 @@ $set_cfg_keys = array();
 $camera_page = false;
 $camera_id = -1;
 if (isset($_GET['camera']) && $_GET['camera'] >= 0){
-    $camera_config = WebConfig($db, (int)$_GET['camera']);
+    $camera_config = new WebConfig($db, (int)$_GET['camera']);
     $camera_page = true;
     $camera_id = (int)$_GET['camera'];
     foreach ($cfg_keys as $k){
@@ -85,21 +92,20 @@ if (isset($_GET['camera']) && $_GET['camera'] >= 0){
         $val['system'] = $cfg->get_value($k);
         $val['desc'] = $cfg->get_desc($k);
         $val['short_desc'] = $cfg->get_short_desc($k);
-        $val['read_only'] = $cfg->get_priority($k) == READ_ONLY;
+        $val['read_only'] = $cfg->get_priority($k) == SETTING_READ_ONLY;
+        $val['required'] = $cfg->get_priority($k) == SETTING_REQUIRED_CAMERA;
         if ($camera_config->isset($k)){
-            if ($cfg->isset($k)){
-                $val['set'] = 'system';
-                $unset_cfg_keys[] = $k;
-            } else {
-                $val['set'] = 'camera';
-                $set_cfg_keys[] = $k;
-            }
+            $val['set'] = 'camera';
+            $set_cfg_keys[] = $k;
+        } elseif ($cfg->isset($k)){
+            $val['set'] = 'system';
+            $set_cfg_keys[] = $k;//we have a value to display
+            $unset_cfg_keys[] = $k;//but it can still be added
         } else {
             $val['set'] = 'default';
             $unset_cfg_keys[] = $k;
         }
-        $val['set'] = $cfg->isset($k) ? 'system' : 'default';
-        $cfg_values[$key] = $val;
+        $cfg_values[$k] = $val;
     }
 
 } else {
@@ -113,6 +119,7 @@ if (isset($_GET['camera']) && $_GET['camera'] >= 0){
         $val['desc'] = $cfg->get_desc($k);
         $val['short_desc'] = $cfg->get_short_desc($k);
         $val['read_only'] = $cfg->get_priority($k) == SETTING_READ_ONLY;
+        $val['required'] = $cfg->get_priority($k) == SETTING_REQUIRED_SYSTEM;
         if ($cfg->isset($k)){
             $val['set'] = 'system';
             $set_cfg_keys[] = $k;
@@ -128,8 +135,25 @@ if (isset($_GET['camera']) && $_GET['camera'] >= 0){
 $smarty->assign('timezones', DateTimeZone::listIdentifiers());
 $smarty->assign('cfg_values', $cfg_values);
 $smarty->assign('cfg_keys', $cfg_keys);
+$smarty->assign('cfg_json', json_encode($cfg_values));
 $smarty->assign('unset_keys', $unset_cfg_keys);
 $smarty->assign('set_keys', $set_cfg_keys);
 $smarty->assign('camera_setting', $camera_page);
 $smarty->assign('camera_id', $camera_id);
+//list all cameras
+$sql = "SELECT name, value, camera FROM config WHERE name='active' OR name='display-name' ORDER BY camera ASC, name ASC";
+$res = $db->query($sql);
+$cameras = array();
+while ($row = $res->fetch_assoc()){
+    if ($row['camera'] < 0){
+            continue;//ignore system settings
+    }
+    $name = $row['name'] == 'active' ? 'Camera ' . $row['camera'] : $row['value'];
+    $cameras[$row['camera']]['name'] = $name;
+    if ($row['name'] == 'active'){
+        $cameras[$row['camera']]['active'] = $row['value'];
+    }
+}
+$smarty->assign('camera_list', $cameras);
+
 $smarty->display('settings.tpl');

@@ -25,23 +25,10 @@ class WebConfig {
     private $settings;
     private $db;
     private $camera_cfg;
-    function __construct($db){
+    function __construct($db, $camera = -1){
         $this->db = $db;
-        $this->camera_cfg = false;
-        $sql = 'SELECT name, value FROM config WHERE camera = -1';
-        $res = $db->query($sql);
-        if ($res){
-            while ($row = $res->fetch_assoc()){
-                $this->settings[$row['name']] = $row['value'];
-            }
-        }
-    }
-
-    //makes a config that only returns the values for this
-    function __construct1($db, $camera){
-        $this->db = $db;
-        $this->camera_cfg = true;
-        $sql = 'SELECT name, value FROM config WHERE camera = ' . (int)$camera . ' ORDER BY camera DESC';
+        $this->camera_cfg = $camera != -1;
+        $sql = 'SELECT name, value FROM config WHERE camera = ' . (int)$camera;
         $res = $db->query($sql);
         if ($res){
             while ($row = $res->fetch_assoc()){
@@ -93,6 +80,14 @@ class WebConfig {
         return $default_settings[$name];//it is an error if this is not set
     }
 
+    //returns if this is a value we can modify
+    function issettable($name){
+        global $default_settings;
+        if (isset($default_settings[$name])){
+            return $this->get_priority($name) != SETTING_READ_ONLY;
+        }
+        return false;
+    }
     //gets the info for all config of type
     function get_defaults_of_type($type){
         global $default_settings;
