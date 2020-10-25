@@ -175,3 +175,15 @@ ul.settings li  {
 .setting_camera input, .setting_camera select {
     background-color:rgb(180, 240, 180);
 }
+
+/*
+* Mobile Website
+*/
+@media (max-width: 1023px) {
+    .tiledViewer {
+        width:100%;
+    }
+    .singleViewer{
+        width:100%;
+    }
+}
