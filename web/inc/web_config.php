@@ -28,6 +28,9 @@ class WebConfig {
     function __construct($db, $camera = -1){
         $this->db = $db;
         $this->camera_cfg = $camera != -1;
+        if ($camera == -1){
+            $this->load_txt_cfg();
+        }
         $sql = 'SELECT name, value FROM config WHERE camera = ' . (int)$camera;
         $res = $db->query($sql);
         if ($res){
@@ -105,4 +108,24 @@ class WebConfig {
         global $default_settings;
         return array_keys($default_settings);
     }
+
+    //parse the text config file
+    function load_txt_cfg(){
+        if (!defined('CONFIG_FILE_PATH') || !file_exists(CONFIG_FILE_PATH)){
+            return false;
+        }
+        $file = file(CONFIG_FILE_PATH);
+        foreach ($file as &$line){
+            if (preg_match('/^\s*([a-z0-9-]+)\s*=\s*([\'"]?)(.*?)(\2)\s*(?:#.*)?$/', $line, $matches)){
+                if ($matches[2] == '\''){
+                    $matches[3] = str_replace("\\'", "'", $matches[3]);
+                } else if($matches[2] == '"'){
+                    $matches[3] = str_replace('\\"', '"', $matches[3]);
+                }
+                $this->settings[$matches[1]] = $matches[3];
+            }
+        }
+
+    }
+
 }

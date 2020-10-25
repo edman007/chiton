@@ -28,4 +28,5 @@ define('DB_USER', @DB_USER@);
 define('DB_PASS', @DB_PASS@);
 define('SMARTY_COMPILE_DIR', '@SMARTY_COMPILE_DIR@');
 define('SMARTY_CACHE_DIR', '@SMARTY_CACHE_DIR@');
+define('CONFIG_FILE_PATH', @CFG_FILE@);
 ?>

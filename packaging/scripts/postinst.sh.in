@@ -180,6 +180,7 @@ if [ ! -f $CFGDIR/config.php ]; then
         -e "s,[@]DB_DB[@],'$MYSQL_DB_SED',g" \
         -e "s,[@]SMARTY_COMPILE_DIR[@],$STATE_DIR/compile,g" \
         -e "s,[@]SMARTY_CACHE_DIR[@],$STATE_DIR/cache,g" \
+        -e "s,[@]CFG_FILE[@],'$CFGDIR/chiton.cfg',g" \
         $CFGDIR/config.template.php > $CFGDIR/config.php
 
 fi
