@@ -58,6 +58,10 @@ function loadShortcuts(video){
     var lastOffsetX = 0;
     var lastOffsetY = 0;
     var vcontrol = videoViewPort.getElementsByClassName("vcontrol")[0];
+    var touchStartX = 0;
+    var touchStartY = 0;
+    var swipeProcessed = false;
+
     loadControls(video, vcontrol);
 
     //these are callbacks to allow zooming and panning of the video
@@ -110,11 +114,17 @@ function loadShortcuts(video){
             }
         } else {
             //media player shift
+            if (ev.deltaY > 0){
+                jumpTime(60);//FIXME: Should be a config variable
+            } else {
+                jumpTime(-60);
+            }
         }
     
         ev.preventDefault();
         return false;
     };
+
     var mousemoveF = (ev) => {
         var newX = lastOffsetX + ev.movementX/2;
         var newY = lastOffsetY + ev.movementY/2;
@@ -122,6 +132,7 @@ function loadShortcuts(video){
         ev.preventDefault();
         return false;
     };
+
     var mouseupF = (e) => {
         document.removeEventListener('mousemove', mousemoveF);
         document.removeEventListener('mouseup', mouseupF);
@@ -168,9 +179,51 @@ function loadShortcuts(video){
     //add fullscreen callback
     vcontrol.getElementsByClassName("fullscreen")[0].addEventListener('click', enterFS, false);
 
-
     //load the video timestamps
     loadVideoTS(video, vcontrol);
+
+    function jumpTime(seconds){
+        var target = video.currentTime + seconds;
+        if (target < 0){
+            video.currentTime = 0;
+        } else if (target > video.duration){
+            video.currentTime = video.currentTime - 6;//FIXME: the 6 should be a config variable
+        } else {
+            video.currentTime = target;
+        }
+    }
+
+    //mobile functions...
+
+    //swipe is left/right
+    var touchStartF = (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        swipeProcessed = false;
+    };
+
+    var touchEndF = (e) => {
+        if (swipeProcessed){
+            return;
+        }
+        var deltaX = e.changedTouches[0].clientX - touchStartX;
+        var deltaY = e.changedTouches[0].clientY - touchStartY;
+        if (Math.abs(deltaX) > Math.abs(deltaY)){
+            if (deltaX > 0){
+                //swipe right
+                jumpTime(+60);//FIXME: the 60 should be a config variable
+            } else {
+                //swipe left
+                jumpTime(-60);
+            }
+        }
+        swipeProcessed = true;
+
+    };
+
+    videoWrapper.addEventListener('touchstart', touchStartF, false);
+    videoWrapper.addEventListener('touchmove', touchEndF, false);
+
 }
 
 
@@ -271,7 +324,8 @@ function loadVideoTS(video, vcontrol){
         ev.preventDefault();
         ev.stopPropagation();
     }
-    
+
+
     //query the info...
     getCameraInfo(camera, start_ts, (jdata) => {
         jsonData = jdata;        
@@ -407,6 +461,9 @@ function getTSHTML(ts, len){
 }
 
 function tsToStr(ts){
+    if (isNaN(ts)){
+        return "??";
+    }
     var hours = Math.floor(ts / 3600);
     ts -= hours*3600;
     var min = Math.floor(ts / 60);
