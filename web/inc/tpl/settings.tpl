@@ -30,7 +30,8 @@
        {/foreach}
        </select>
     {else}
-      <input type="text" name="value[{$smarty.foreach.CFGOPT.index}]" value="{$cfg_values[$set_key]['value']|escape}" {if $cfg_values[$set_key]['read_only']}readonly{/if}/>
+      <input type="text" name="value[{$smarty.foreach.CFGOPT.index}]" value="{if $set_key == 'db-password'}********{else}{$cfg_values[$set_key]['value']|escape}{/if}"
+             {if $cfg_values[$set_key]['read_only']}readonly{/if}/>
     {/if}</div>
     <div class="setting_delete">
       <input type="hidden" name="camera[{$smarty.foreach.CFGOPT.index}]" value="{$camera_id}"/>
