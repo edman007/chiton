@@ -110,13 +110,6 @@ AC_ARG_WITH([runuser],
   [runuser=$PACKAGE_TARNAME])
 AC_SUBST([runuser])
 
-AC_ARG_WITH([syslogconfdir],
-  [AS_HELP_STRING([--with-sysconfdir=DIR], [Directory to install the syslog config  [SYSCONFDIR/syslog.d]])],
-  [SYSLOGCONFDIR=$withval],
-  [SYSLOGCONFDIR=${sysconfdir}/syslog.d])
-AC_SUBST([SYSLOGCONFDIR])
-
-
 AC_ARG_WITH([smartydir],
   [AS_HELP_STRING([--with-smartydir=DIR], [Directory of system Smarty 3.x installation  [no]])],
   [SMARTYDIR=$withval],
