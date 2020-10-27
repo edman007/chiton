@@ -69,13 +69,9 @@ function loadShortcuts(video){
     loadControls(video, vcontrol);
 
     var mouseWheelF = (ev) => {
-        if (ev.shiftKey){
-            if (ev.deltaY > 0){
-
-            } else {
-
-            }
-        } else {
+        if (!ev.shiftKey){
+            ev.preventDefault();
+            ev.stopPropagation();
             //media player shift
             if (ev.deltaY > 0){
                 jumpTime(60);//FIXME: Should be a config variable
@@ -87,7 +83,7 @@ function loadShortcuts(video){
         return false;
     };
     
-    videoWrapper.addEventListener('mousewheel', mouseWheelF, false);
+    videoViewPort.addEventListener('mousewheel', mouseWheelF, true);
 
     //play/pause callbacks
     vcontrol.getElementsByClassName("playbtn")[0].addEventListener('click', (ev) => {playVideo(video, vcontrol);}, false);
