@@ -75,6 +75,7 @@ ul.sitemap li a {
 
 .video_wrapper {
     position:relative;
+    touch-action:none;
 }
 
 .hidden {

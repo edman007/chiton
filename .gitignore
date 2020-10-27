@@ -37,6 +37,7 @@ m4/*.m4
 LICENSE.smarty
 LICENSE.hls
 LICENSE.breeze-icons
+LICENSE.pinch-zoom
 chiton-*.tar.*
 chiton-*.zip
 chiton-git
@@ -60,3 +61,4 @@ packaging/slackware/douninst.sh
 packaging/slackware/chiton.SlackBuild
 release
 web/inc/configdb.php
+web/static/pinch-zoom-min.js

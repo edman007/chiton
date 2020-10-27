@@ -1,10 +1,11 @@
 <div class="video_viewport">
-<div class="video_wrapper">
+<pinch-zoom class="video_wrapper">
 <video controls>
 <source src="{$video.url}"/>
 Video is not supported by your browser
 </video>
-</div>
+</pinch-zoom>
+
 <div class="vcontrol hidden">
 <div class="progress"></div>
 <div class="play"><img src="static/breeze/2x-playback-start.png" srcset="static/breeze/2x-playback-start.png, static/breeze/4x-playback-start.png 2x" alt="Play" class="playbtn" /><img src="static/breeze/2x-playback-pause.png" srcset="static/breeze/2x-playback-pause.png, static/breeze/4x-playback-pause.png 2x" alt="Pause" class="pausebtn hidden" /></div>
@@ -15,4 +16,5 @@ Video is not supported by your browser
 <div class="cameraid hidden">{$video.camera}</div>
 <div class="starttime hidden">{$video.start_ts}</div>
 </div>
+
 </div>

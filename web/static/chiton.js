@@ -14,7 +14,9 @@ function loadPlayer(){
     
 }
 
+//also loads the pinchZoom function after the video load
 function loadHLS(video){
+    var pinchZ;
     if (Hls.isSupported()) {
         // bind them together
         var hls = new Hls();
@@ -34,6 +36,7 @@ function loadHLS(video){
         function lockViewPortSize(){
             videoViewPort.style.height = videoWrapper.scrollHeight + "px";
             hls.off(Hls.Events.FRAG_BUFFERED, lockViewPortSize);
+
         }
         hls.on(Hls.Events.FRAG_BUFFERED, lockViewPortSize);
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -62,55 +65,15 @@ function loadShortcuts(video){
     var touchStartY = 0;
     var swipeProcessed = false;
 
+
     loadControls(video, vcontrol);
 
-    //these are callbacks to allow zooming and panning of the video
-    function applyOffSet(node, newX, newY){
-        var maxDeltaX = videoWrapper.offsetWidth - videoViewPort.offsetWidth;
-        var maxDeltaY = videoWrapper.offsetHeight - videoViewPort.offsetHeight;
-
-        if (newX > maxDeltaX){
-            newX = maxDeltaX;
-        } else if (newX < -maxDeltaX) {
-            newX = -maxDeltaX;
-        }
-        
-        if (newY > maxDeltaY){
-            newY = maxDeltaY;
-        } else if (newY < -maxDeltaY) {
-            newY = -maxDeltaY;
-        }
-        lastOffsetY = newY;
-        lastOffsetX = newX;
-        node.style.left = newX + 'px';
-        node.style.top = newY + 'px';
-    }
     var mouseWheelF = (ev) => {
-        if (ev.shiftKey){//zoom
-            var newWidth;
-            var newHeight;
-            var oldWidth = videoWrapper.offsetWidth;
-            var oldHeight = videoWrapper.offsetHeight;
-            
-            if (ev.deltaY < 0){
-                newWidth = videoWrapper.offsetWidth*1.5;
-                if (newWidth > maxWidth){
-                    newWidth = maxWidth;
-                }
+        if (ev.shiftKey){
+            if (ev.deltaY > 0){
+
             } else {
-                newWidth = videoWrapper.offsetWidth*0.75;
-                if (newWidth < startWidth){
-                    newWidth = startWidth;
-                }
-                
-            }
-            videoWrapper.style.width = newWidth + 'px';
-            newHeight = videoWrapper.offsetHeight;
-            //and fixup the offsets
-            if (ev.deltaY < 0){
-                applyOffSet(videoWrapper, lastOffsetX - ev.offsetX/2 , lastOffsetY  - ev.offsetY/2);
-            } else {
-                applyOffSet(videoWrapper, lastOffsetX*(newWidth/oldWidth) ,lastOffsetY*(newHeight/oldHeight));
+
             }
         } else {
             //media player shift
@@ -121,34 +84,10 @@ function loadShortcuts(video){
             }
         }
     
-        ev.preventDefault();
-        return false;
-    };
-
-    var mousemoveF = (ev) => {
-        var newX = lastOffsetX + ev.movementX/2;
-        var newY = lastOffsetY + ev.movementY/2;
-        applyOffSet(videoWrapper, newX, newY);
-        ev.preventDefault();
-        return false;
-    };
-
-    var mouseupF = (e) => {
-        document.removeEventListener('mousemove', mousemoveF);
-        document.removeEventListener('mouseup', mouseupF);
-        e.preventDefault();
-        return false;
-    };
-
-    var mousedownF = (e) => {
-        document.addEventListener('mouseup', mouseupF, false);
-        document.addEventListener('mousemove', mousemoveF, false);
-        e.preventDefault();
         return false;
     };
     
-    videoViewPort.addEventListener('mousewheel', mouseWheelF, false);
-    videoWrapper.addEventListener('mousedown', mousedownF, false);
+    videoWrapper.addEventListener('mousewheel', mouseWheelF, false);
 
     //play/pause callbacks
     vcontrol.getElementsByClassName("playbtn")[0].addEventListener('click', (ev) => {playVideo(video, vcontrol);}, false);
@@ -223,7 +162,6 @@ function loadShortcuts(video){
 
     videoWrapper.addEventListener('touchstart', touchStartF, false);
     videoWrapper.addEventListener('touchmove', touchEndF, false);
-
 }
 
 

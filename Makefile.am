@@ -41,7 +41,7 @@ sbin_SCRIPTS = chiton-install
 noinst_DATA=dist-version
 chiton_CXXFLAGS = $(AM_CXXFLAGS)
 
-EXTERNAL_LICENSE=LICENSE.breeze-icons  LICENSE.hls  LICENSE.smarty
+EXTERNAL_LICENSE=LICENSE.breeze-icons  LICENSE.hls  LICENSE.smarty LICENSE.pinch-zoom
 LICENSE_FILES=COPYING $(EXTERNAL_LICENSE)
 
 DEBIAN_PKG_FILES=packaging/debian/source-format packaging/debian/compat \
@@ -194,6 +194,10 @@ LICENSE.smarty web/inc/external/smarty:
 	chmod u+w -R web/inc/external/smarty
 	cp $(top_srcdir)/external/smarty.git/LICENSE LICENSE.smarty
 
+LICENSE.pinch-zoom:
+	cp $(top_srcdir)/external/pinch-zoom.git/dist/pinch-zoom-min.js  web/static/pinch-zoom-min.js
+	cp $(top_srcdir)/external/pinch-zoom.git/LICENSE $@
+
 web/static/2x-bottom-cursor.png: $(top_srcdir)/web/static/bottom-cursor.svg
 	$(CONVERT) -background none -density 144 $<  $@
 
@@ -231,7 +235,7 @@ packaging/slackware/chiton.SlackBuild: packaging/slackware/chiton.SlackBuild.in 
 	$(do_subst) < $< > $@
 	chmod +x $@
 dist-version:
-	echo $(shell echo $(shell git log --oneline --no-walk  || echo Unknown) | head -1 | cut -d ' ' -f 1) > dist-version
+	echo "$(shell git log --oneline --no-walk  || echo Unknown)" | head -1 | cut -d ' ' -f 1 > dist-version
 
 #all the web files
 dist_web_DATA=web/camera.php  web/index.php  web/info.php  web/settings.php  web/stream.php web/license.php
@@ -255,6 +259,9 @@ web_staticdir=$(pkgdatadir)/web/static
 web_statichls_DATA=$(HLS_FILES)
 web_statichlsdir=$(pkgdatadir)/web/static
 
+web_staticpinchzoom_DATA=external/pinch-zoom.git/dist/pinch-zoom-min.js
+web_staticpinchzoomdir=$(pkgdatadir)/web/static
+
 web_static_breeze_DATA=$(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG)
 web_static_breezedir=$(pkgdatadir)/web/static/breeze
 
@@ -269,7 +276,7 @@ CLEANFILES=$(EXTERNAL_LICENSE) $(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG) w
 	$(HLS_BUILD_FILES) $(sbin_SCRIPTS) 	$(SLACKWARE_PACKAGE_FILES_BUILT) $(DEBIAN_PKG_FILES_BUILT) \
 	web/static/2x-bottom-cursor.png web/static/4x-bottom-cursor.png \
 	packaging/scripts/rc.chiton chiton-install packaging/scripts/chiton.service \
-	web/inc/configdb.php
+	web/inc/configdb.php web/static/pinch-zoom-min.js
 
 MAINTAINERCLEANFILES=dist-version chiton-$(VERSION).dsc
 

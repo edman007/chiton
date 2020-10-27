@@ -7,3 +7,6 @@
 [submodule "external/breeze-icons.git"]
 	path = external/breeze-icons.git
 	url = https://github.com/KDE/breeze-icons.git
+[submodule "external/pinch-zoom.git"]
+	path = external/pinch-zoom.git
+	url = https://github.com/GoogleChromeLabs/pinch-zoom.git
