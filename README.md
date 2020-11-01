@@ -10,7 +10,7 @@ whenever possible to maximize performance
 
 It is recommended to use a binary package for your distribition. Then start it with `systemctl enable chiton` (on a systemd based system) or executing `/etc/rc.d/rc.chiton start` on a SysV based system (like Slackware).
 
-If you would like to build from source, it is recommended to run the packaging script in the packaging directory to generate a binary for your distribution. If you downloaded this via git you will need to run `./autogen.sh` first.
+If you would like to build from source, it is recommended to run the packaging script in the packaging directory to generate a binary for your distribution. If you downloaded this via git you will need to run `./autogen.sh` first. Note, when building from git node-license-checker is a build time dependency
 
 For debian that would look something like this:
 

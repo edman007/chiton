@@ -37,7 +37,7 @@ chiton_SOURCES = main.cpp config.cpp config_parser.cpp database.cpp mariadb.cpp 
 	database_manager.hpp database_manager.cpp setting.hpp
 
 #these are actually to make it possible to serve the website ouf of the source for development
-EXTRA_chiton_DEPENDICIES=hls pinch-zoom
+EXTRA_chiton_DEPENDENCIES=hls pinch-zoom
 sbin_SCRIPTS = chiton-install
 
 noinst_DATA=dist-version
