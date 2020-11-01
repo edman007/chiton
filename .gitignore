@@ -62,3 +62,7 @@ packaging/slackware/chiton.SlackBuild
 release
 web/inc/configdb.php
 web/static/pinch-zoom-min.js
+external/npm/LICENSE.*
+external/npm/debian-license.in
+external/npm/license-meta.csv
+external/npm/node_modules

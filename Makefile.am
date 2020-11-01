@@ -36,12 +36,15 @@ chiton_SOURCES = main.cpp config.cpp config_parser.cpp database.cpp mariadb.cpp 
 	database_result.hpp main.hpp mariadb_result.hpp stream_writer.hpp \
 	database_manager.hpp database_manager.cpp setting.hpp
 
+#these are actually to make it possible to serve the website ouf of the source for development
+EXTRA_chiton_DEPENDICIES=hls pinch-zoom
 sbin_SCRIPTS = chiton-install
 
 noinst_DATA=dist-version
 chiton_CXXFLAGS = $(AM_CXXFLAGS)
 
-EXTERNAL_LICENSE=LICENSE.breeze-icons  LICENSE.hls  LICENSE.smarty LICENSE.pinch-zoom
+NPM_LICENSE=external/npm/LICENSE.*
+EXTERNAL_LICENSE=LICENSE.breeze-icons LICENSE.smarty $(NPM_LICENSE)
 LICENSE_FILES=COPYING $(EXTERNAL_LICENSE)
 
 DEBIAN_PKG_FILES=packaging/debian/source-format packaging/debian/compat \
@@ -64,7 +67,7 @@ PACKAGING_FILES=packaging/scripts/rc.chiton.in packaging/scripts/chiton.service.
 noinst_SCRIPTS=packaging/scripts/rc.chiton
 
 EXTRA_DIST=external chiton-install.in $(PACKAGING_FILES) dist-version README.md \
-	README NEWS AUTHORS ChangeLog web/inc/configdb.php.in
+	README NEWS AUTHORS ChangeLog web/inc/configdb.php.in external/npm/debian-license.in
 
 dist_cfg_DATA=config/chiton.cfg.template web/inc/config.template.php
 cfgdir=$(sysconfdir)/$(PACKAGE)
@@ -115,6 +118,7 @@ dist-hook:
 	-chmod u+w $(distdir)/external/*/.git
 	-rm -rf $(distdir)/external/*/.git
 	-rm $(distdir)/web/inc/tpl_cache/* $(distdir)/web/inc/tpl_compile/* $(distdir)/web/vids
+	-cp external/npm/LICENSE.* $(distdir)/external/npm/
 	find $(distdir) -name .placeholder -delete
 
 #install the web directory with some cp commands...
@@ -184,15 +188,14 @@ $(BREEZE_4X_PNG): $(BREEZE_SVG)
 external/npm/node_modules:
 	$(MKDIR_P) external/npm/
 	(cd external/npm/ && npm install --only-prod hls.js pinch-zoom-element )
+	(cd external/npm/ && license-checker --relativeLicensePath --csv --customPath license-format.json --out license-meta.csv && ./create-license.sh )
+$(NPM_LICENSE) external/npm/debian-license.in  &: | external/npm/node_modules
 
 $(HLS_FILES) external/npm/node_modules/pinch-zoom-element/dist/pinch-zoom-min.js &: | external/npm/node_modules
 
 LICENSE.breeze-icons: $(BREEZE_2X_PNG) $(BREEZE_4X_PNG)
 	cp $(top_srcdir)/external/breeze-icons.git/COPYING.LIB LICENSE.breeze-icons
 
-LICENSE.hls: external/npm/node_modules
-	cp $(top_srcdir)/external/npm/node_modules/hls.js/dist/hls.light.* web/static/
-	cp $(top_srcdir)/external/npm/node_modules/hls.js/LICENSE $@
 
 LICENSE.smarty web/inc/external/smarty:
 	$(MKDIR_P) web/inc/external/
@@ -200,9 +203,13 @@ LICENSE.smarty web/inc/external/smarty:
 	chmod u+w -R web/inc/external/smarty
 	cp $(top_srcdir)/external/smarty.git/LICENSE LICENSE.smarty
 
-LICENSE.pinch-zoom: | external/npm/node_modules
+#These are developer install rules
+.PHONY: hls
+hls: | external/npm/node_modules
+	cp $(top_srcdir)/external/npm/node_modules/hls.js/dist/hls.light.* web/static/
+.PHONY: pinch-zoom
+pinch-zoom: | external/npm/node_modules
 	cp $(top_srcdir)/external/npm/node_modules/pinch-zoom-element/dist/pinch-zoom-min.js  web/static/pinch-zoom-min.js
-	cp $(top_srcdir)/external/npm/node_modules/pinch-zoom-element/LICENSE $@
 
 web/static/2x-bottom-cursor.png: $(top_srcdir)/web/static/bottom-cursor.svg
 	$(CONVERT) -background none -density 144 $<  $@
@@ -287,7 +294,7 @@ CLEANFILES=$(EXTERNAL_LICENSE) $(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG) w
 MAINTAINERCLEANFILES=dist-version chiton-$(VERSION).dsc
 
 maintainer-clean-local:
-	rm -rf external/npm/node_modules
+	-rm -rf external/npm/node_modules external/npm/LICENSE.* external/npm/debian-license.in
 
 # This is for actual release production...Creates the directory 'release' with all the files in our release
 .PHONY: release
@@ -301,8 +308,9 @@ release: chiton-$(VERSION).dsc dist $(SLACKSRCPKG)
 packaging/debian/control: packaging/debian/control.in Makefile
 	$(do_subst) < $< > $@
 
-packaging/debian/copyright: packaging/debian/copyright.in $(LICENSE_FILES)
+packaging/debian/copyright: packaging/debian/copyright.in $(LICENSE_FILES) | external/npm/node_modules
 	$(do_subst) < $< > $@
+	cat external/npm/node_modules/debian-license.in >> $@
 
 #kinda crappy, but i need something that works
 packaging/debian/changelog: Makefile

@@ -5,13 +5,17 @@ Third Party Sources We Require:
 Smarty
 https://www.smarty.net/
 
-HLS:
-https://hls-js.netlify.app/demo/
 
 Breeze Icons:
 https://api.kde.org/frameworks/breeze-icons/html/index.html
 
+Direct NPM Dependencies
+HLS:
+https://hls-js.netlify.app/demo/
+
 Pinch-Zoom:
 https://github.com/GoogleChromeLabs/pinch-zoom
+
+Other NPM dependencies, see external/npm/LICENSE.*
 
 * Developer Note, update packing/debian/copyright.in when changing this file
