@@ -163,10 +163,8 @@ BREEZE_4X_PNG=$(addprefix web/static/breeze/4x-,$(notdir $(BREEZE_PNG)))
 _getpos = $(if $(findstring $1,$2),$(call _getpos,$1,$(wordlist 2,$(words $2),$2),x $3),$3)
 getpos = $(words $(call _getpos,$1,$2))
 
-HLS_FILES=external/hls.js.git/dist/hls.js external/hls.js.git/dist/hls.light.js \
-	external/hls.js.git/dist/hls.light.min.js external/hls.js.git/dist/hls.min.js \
-	external/hls.js.git/dist/hls.js.map  external/hls.js.git/dist/hls.light.js.map \
-	external/hls.js.git/dist/hls.light.min.js.map  external/hls.js.git/dist/hls.min.js.map
+HLS_FILES= external/npm/node_modules/hls.js/dist/hls.light.js external/npm/node_modules/hls.js/dist/hls.light.min.js \
+	external/npm/node_modules/hls.js/dist/hls.light.js.map external/npm/node_modules/hls.js//dist/hls.light.min.js.map
 
 HLS_BUILD_FILES=$(addprefix web/static/,$(notdir $(HLS_FILES)))
 
@@ -181,12 +179,20 @@ $(BREEZE_2X_PNG): $(BREEZE_SVG)
 $(BREEZE_4X_PNG): $(BREEZE_SVG)
 	$(CONVERT) -background none -density 288 $(word $(call getpos,$@,$(BREEZE_4X_PNG)),$(BREEZE_SVG))  $@
 
+
+
+external/npm/node_modules:
+	$(MKDIR_P) external/npm/
+	(cd external/npm/ && npm install --only-prod hls.js pinch-zoom-element )
+
+$(HLS_FILES) external/npm/node_modules/pinch-zoom-element/dist/pinch-zoom-min.js &: | external/npm/node_modules
+
 LICENSE.breeze-icons: $(BREEZE_2X_PNG) $(BREEZE_4X_PNG)
 	cp $(top_srcdir)/external/breeze-icons.git/COPYING.LIB LICENSE.breeze-icons
 
-LICENSE.hls:
-	cp $(top_srcdir)/external/hls.js.git/dist/hls.* web/static/
-	cp $(top_srcdir)/external/hls.js.git/LICENSE LICENSE.hls
+LICENSE.hls: external/npm/node_modules
+	cp $(top_srcdir)/external/npm/node_modules/hls.js/dist/hls.light.* web/static/
+	cp $(top_srcdir)/external/npm/node_modules/hls.js/LICENSE $@
 
 LICENSE.smarty web/inc/external/smarty:
 	$(MKDIR_P) web/inc/external/
@@ -194,9 +200,9 @@ LICENSE.smarty web/inc/external/smarty:
 	chmod u+w -R web/inc/external/smarty
 	cp $(top_srcdir)/external/smarty.git/LICENSE LICENSE.smarty
 
-LICENSE.pinch-zoom:
-	cp $(top_srcdir)/external/pinch-zoom.git/dist/pinch-zoom-min.js  web/static/pinch-zoom-min.js
-	cp $(top_srcdir)/external/pinch-zoom.git/LICENSE $@
+LICENSE.pinch-zoom: | external/npm/node_modules
+	cp $(top_srcdir)/external/npm/node_modules/pinch-zoom-element/dist/pinch-zoom-min.js  web/static/pinch-zoom-min.js
+	cp $(top_srcdir)/external/npm/node_modules/pinch-zoom-element/LICENSE $@
 
 web/static/2x-bottom-cursor.png: $(top_srcdir)/web/static/bottom-cursor.svg
 	$(CONVERT) -background none -density 144 $<  $@
@@ -259,7 +265,7 @@ web_staticdir=$(pkgdatadir)/web/static
 web_statichls_DATA=$(HLS_FILES)
 web_statichlsdir=$(pkgdatadir)/web/static
 
-web_staticpinchzoom_DATA=external/pinch-zoom.git/dist/pinch-zoom-min.js
+web_staticpinchzoom_DATA=external/npm/node_modules/pinch-zoom-element/dist/pinch-zoom-min.js
 web_staticpinchzoomdir=$(pkgdatadir)/web/static
 
 web_static_breeze_DATA=$(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG)
@@ -279,6 +285,9 @@ CLEANFILES=$(EXTERNAL_LICENSE) $(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG) w
 	web/inc/configdb.php web/static/pinch-zoom-min.js
 
 MAINTAINERCLEANFILES=dist-version chiton-$(VERSION).dsc
+
+maintainer-clean-local:
+	rm -rf external/npm/node_modules
 
 # This is for actual release production...Creates the directory 'release' with all the files in our release
 .PHONY: release
