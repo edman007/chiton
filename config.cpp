@@ -124,7 +124,7 @@ double Config::get_value_double(const std::string& key){
 const std::string& Config::get_default_value(const std::string& key){
     for (auto& itr : setting_options){
         if (itr.key == key){\
-            LWARN("Got default value of " + itr.def);
+            LDEBUG("Got default value of " + itr.def);
             return itr.def;
         }
     }
