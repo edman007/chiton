@@ -29,11 +29,11 @@ void ffmpeg_log_callback(void * avcl, int level, const char * fmt, va_list vl){
     if (level <= AV_LOG_FATAL){
         chiton_level = CH_LOG_FATAL;
     } else if (level <= AV_LOG_ERROR){
-        chiton_level = CH_LOG_ERROR;
-    } else if (level <= AV_LOG_WARNING){
         chiton_level = CH_LOG_WARN;
-    } else if (level <= AV_LOG_INFO){
+    } else if (level <= AV_LOG_WARNING){
         chiton_level = CH_LOG_INFO;
+    } else if (level <= AV_LOG_INFO){
+        chiton_level = CH_LOG_DEBUG;
     //}else if (level <= AV_LOG_VERBOSE){//we do not have a "verbose"
     } else {
         chiton_level = CH_LOG_DEBUG;
@@ -57,7 +57,7 @@ void load_ffmpeg(void){
 #ifdef DEBUG
     av_log_set_level(AV_LOG_DEBUG);
 #else
-    av_log_set_level(AV_LOG_INFO);
+    av_log_set_level(AV_LOG_WARNING);
 #endif
     av_log_set_callback(ffmpeg_log_callback);
 }
