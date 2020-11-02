@@ -26,6 +26,7 @@
 
 StreamUnwrap::StreamUnwrap(Config& cfg) : cfg(cfg) {
     input_format_context = NULL;
+    max_sync_offset = cfg.get_value_int("max-sync-offset");
     LINFO("Unwrap is loaded" + cfg.get_value("camera-id"));
 }
 
@@ -256,8 +257,9 @@ bool StreamUnwrap::read_frame(void){
     //check the time of the youngest packet...
     double delta = recv_time.tv_sec;
     delta -= av_q2d(input_format_context->streams[reorder_queue.back().stream_index]->time_base) * reorder_queue.back().dts;
-    if (delta > 60 || delta < -60){
-        LWARN("Input stream has drifted " + std::to_string(delta) + "s from wall time on camera " + cfg.get_value("camera-id"));
+    if (delta > max_sync_offset || delta < -max_sync_offset){
+        connect_time.tv_sec -= delta;
+        LWARN("Input stream has drifted " + std::to_string(delta) + "s from wall time on camera " + cfg.get_value("camera-id") + ", resyncing..." );
     }
     
     return true;

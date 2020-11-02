@@ -61,6 +61,7 @@ private:
     std::list<AVPacket> reorder_queue;
 
     struct timeval connect_time;
+    int max_sync_offset;
 };
 
 #endif

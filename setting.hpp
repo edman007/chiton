@@ -79,5 +79,6 @@ const std::vector<Setting> setting_options {
  {"min-free-space", "1073741824", "min-free-space", "How many bytes of free space triggers a cleanup, if it contains a %, "
          "it is the target free-percentage of user accessable space", SETTING_OPTIONAL_SYSTEM},
  {"display-name", "", "Camera Name", "The name of the camera used in displays", SETTING_OPTIONAL_CAMERA},
+ {"max-sync-offset", "5", "Max Sync Offset", "The maximum drift in camera time tolerated before we resync the clock", SETTING_OPTIONAL_CAMERA},
 
      };
