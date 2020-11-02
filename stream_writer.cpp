@@ -169,13 +169,18 @@ bool StreamWriter::write(const AVPacket &packet){
     */
     
     //guarentee that they have an increasing DTS
-    if (out_pkt.dts <= last_dts[stream_mapping[out_pkt.stream_index]]){
+    if (out_pkt.dts < last_dts[stream_mapping[out_pkt.stream_index]]){
         LWARN("Shifting frame timestamp due to out of order issue in camera " + cfg.get_value("camera-id") +", old dts was: " + std::to_string(out_pkt.dts));
         last_dts[stream_mapping[out_pkt.stream_index]]++;
         long pts_delay = out_pkt.pts - out_pkt.dts;
         out_pkt.dts = last_dts[stream_mapping[out_pkt.stream_index]];
         out_pkt.pts = out_pkt.dts + pts_delay;
+    } else if (out_pkt.dts == last_dts[stream_mapping[out_pkt.stream_index]]) {
+        LWARN("Received duplicate frame from camera " + cfg.get_value("camera-id") +" at dts: " + std::to_string(out_pkt.dts) + ". Dropping Frame");
+        av_packet_unref(&out_pkt);
+        return true;
     }
+
     last_dts[stream_mapping[out_pkt.stream_index]] = out_pkt.dts;
     //log_packet(output_format_context, out_pkt, "out: "+path);
 
