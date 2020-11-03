@@ -156,8 +156,8 @@ function loadShortcuts(video){
 
     };
 
-    videoWrapper.addEventListener('touchstart', touchStartF, false);
-    videoWrapper.addEventListener('touchmove', touchEndF, false);
+    vcontrol.addEventListener('touchstart', touchStartF, false);
+    vcontrol.addEventListener('touchmove', touchEndF, false);
 }
 
 
