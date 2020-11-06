@@ -289,7 +289,7 @@ function loadVideoTS(video, vcontrol){
         }
     });
 
-    progressBar.addEventListener('click', (ev)=>{
+    vcontrol.addEventListener('click', (ev)=>{
         var offset = ev.offsetX;
         if (ev.target !== progressBar){
             offset += ev.target.offsetLeft;
