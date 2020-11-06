@@ -280,11 +280,9 @@ function loadVideoTS(video, vcontrol){
         var actualDuration = convertTSToTime(video.duration, jsonData)
         tsBox.innerHTML = getTSHTML(actualTime, actualDuration);
         var barWidth = progressBar.offsetWidth;
-        var newEnd = (actualDuration/fullDay*barWidth);
-
+        var newEnd = (actualDuration/fullDay)*barWidth;
         if (vcontrol.getElementsByClassName("future").length == 1){
-            vcontrol.getElementsByClassName("future")[0].style.left =  newEnd - totalGaps+"px";
-            vcontrol.getElementsByClassName("future")[0].style.width =  (barWidth - newEnd)+"px";
+            vcontrol.getElementsByClassName("future")[0].style.width =  (barWidth - (newEnd + totalGaps))+"px";
         }
         if (pointer !== null){
             pointer.style.left = (actualTime/fullDay*barWidth) - pointer.offsetWidth/2 + "px";
@@ -333,7 +331,8 @@ function drawGaps(camera, vcontrol, jsonData){
         if (gapWidth <= 1){
             gapWidth = 1;
         }
-        var left = (jsonData.gaps[i].start_ts / fullDay) * width - total_offset;
+
+        var left = (jsonData.gaps[i].start_ts / fullDay) * width  /*- total_offset*/;
         total_offset += gapWidth;
         newHTML += '<div class="gap" style="width:' + gapWidth+ 'px; left:'+ left+';"></div>';
     }
