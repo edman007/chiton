@@ -17,6 +17,6 @@ function DateTime_to_dbtime($datetime){
 }
 
 function DateInterval_to_ts($dateInterval){
-    return 0.0 + $dateInterval->h*3600 + $dateInterval->m*60 + $dateInterval->s + $dateInterval->f;    
+    return 0.0 + $dateInterval->h*3600 + $dateInterval->i*60 + $dateInterval->s + $dateInterval->f;
 }
 ?>
