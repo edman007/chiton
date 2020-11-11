@@ -25,7 +25,7 @@ require_once('./inc/main.php');
 $smarty->assign('pagename', 'Licenses');
 
 //guess the path for the license directory
-$license_path = '../licenses/';
+$license_path = '../license/';
 if (!file_exists($license_path . 'COPYING')){
     //try the alternate path
     $license_path = '../';
