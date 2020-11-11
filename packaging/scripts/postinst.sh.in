@@ -216,7 +216,9 @@ if [ ! -f $APACHE_CFG_DIR/apache-chiton.conf ] || [ "$1" == "reconfigure"  ]; th
 
     if [ "x@apachesymlinkdir@" != "xno" ]; then
         if [ -d @apachesymlinkdir@ ] && [ ! -f @apachesymlinkdir@/apache-chiton.conf ]; then
-            ln -s $APACHE_CFG_DIR/apache-chiton.conf @apachesymlinkdir@
+            if ! grep apache-chiton.conf @apachesymlinkdir@/* >/dev/null 2>/dev/null ; then
+                ln -s $APACHE_CFG_DIR/apache-chiton.conf @apachesymlinkdir@
+            fi
         fi
     fi
 
