@@ -1,0 +1,17 @@
+This is the ongoing list of features that need to be added
+
+- Decoding
+- Transcoding
+- Motion Detection & Display
+- New Object Detection (Identify the timestamp an object appeared)
+- Sound Detection
+- Secondary Stream Recording and playback
+- Reolink compatible mode
+- HLS recording
+- ONVIF Functions
+- Backend control socket (for web control)
+- Event notification
+- Admin Login/Secure it/Hide Debug web interface things
+- Standalone system controls (DHCP, router, port forwarding, etc)
+- Video Locking
+- Video Export
