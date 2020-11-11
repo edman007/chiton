@@ -63,31 +63,32 @@ $json = array(
     'starttime' => $start_time->getTimestamp()//FIXME: should be actual start time
 );
 
-//get the video offset (difference between requested and first record)
-//FIXME: This should be done as just a gap in the next query, can't figure it out right now
-$sql = 'SELECT starttime FROM videos WHERE starttime > ' . $packed_start . ' ORDER BY starttime ASC LIMIT 1';
-$res = $db->query($sql);
-if ($res){
-    $row = $res->fetch_assoc();
-    if ($row){
-        $diff = $start_time->diff(dbtime_to_Datetime($row['starttime']));
-        $json['offset'] = DateInterval_to_ts($diff);
-    }
-}
-
 
 //query the gaps in the video
-$sql = 'SELECT v.starttime, v.endtime, v1.starttime AS nostart, v2.starttime AS noend FROM videos AS v LEFT JOIN videos AS v1 ON v.endtime = v1.starttime LEFT JOIN videos AS v2 ON v.starttime = v2.endtime WHERE v.camera = ' . ((int)$_GET['id']).' AND v.endtime IS NOT NULL AND (v1.starttime IS NULL OR v2.endtime IS NULL) AND v.starttime > ' . $packed_start; 
+$sql = 'SELECT v.starttime, v.endtime, v1.starttime AS nostart, v2.starttime AS noend FROM '.
+ ' videos AS v LEFT JOIN videos AS v1 ON v.endtime = v1.starttime AND v.id != v1.id AND v.camera = v1.camera '.
+ ' LEFT JOIN videos AS v2 ON v.starttime = v2.endtime AND v.id != v2.id  AND v.camera = v2.camera '.
+ ' WHERE v.camera = ' . ((int)$_GET['id']).' AND v.endtime IS NOT NULL AND (v1.starttime IS NULL OR v2.endtime IS NULL) AND v.starttime > ' . $packed_start;
 if (isset($packed_endtime)){
     $sql .= ' AND v.starttime < '. $packed_endtime;
 }
 $sql .= ' ORDER BY v.starttime ASC';
-
 $res = $db->query($sql);
+
+
+/*
+ * Generate Json Gap Data
+ *
+ *  - len - Length of gap in seconds
+ *  - start_ts - time since $start_time (last midnight usually) that the gap starts
+ *  - actual_start_ts - Time on the actual received video that the gap starts
+ *
+ */
 if ($res){
     $gap = array();
     $end_ts = $packed_start;
     $total_gaps = 0;
+    $last_endtime = 0;
     while ($row = $res->fetch_assoc()){
         //mark the end of the video
         if ($row['nostart'] === NULL){
@@ -97,15 +98,14 @@ if ($res){
 
         //found the start of video, compute the gap and metadata
         if ($row['noend'] === NULL){
-            $start_ts = dbtime_to_Datetime($row['starttime']);
+            $start_ts = dbtime_to_Datetime($end_ts);//$end_ts is the end of the last file, which would start the gap (so it's the start time of the gap)
 
             //compute the gap
-            $gap_stat['len'] = ($row['starttime'] - $end_ts)/1000.0;
+            $gap_stat['len'] = ($row['starttime'] - $end_ts)/1000.0;//$row['starttime'] is the start of the next file, so it's the end of the gap
             $ts = $start_ts->diff($start_time);
             $gap_stat['start_ts'] = DateInterval_to_ts($ts);
-            $gap_stat['actual_ts_start'] = $gap_stat['start_ts'] - $total_gaps;
+            $gap_stat['actual_start_ts'] = $gap_stat['start_ts'] - $total_gaps;
             $total_gaps += $gap_stat['len'];//to track how our timestamps differ
-
             $gap[] = $gap_stat;
         }
     }

@@ -19,7 +19,10 @@ function loadHLS(video){
     var pinchZ;
     if (Hls.isSupported()) {
         // bind them together
-        var hls = new Hls();
+        var cfg = {
+            //debug: true
+        };
+        var hls = new Hls(cfg);
         hls.attachMedia(video);
         hls.on(Hls.Events.MEDIA_ATTACHED, function () {
             var source = video.getElementsByTagName("source");
@@ -281,8 +284,9 @@ function loadVideoTS(video, vcontrol){
         tsBox.innerHTML = getTSHTML(actualTime, actualDuration);
         var barWidth = progressBar.offsetWidth;
         var newEnd = (actualDuration/fullDay)*barWidth;
+
         if (vcontrol.getElementsByClassName("future").length == 1){
-            vcontrol.getElementsByClassName("future")[0].style.width =  (barWidth - (newEnd + totalGaps))+"px";
+            vcontrol.getElementsByClassName("future")[0].style.width =  (barWidth - (newEnd))+"px";
         }
         if (pointer !== null){
             pointer.style.left = (actualTime/fullDay*barWidth) - pointer.offsetWidth/2 + "px";
@@ -319,14 +323,10 @@ function drawGaps(camera, vcontrol, jsonData){
     var width = bar.offsetWidth;
     var fullDay = 3600*24;
     var newHTML = "";
-    var gapWidth = (jsonData.offset / fullDay) * width;
-    var total_offset = gapWidth;
+    var gapWidth = 0;
+    var total_offset = 0;
 
-    newHTML += '<div class="gap" style="width:' + gapWidth+ 'px; left:0px;"></div>';
     for (var i = 0; i < jsonData.gaps.length; i++){
-        if (i == 0 && jsonData.gaps[i].len > jsonData.offset){
-            continue;//do not double count the offset if the video is discontinous over midnight
-        }
         gapWidth = (jsonData.gaps[i].len / fullDay) * width;
         if (gapWidth <= 1){
             gapWidth = 1;
@@ -348,13 +348,12 @@ function drawGaps(camera, vcontrol, jsonData){
 function convertToTS(clickFraction, jsonData){
     var fullDay = 3600*24;
     var targetTime = clickFraction*fullDay;
-    var totalGaps = jsonData.offset;
-    if (totalGaps === undefined){
-        totalGaps = 0;
-    }
+    var totalGaps = 0;
+
     if (jsonData.gaps === undefined){
-        return targetTime - totalGaps;
+        return targetTime;
     }
+
     for (var i; i < jsonData.gaps.length; i++){
         if (jsonData.gaps[i].actual_start_ts < targetTime){
             totalGaps += jsonData.gaps[i].len;
@@ -369,14 +368,13 @@ function convertToTS(clickFraction, jsonData){
 //convert a video timestamp to Time
 function convertTSToTime(ts, jsonData){
     var fullDay = 3600*24;
-    var totalGaps = jsonData.offset;
-    if (totalGaps === undefined){
-        totalGaps = 0;
-    }
+    var totalGaps = 0;
+
     if (jsonData.gaps === undefined){
-        return ts + totalGaps;
+        return ts;
     }
-    for (var i; i < jsonData.gaps.length; i++){
+
+    for (var i = 0; i < jsonData.gaps.length; i++){
         if (jsonData.gaps[i].actual_start_ts < ts){
             totalGaps += jsonData.gaps[i].len;
         } else {
@@ -385,8 +383,6 @@ function convertTSToTime(ts, jsonData){
         }
     }
     return ts + totalGaps;
-
-
 }
 
 function getTSHTML(ts, len){

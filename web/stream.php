@@ -86,6 +86,9 @@ if ($res){
         }
         $last_endtime = $row['endtime'];
         $len = ($row['endtime'] - $row['starttime'])/1000;
+        if ($len == 0){//we have seen some with a len of zero...is this an ok workaround?
+            $len = 0.001;
+        }
         $url = 'vids/' . $row['path'] . $row['id'] . '.ts';
         $name = "Camera $camera: " . dbtime_to_DateTime($row['starttime'])->format('r');
         echo "#EXTINF:$len,$name\n";
