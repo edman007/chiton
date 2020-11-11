@@ -310,7 +310,7 @@ packaging/debian/control: packaging/debian/control.in Makefile
 
 packaging/debian/copyright: packaging/debian/copyright.in $(LICENSE_FILES) | external/npm/node_modules
 	$(do_subst) < $< > $@
-	cat external/npm/node_modules/debian-license.in >> $@
+	cat external/npm/debian-license.in >> $@
 
 #kinda crappy, but i need something that works
 packaging/debian/changelog: Makefile
