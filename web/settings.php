@@ -25,14 +25,14 @@ require_once('./inc/main.php');
 
 $smarty->assign('title', 'Settings');
 $camera_id = -1;
-if (!empty($_GET['camera'])){
+if (isset($_GET['camera'])){
     $camera_id = (int)$_GET['camera'];
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST'){
     //update the DB...
     
-    if (!empty($_POST['delete_camera']) && !empty($_POST['camera_id'])){
+    if (!empty($_POST['delete_camera']) && isset($_POST['camera_id'])){
         //delete this camera
         $camera = (int)$_POST['camera_id'];
         if ($camera >= 0){
