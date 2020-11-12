@@ -20,7 +20,13 @@ function loadHLS(video){
     if (Hls.isSupported()) {
         // bind them together
         var cfg = {
-            //debug: true
+            //"debug": true,
+            "enableWorker": true,
+            "liveBackBufferLength": 900,
+            "maxFragLookUpTolerance": true,
+            "maxBufferHole": 5,
+            "maxFragLookUpTolerance": 5,
+            "liveSyncDurationCount": 2,
         };
         var hls = new Hls(cfg);
         hls.attachMedia(video);
@@ -304,6 +310,7 @@ function loadVideoTS(video, vcontrol){
         }
 
         var requestedTime = convertToTS(offset/progressBar.offsetWidth, jsonData);
+        console.log("Seeking to ", requestedTime, offset, progressBar.offsetWidth);
         video.currentTime = requestedTime;
     }, true);
     
@@ -359,7 +366,7 @@ function convertToTS(clickFraction, jsonData){
         return targetTime;
     }
 
-    for (var i; i < jsonData.gaps.length; i++){
+    for (var i = 0; i < jsonData.gaps.length; i++){
         if (jsonData.gaps[i].actual_start_ts < targetTime){
             totalGaps += jsonData.gaps[i].len;
         } else {
@@ -367,6 +374,7 @@ function convertToTS(clickFraction, jsonData){
             break;
         }
     }
+
     return targetTime - totalGaps;
 }
 

@@ -82,7 +82,7 @@ if ($res){
     $last_endtime = 0;
     while ($row = $res->fetch_assoc()){
         if ($last_endtime != 0 && $row['starttime'] != $last_endtime){
-            echo "EXT-X-DISCONTINUITY\n";
+            echo "#EXT-X-DISCONTINUITY\n";
         }
         $last_endtime = $row['endtime'];
         $len = ($row['endtime'] - $row['starttime'])/1000;
