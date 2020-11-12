@@ -5,6 +5,14 @@
 {include file="player.tpl" video=$video_info}
 </div>
 
+{if !empty($camera_name)}
+<h2>{$camera_name|escape}</h2>
+{else}
+<h2>Camera {$camera_id}</h2>
+{/if}
+Shift+Scroll: Zoom<br/>
+Scroll: Skip<br/>
+
 {if !empty($avail_days)}
 <div class="dateSwitch">
 <form method="get" action="camera.php">
@@ -17,10 +25,7 @@
 </select>
 
 </form>
-</div>
+</div><br/>
 {/if}
-
-Shift+Scroll: Zoom<br/>
-Scroll: Skip<br/>
 
 {include file="footer.tpl"}

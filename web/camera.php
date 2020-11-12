@@ -29,8 +29,13 @@ if (!isset($_GET['id'])){
     $smarty->display('error.tpl');
     die();
 }
+$camera_id = empty($_GET['id']) ? 0 : (int)$_GET['id'];
+$smarty->assign('camera_id', $camera_id);
 
-$smarty->assign('camera_id', (int)$_GET['id']);
+
+//get the camera settings
+$camera_cfg = new WebConfig($db, $camera_id);
+$smarty->assign('camera_name', $camera_cfg->get_value('display-name'));
 
 //the following queries are timezone sensitive, so lets tell the server our configured timezone
 $tz_offset = $tz->getOffset(new DateTime('now'))/60;
@@ -43,8 +48,9 @@ $sql = "SET timezone = '$tz_offset'";
 $db->query($sql);
 
 
+
 //get the oldest possible date
-$sql = "SELECT FROM_UNIXTIME(starttime/1000, '%Y-%m-%d') as day, COUNT(id) FROM videos WHERE  camera = ".((int)$_GET['id']).' GROUP BY day ORDER BY starttime DESC';
+$sql = "SELECT FROM_UNIXTIME(starttime/1000, '%Y-%m-%d') as day, COUNT(id) FROM videos WHERE  camera = ".($camera_id).' GROUP BY day ORDER BY starttime DESC';
 $res = $db->query($sql);
 if ($res){
     $available_days = array();
