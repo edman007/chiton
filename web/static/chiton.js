@@ -135,6 +135,10 @@ function loadShortcuts(video){
         } else {
             video.currentTime = target;
         }
+        if (video.paused || video.seeking){
+            playVideo(video, vcontrol);
+        }
+
     }
 
     //mobile functions...
@@ -179,7 +183,7 @@ function loadControls(video, vcontrol){
 }
 
 //play video, and update controls if successful
-function playVideo(video, vcontrol){    
+function playVideo(video, vcontrol){
     var promise = video.play();
     if (promise !== undefined) {
         promise.then(_ => {
@@ -248,6 +252,9 @@ function loadVideoTS(video, vcontrol){
         var newPos = pointerStartPos + pointerDelta;
         var newTS = convertToTS(newPos/progressBar.offsetWidth, jsonData);
         video.currentTime = newTS;
+        if (video.paused || video.seeking){
+            playVideo(video, vcontrol);
+        }
         ev.preventDefault();
     }
 
@@ -265,6 +272,10 @@ function loadVideoTS(video, vcontrol){
         var newPos = pointer.offsetLeft + ev.offsetX;
         var newTS = convertToTS(newPos/progressBar.offsetWidth, jsonData);
         video.currentTime = newTS;
+        if (video.paused || video.seeking){
+            playVideo(video, vcontrol);
+        }
+
         ev.preventDefault();
         ev.stopPropagation();
     }
@@ -310,8 +321,11 @@ function loadVideoTS(video, vcontrol){
         }
 
         var requestedTime = convertToTS(offset/progressBar.offsetWidth, jsonData);
-        console.log("Seeking to ", requestedTime, offset, progressBar.offsetWidth);
         video.currentTime = requestedTime;
+        if (video.paused || video.seeking){
+            playVideo(video, vcontrol);
+        }
+
     }, true);
     
 }
