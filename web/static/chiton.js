@@ -216,6 +216,7 @@ function loadVideoTS(video, vcontrol){
     var jsonData = Array();
     var fullDay = 3600*24;
     var totalGaps = 0;
+    var vcontrol_box = vcontrol.getElementsByClassName("control_box")[0];
     
     //query the camera ID and starttime
     var camera = parseInt(vcontrol.getElementsByClassName("cameraid")[0].innerHTML);
@@ -295,9 +296,13 @@ function loadVideoTS(video, vcontrol){
 
     vcontrol.addEventListener('click', (ev)=>{
         var offset = ev.offsetX;
+        if (ev.target === vcontrol_box || vcontrol_box.contains(ev.target)){
+            return;//.control_box has all the buttons and we do not jump for clicks there
+        }
         if (ev.target !== progressBar){
             offset += ev.target.offsetLeft;
         }
+
         var requestedTime = convertToTS(offset/progressBar.offsetWidth, jsonData);
         video.currentTime = requestedTime;
     }, true);
