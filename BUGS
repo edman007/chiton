@@ -1,4 +1,3 @@
 This is just a simple tracker of bugs I've noticed
 
 - 0 Length fragments can be produced, they should always be finite amounts of time
-- HLS reports negative timestamps in fragments and cuts the video off after finding one
