@@ -49,6 +49,7 @@ if (empty($suppress_smarty)){
         ->setCompileDir(SMARTY_COMPILE_DIR)
         ->setCacheDir(SMARTY_CACHE_DIR)
         ->setConfigDir('./inc/smarty_cfg');
+    $smarty->assign('CHITON_VERSION', CHITON_VERSION);
 }
 $db = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_DB);
 

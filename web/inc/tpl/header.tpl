@@ -3,9 +3,9 @@
 <head>
 <title>{$title} - Chiton</title>
 <link rel="stylesheet" href="static/default.css">
-<script src="static/pinch-zoom-min.js" type="text/javascript"></script>
-<script src="static/chiton.js" type="text/javascript"></script>
-<script src="static/hls.light.min.js" type="text/javascript"></script>
+<script src="static/pinch-zoom-min.js?v={$CHITON_VERSION}" type="text/javascript"></script>
+<script src="static/chiton.js?v={$CHITON_VERSION}" type="text/javascript"></script>
+<script src="static/hls.light.min.js?v={$CHITON_VERSION}" type="text/javascript"></script>
 
 </head>
 <body onLoad="loadSite('{#pagetag#}');">

@@ -21,6 +21,12 @@
  **************************************************************************
  */
 
+//build settings
+define('CHITON_VERSION', '@fullversion@');
+define('CHITON_RUNSTATEDIR', '@runstatedir@');
+define('CHITON_LOCALSTATEDIR', '@localstatedir@');
+
+
 //see setting.hpp
 define('SETTING_READ_ONLY', 1);
 define('SETTING_REQUIRED_SYSTEM', 2);
