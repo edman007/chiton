@@ -24,9 +24,6 @@ function loadHLS(video){
             "enableWorker": true,
             "liveBackBufferLength": 900,
             "maxFragLookUpTolerance": true,
-            "maxBufferHole": 5,
-            "maxFragLookUpTolerance": 5,
-            "liveSyncDurationCount": 2,
         };
         var hls = new Hls(cfg);
         hls.attachMedia(video);
