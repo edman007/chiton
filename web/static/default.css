@@ -204,6 +204,7 @@ ul.settings li  {
 @media (max-width: 1023px) {
     .tiledViewer {
         width:100%;
+        height:auto;
     }
     .singleViewer{
         width:100%;
