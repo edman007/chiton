@@ -291,7 +291,7 @@ function loadVideoTS(video, vcontrol){
         pointer.addEventListener('click', cursorClick, false);
     });
 
-    var tsBox = vcontrol.getElementsByClassName("tsbox")[0];
+    var tsBox = vcontrol.getElementsByClassName("tsBox")[0];
     tsBox.innerHTML = getTSHTML(0, 3600*24);
 
     var progressBar = vcontrol.getElementsByClassName("progress")[0];
