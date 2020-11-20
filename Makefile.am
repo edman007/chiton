@@ -20,7 +20,7 @@
  ########################################################################
 
 ACLOCAL_AMFLAGS = -I m4
-AM_CXXFLAGS = -std=gnu++11 -Wall -DSYSCFGPATH='"$(sysconfdir)/$(PACKAGE)/chiton.cfg"'
+AM_CXXFLAGS = -std=gnu++11 -Wall -DSYSCFGPATH='"$(sysconfdir)/$(PACKAGE)/chiton.cfg"' -DDEFAULT_SOCKET_PATH='"$(defaultsocketpath)"'
 PRGM = chiton
 MAINTAINER=Ed Martin <edman007@edman007.com>
 
@@ -34,7 +34,7 @@ chiton_SOURCES = main.cpp config.cpp config_parser.cpp database.cpp mariadb.cpp 
 	camera.hpp chiton_ffmpeg.hpp database.hpp file_manager.hpp mariadb.hpp \
 	stream_unwrap.hpp util.hpp chiton_config.hpp config_parser.hpp \
 	database_result.hpp main.hpp mariadb_result.hpp stream_writer.hpp \
-	database_manager.hpp database_manager.cpp setting.hpp
+	database_manager.hpp database_manager.cpp setting.hpp remote.hpp remote.cpp
 
 #these are actually to make it possible to serve the website ouf of the source for development
 EXTRA_chiton_DEPENDENCIES=hls pinch-zoom
@@ -79,6 +79,8 @@ apachecfgdir=$(pkgdatadir)/apache/
 dist_man1_MANS = man/chiton.1 man/chiton-install.1
 
 
+defaultsocketpath = $(localstatedir)/run/chiton.sock
+
 if ENABLESYSV
 initfile=$(initdir)/rc.chiton
 inittype=sysv
@@ -104,7 +106,8 @@ do_subst = sed -e 's,[@]PKGNAME[@],$(PRGM),g' \
 	-e 's,[@]apachesymlinkdir[@],$(apachesymlinkdir),g' \
 	-e 's,[@]apacheappendconf[@],$(apacheappendconf),g' \
 	-e 's,[@]initscript[@],$(initfile),g' \
-	-e 's,[@]inittype[@],$(inittype),g'
+	-e 's,[@]inittype[@],$(inittype),g' \
+	-e 's,[@]defaultsocketpath[@],$(defaultsocketpath),g'
 
 
 #the file for the debian packager source code (will be a symlink)

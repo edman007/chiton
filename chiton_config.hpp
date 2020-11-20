@@ -21,6 +21,10 @@
  *
  **************************************************************************
  */
+
+//we like new stuff
+#define _XOPEN_SOURCE 700
+
 #include <string>
 #include <map>
 

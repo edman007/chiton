@@ -21,6 +21,7 @@
  */
 
 #include <vector>
+#include "config_build.hpp"
 
 /*
  * This file is included by config.cpp to provide default values
@@ -80,5 +81,5 @@ const std::vector<Setting> setting_options {
          "it is the target free-percentage of user accessable space", SETTING_OPTIONAL_SYSTEM},
  {"display-name", "", "Camera Name", "The name of the camera used in displays", SETTING_OPTIONAL_CAMERA},
  {"max-sync-offset", "5", "Max Sync Offset", "The maximum drift in camera time tolerated before we resync the clock", SETTING_OPTIONAL_CAMERA},
-
+ {"socket-path", DEFAULT_SOCKET_PATH, "Control Socket Path", "The path for the control socket, required to manage the system from the web interface", SETTING_OPTIONAL_SYSTEM},
      };

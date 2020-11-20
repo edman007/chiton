@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include "chiton_ffmpeg.hpp"
 #include "database_manager.hpp"
+#include "remote.hpp"
+
 
 #include <csignal>
 #include <atomic>
@@ -105,7 +107,7 @@ void run(Config& args){
     //load system config
     load_sys_cfg(cfg);
 
-
+    Remote remote(db, cfg);
     FileManager fm(db, cfg);
     //Launch all cameras
     res = db.query("SELECT camera FROM config WHERE camera != -1 AND name = 'active' AND value = '1' GROUP BY camera");
@@ -154,7 +156,7 @@ void run(Config& args){
         }
         fm.clean_disk();
         std::this_thread::sleep_for(std::chrono::seconds(10));
-    } while (!exit_requested && !reload_requested);
+    } while (!exit_requested && !reload_requested && !remote.get_reload_request());
 
     //shutdown all cams
     for (auto c : cams){
