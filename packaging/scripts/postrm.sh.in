@@ -21,6 +21,8 @@ fi
 if [[ "$1" == "purge" || "$1" == "db_purge" ]]; then
     # We are deleting all our files
     rm -f @runstatedir@/@PKGNAME@.pid 2>&1 > /dev/null || true
+    rm -f @runstatedir@/@PKGNAME@.sock 2>&1 > /dev/null || true
+    rmdir @runstatedir@ 2>&1 > /dev/null || true
     rmdir @localstatedir@/@PKGNAME@/cache/ || true
     rmdir @localstatedir@/@PKGNAME@/compile/ || true
     rmdir @localstatedir@/@PKGNAME@/vids/ || true #this will likely fail if we have content, this is expected
@@ -30,7 +32,7 @@ if [[ "$1" == "purge" || "$1" == "db_purge" ]]; then
     fi
 
     #I don't think this can ever happen on debian, but it's here for completness
-    if [ "x@apacheappendconf@" != "zno" ]; then
+    if [ "x@apacheappendconf@" != "xno" ]; then
         #append an include line to @apacheappendconf@
         if [ -f "@apacheappendconf@" ] && [ ! grep "$APACHE_CFG_DIR/apache-chiton.conf" "@apacheappendconf@" ]; then
             sed -i -e 's,# Enable Chiton NVR,,' \

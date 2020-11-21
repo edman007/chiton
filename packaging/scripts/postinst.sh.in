@@ -30,6 +30,7 @@ if [ -f /usr/share/debconf/confmodule ]; then
 fi
 
 STATE_DIR=@localstatedir@/@PKGNAME@
+RUN_DIR=@runstatedir@
 WEBUSER=@webuser@
 VID_DIR=$STATE_DIR/vids
 BACKEND_USER=@PKGNAME@
@@ -61,9 +62,13 @@ if [ ! -d $VID_DIR ]; then
     mkdir -p $VID_DIR
 fi
 
+if [ ! -d $RUN_DIR ]; then
+    mkdir -p $RUN_DIR
+fi
 
-chown $BACKEND_USER:$BACKEND_USER  $STATE_DIR $VID_DIR $STATE_DIR/compile $STATE_DIR/cache
+chown $BACKEND_USER:$BACKEND_USER  $STATE_DIR $VID_DIR $STATE_DIR/compile $STATE_DIR/cache $RUN_DIR
 chmod 770 $STATE_DIR/compile $STATE_DIR/cache $VID_DIR
+chmod 755 $RUN_DIR
 
 rm -f @localstatedir@/@PKGNAME@/cache/*.php @localstatedir@/@PKGNAME@/compile/*.php || true
 
