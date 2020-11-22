@@ -79,7 +79,7 @@ apachecfgdir=$(pkgdatadir)/apache/
 dist_man1_MANS = man/chiton.1 man/chiton-install.1
 
 
-defaultsocketpath = $(localstatedir)/run/chiton.sock
+defaultsocketpath = $(localstatedir)/run/$(PRGM)/chiton.sock
 
 if ENABLESYSV
 initfile=$(initdir)/rc.chiton
@@ -93,7 +93,7 @@ endif
 do_subst = sed -e 's,[@]PKGNAME[@],$(PRGM),g' \
 	-e 's,[@]pkgdatadir[@],$(pkgdatadir),g' \
 	-e 's,[@]localstatedir[@],$(localstatedir)/lib,g' \
-	-e 's,[@]runstatedir[@],$(localstatedir)/run,g' \
+	-e 's,[@]runstatedir[@],$(localstatedir)/run/$(PRGM),g' \
 	-e 's,[@]apachecfgdir[@],@apacheconfdir@,g' \
 	-e 's,[@]bindir[@],$(bindir),g' \
 	-e 's,[@]runuser[@],$(runuser),g' \
