@@ -258,7 +258,7 @@ bool StreamUnwrap::read_frame(void){
     double delta = recv_time.tv_sec;
     delta -= av_q2d(input_format_context->streams[reorder_queue.back().stream_index]->time_base) * reorder_queue.back().dts;
     if (delta > max_sync_offset || delta < -max_sync_offset){
-        connect_time.tv_sec -= delta;
+        connect_time.tv_sec += delta;
         LWARN("Input stream has drifted " + std::to_string(delta) + "s from wall time on camera " + cfg.get_value("camera-id") + ", resyncing..." );
     }
     
