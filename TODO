@@ -9,7 +9,6 @@ This is the ongoing list of features that need to be added
 - Reolink compatible mode
 - HLS recording
 - ONVIF Functions
-- Backend control socket (for web control)
 - Event notification
 - Admin Login/Secure it/Hide Debug web interface things
 - Standalone system controls (DHCP, router, port forwarding, etc)
