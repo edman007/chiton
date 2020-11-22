@@ -25,6 +25,7 @@ require_once('./inc/main.php');
 
 $smarty->assign('title', 'Settings');
 $camera_id = -1;
+$system_messages = array();
 if (isset($_GET['camera'])){
     $camera_id = (int)$_GET['camera'];
 }
@@ -38,8 +39,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST'){
         if ($camera >= 0){
             $sql = 'DELETE FROM config WHERE camera = ' . $camera;
             $db->query($sql);
+            $system_messages[] = 'Camera Deleted';
         }
-
+    } else if (!empty($_POST['reload_backend'])){
+        require_once('./inc/remote.php');
+        $remote = new Remote($db);
+        if ($remote->reload_backend()){
+            $system_messages[] = 'Backend Reloaded';
+        } else {
+            //reload failed
+            $system_messages[] = 'Reloading the backend failed ' . $remote->get_error();
+        }
     } elseif (!empty($_POST['create_camera'])){
         //create a camera
         $sql = "INSERT INTO config (name, value, camera) SELECT 'active', '0', MAX(camera) + 1 FROM config";
@@ -81,6 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST'){
                 }
             }
         }
+        $system_messages[] = 'Settings Updated, backend reload may be required';
     }
     //system config needs to be reloaded
     $cfg = new WebConfig($db);
@@ -185,5 +196,9 @@ while ($row = $res->fetch_assoc()){
     }
 }
 $smarty->assign('camera_list', $cameras);
+
+if (!empty($system_messages)){
+    $smarty->assign('system_msg', $system_messages);
+}
 
 $smarty->display('settings.tpl');

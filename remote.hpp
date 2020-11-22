@@ -34,6 +34,34 @@
  * It will spawn off a worker thread that listens for and handles actions requested
  * from the web frontend
  */
+
+
+/*
+ * Definition of socket protocal:
+ *
+ * Commands are all CAPS, and case sensitive
+ * The client sends commands, seperated by \n, weather or not the server responds depends on the command
+ * The connection should be closed by calling CLOSE before disconnecting
+ *
+ * A typical connection looks like this
+ *
+ *   -> RELOAD
+ *   <- OK
+ *   -> CLOSE
+ *
+ * Command Documentation:
+ *
+ * RELOAD
+ *  - Server will respond with "OK" when processed correctly
+ *  - This will reload the backend, as if the HUP signal was sent
+ *
+ * CLOSE
+ *  - Server responds by closing the connection
+ *
+ * HELP
+ *  - Server responds with 'SUPPORTED COMMANDS:' followed by a space deliminated list of commands supported
+ *
+ */
 class Remote {
 public:
     Remote(Database &db, Config &cfg);

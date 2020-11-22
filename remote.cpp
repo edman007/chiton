@@ -277,7 +277,7 @@ void Remote::write_data(int fd, std::string str){
 
 void Remote::process_input(int fd){
     char buf[1024];
-    size_t cnt = sizeof(buf);
+    int cnt = sizeof(buf);
     cnt = read(fd, buf, cnt);
     if (cnt <= 0){
         if (cnt < 0 && errno != EAGAIN && errno != EINTR && errno != EWOULDBLOCK){
@@ -350,6 +350,6 @@ void Remote::execute_cmd(int fd, std::string &cmd){
     } else if (cmd == "CLOSE"){
         close_conn(fd);
     } else if (cmd == "HELP"){
-        write_data(fd, "SUPPORTED COMMANDS: RELOAD CLOSE\n");
+        write_data(fd, "SUPPORTED COMMANDS: RELOAD CLOSE HELP\n");
     }
 }

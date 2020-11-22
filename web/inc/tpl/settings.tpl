@@ -76,6 +76,12 @@
 <input type="submit" value="Create New Camera"/>
 </form>
 
+{* Reload Backend *}
+<form method="post" action="settings.php">
+<input type="hidden" value="1" name="reload_backend"/>
+<input type="submit" value="Reload Backend and Apply Settings"/>
+</form>
+
 <a href="settings.php">System Settings</a>
 <h2>Cameras</h2>
 <ul>

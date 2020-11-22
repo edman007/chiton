@@ -14,3 +14,10 @@
 <li><a href="settings.php">Settings</a></li>
 <li><a href="license.php">License</a></li>
 </ul>
+{if !empty($system_msg)}
+<ul class="statusmsg">
+{foreach from=$system_msg item=msg name=SYSTEM_MSG_BANNER}
+<li>{$msg|escape}</li>
+{/foreach}
+</ul>
+{/if}
