@@ -44,13 +44,15 @@ noinst_DATA=dist-version
 chiton_CXXFLAGS = $(AM_CXXFLAGS)
 
 NPM_LICENSE=external/npm/LICENSE.*
-EXTERNAL_LICENSE=LICENSE.breeze-icons LICENSE.smarty $(NPM_LICENSE)
+EXTERNAL_NO_NPM_LICENSE=LICENSE.breeze-icons LICENSE.smarty
+EXTERNAL_LICENSE=$(EXTERNAL_NO_NPM_LICENSE) $(NPM_LICENSE)
 LICENSE_FILES=COPYING $(EXTERNAL_LICENSE)
 
 DEBIAN_PKG_FILES=packaging/debian/source-format packaging/debian/compat \
 	packaging/debian/chiton.templates
-DEBIAN_PKG_FILES_BUILT=packaging/debian/control packaging/debian/copyright \
-	packaging/debian/changelog packaging/debian/rules \
+DEBIAN_PKG_FILES_EARLY=packaging/debian/control packaging/debian/copyright \
+	packaging/debian/changelog packaging/debian/rules
+DEBIAN_PKG_FILES_BUILT=$(DEBIAN_PKG_FILES_EARLY) \
 	packaging/debian/preinst  packaging/debian/postinst \
 	packaging/debian/prerm packaging/debian/postrm \
 	packaging/debian/chiton.config 
@@ -58,16 +60,18 @@ SLACKWARE_PACKAGE_FILES=packaging/slackware/slack-desc
 SLACKWARE_PACKAGE_FILES_BUILT=packaging/slackware/doinst.sh \
 	 packaging/slackware/douninst.sh packaging/slackware/chiton.SlackBuild
 
+#packaging/debian/changelog is required here because it's needed
 PACKAGING_FILES=packaging/scripts/rc.chiton.in packaging/scripts/chiton.service.in \
 	packaging/scripts/postinst.sh.in packaging/scripts/preinst.sh.in \
 	packaging/scripts/prerm.sh.in packaging/scripts/postrm.sh.in \
 	packaging/scripts/config.sh.in packaging/slackware/chiton.SlackBuild.in \
+	$(DEBIAN_PKG_FILES_EARLY) \
 	$(DEBIAN_PKG_FILES) $(SLACKWARE_PACKAGE_FILES)
 
 noinst_SCRIPTS=packaging/scripts/rc.chiton
 
 EXTRA_DIST=external chiton-install.in $(PACKAGING_FILES) dist-version README.md \
-	README NEWS AUTHORS ChangeLog web/inc/configdb.php.in external/npm/debian-license.in
+	README NEWS AUTHORS ChangeLog web/inc/configdb.php.in external/npm/debian-license.in $(NPM_LICENSE)
 
 dist_cfg_DATA=config/chiton.cfg.template web/inc/config.template.php
 cfgdir=$(sysconfdir)/$(PACKAGE)
@@ -191,9 +195,9 @@ $(BREEZE_4X_PNG): $(BREEZE_SVG)
 external/npm/node_modules:
 	$(MKDIR_P) external/npm/
 	(cd external/npm/ && npm install --only-prod hls.js pinch-zoom-element )
-	(cd external/npm/ && license-checker --relativeLicensePath --csv --customPath license-format.json --out license-meta.csv && ./create-license.sh )
-$(NPM_LICENSE) external/npm/debian-license.in  &: | external/npm/node_modules
 
+$(NPM_LICENSE) external/npm/debian-license.in  &: | external/npm/node_modules
+		(cd external/npm/ && license-checker --relativeLicensePath --csv --customPath license-format.json --out license-meta.csv && ./create-license.sh )
 $(HLS_FILES) external/npm/node_modules/pinch-zoom-element/dist/pinch-zoom-min.js &: | external/npm/node_modules
 
 LICENSE.breeze-icons: $(BREEZE_2X_PNG) $(BREEZE_4X_PNG)
@@ -257,7 +261,8 @@ dist-version:
 dist_web_DATA=web/camera.php  web/index.php  web/info.php  web/settings.php  web/stream.php web/license.php
 webdir=$(pkgdatadir)/web
 
-dist_web_inc_DATA=web/inc/main.php web/inc/util.php web/inc/web_config.php web/inc/configdb.php
+dist_web_inc_DATA=web/inc/main.php web/inc/util.php web/inc/web_config.php web/inc/remote.php
+web_inc_DATA=web/inc/configdb.php
 web_incdir=$(pkgdatadir)/web/inc
 
 dist_web_inc_tpl_DATA=web/inc/tpl/camera.tpl web/inc/tpl/error.tpl web/inc/tpl/footer.tpl web/inc/tpl/header.tpl \
@@ -288,7 +293,7 @@ initscript_DATA=packaging/scripts/chiton.service
 endif
 initscriptdir=$(initdir)
 
-CLEANFILES=$(EXTERNAL_LICENSE) $(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG) web/external/smarty \
+CLEANFILES=$(EXTERNAL_NO_NPM_LICENSE) $(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG) web/external/smarty \
 	$(HLS_BUILD_FILES) $(sbin_SCRIPTS) 	$(SLACKWARE_PACKAGE_FILES_BUILT) $(DEBIAN_PKG_FILES_BUILT) \
 	web/static/2x-bottom-cursor.png web/static/4x-bottom-cursor.png \
 	packaging/scripts/rc.chiton chiton-install packaging/scripts/chiton.service \
@@ -316,7 +321,7 @@ packaging/debian/copyright: packaging/debian/copyright.in $(LICENSE_FILES) | ext
 	cat external/npm/debian-license.in >> $@
 
 #kinda crappy, but i need something that works
-packaging/debian/changelog: Makefile
+packaging/debian/changelog: Makefile dist-version
 	echo $(PACKAGE_TARNAME) '('$(VERSION)'-1)' unstable\; urgency=low > $@
 	git log -n 5 | sed 's/^/  /' >> $@
 	echo -n ' -- $(MAINTAINER)  ' >> $@

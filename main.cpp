@@ -122,6 +122,8 @@ void run(Config& args){
     }
     delete res;
 
+    //delete broken segments
+    fm.delete_broken_segments();
     
     //camera maintance
     do {
@@ -156,7 +158,7 @@ void run(Config& args){
         }
         fm.clean_disk();
         std::this_thread::sleep_for(std::chrono::seconds(10));
-    } while (!exit_requested && !reload_requested && !remote.get_reload_request());
+    } while (!exit_requested && !remote.get_reload_request() && !reload_requested);
 
     //shutdown all cams
     for (auto c : cams){

@@ -82,4 +82,5 @@ const std::vector<Setting> setting_options {
  {"display-name", "", "Camera Name", "The name of the camera used in displays", SETTING_OPTIONAL_CAMERA},
  {"max-sync-offset", "5", "Max Sync Offset", "The maximum drift in camera time tolerated before we resync the clock", SETTING_OPTIONAL_CAMERA},
  {"socket-path", DEFAULT_SOCKET_PATH, "Control Socket Path", "The path for the control socket, required to manage the system from the web interface", SETTING_OPTIONAL_SYSTEM},
-     };
+ {"broken-time-offset", "3600", "Broken Segment Future Offset", "Number of seconds in the future that will cause segments to be deleted", SETTING_OPTIONAL_SYSTEM},
+};

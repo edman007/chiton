@@ -25,7 +25,7 @@
 define('CHITON_VERSION', '@fullversion@');
 define('CHITON_RUNSTATEDIR', '@runstatedir@');
 define('CHITON_LOCALSTATEDIR', '@localstatedir@');
-define('DEFAULT_SOCKET_PATH', '@localstatedir@/chiton.sock');
+define('DEFAULT_SOCKET_PATH', '@defaultsocketpath@');
 
 
 //see setting.hpp

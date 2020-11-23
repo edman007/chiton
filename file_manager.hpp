@@ -40,6 +40,8 @@ public:
     bool update_file_metadata(long int file_id, struct timeval &end_time);
 
     void clean_disk(void);//clean up the disk by deleting files
+
+    void delete_broken_segments(void);//looks for impossible segments and wipes them
 private:
     Database &db;
     Config &cfg;
@@ -47,6 +49,7 @@ private:
 
     void rmdir_r(const std::string &path);//delete directory and all empty parent directories
     long get_target_free_bytes(void);//return the bytes that must be deleted
+    long rm_segment(const std::string &base, const std::string &path, const std::string &id);//deletes a target segment, returns number of bytes removed
 };
 
 #endif

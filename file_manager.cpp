@@ -101,46 +101,82 @@ void FileManager::clean_disk(void){
     if (target_clear){
         LINFO("Cleaning the disk, removing " + std::to_string(target_clear));
         std::string sql = "SELECT v.id, v.path, c.value FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' ORDER BY starttime ASC LIMIT 50";
+
         DatabaseResult* res = db.query(sql);
         while (target_clear > 0 && res && res->next_row()){
-            struct stat statbuf;
-            std::string target_file = res->get_field(2);
-            if (target_file == "NULL"){
-                target_file = cfg.get_value("output-dir");
-            }
-            if (target_file.back() != '/'){
-                target_file += "/";
-            } else {
-                LINFO("Output dir ends in a /: " + target_file);
-            }
-
-            target_file += std::string(res->get_field(1));
-            std::string target_dir = target_file;//copy the parent directory for after we delete all the content
-            
-            target_file += std::string(res->get_field(0)) + FILE_EXT;
-            LINFO("Target: " + target_file);
-            if (!stat(target_file.c_str(), &statbuf)){
-                target_clear -= statbuf.st_size;
-                //and delete it
-                LINFO("Deleting " + target_file);
-                if (unlink(target_file.c_str())){
-                    LWARN("Cannot delete file " + target_file + " (" + std::to_string(errno) + ")");
-                }
-            } else {
-                LWARN("Cannot stat " + target_file + " (" + std::to_string(errno) + ")");
-            }
-
+            const std::string &id = res->get_field(0);
+            target_clear -= rm_segment(res->get_field(2), res->get_field(1), id);
             //delete it from the database
-            sql = "DELETE FROM videos WHERE id = " + res->get_field(0);
+            sql = "DELETE FROM videos WHERE id = " + id;
             DatabaseResult* del_res = db.query(sql);
             delete del_res;
-
-            rmdir_r(target_dir);//and delete any empty parents
-
         }
         delete res;
     }
 
+}
+
+long FileManager::rm_segment(const std::string &base, const std::string &path, const std::string &id){
+    long filesize = 0;
+    struct stat statbuf;
+    std::string target_file;
+    if (base == "NULL"){
+        target_file = cfg.get_value("output-dir");
+    } else {
+        target_file = base;
+    }
+
+    if (target_file.back() != '/'){
+        target_file += "/";
+    }
+
+    target_file += path;
+    std::string target_dir = target_file;//copy the parent directory for after we delete all the content
+
+    target_file += id + FILE_EXT;
+    if (!stat(target_file.c_str(), &statbuf)){
+        filesize = statbuf.st_size;
+        //and delete it
+        LINFO("Deleting " + target_file);
+        if (unlink(target_file.c_str())){
+            LWARN("Cannot delete file " + target_file + " (" + std::to_string(errno) + ")");
+            filesize = 0;
+        }
+    } else {
+        LWARN("Cannot stat " + target_file + " (" + std::to_string(errno) + ")");
+    }
+
+    rmdir_r(target_dir);//and delete any empty parents
+    return filesize;
+}
+
+void FileManager::delete_broken_segments(void){
+    LINFO("Removing Broken Segments");
+
+    //get the current time, plus some time
+    struct timeval curtime;
+    Util::get_videotime(curtime);
+    long broken_offset = cfg.get_value_long("broken-time-offset");
+    if (broken_offset > 0){
+        curtime.tv_sec += broken_offset;
+    }
+    std::string future_time = std::to_string(Util::pack_time(curtime));
+
+    std::string sql = "SELECT v.id, v.path, c.value FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' WHERE "
+        "v.endtime < v.starttime OR v.starttime > " + future_time;
+    DatabaseResult* res = db.query(sql);
+    if (res && res->num_rows() > 0){
+        LWARN("Found " + std::to_string(res->num_rows()) + " broken  segments, deleting them");
+    }
+    while (res && res->next_row()){
+        const std::string &id = res->get_field(0);
+        rm_segment(res->get_field(2), res->get_field(1), id);
+        //delete it from the database
+        sql = "DELETE FROM videos WHERE id = " + id;
+        DatabaseResult* del_res = db.query(sql);
+        delete del_res;
+    }
+    delete res;
 }
 
 long FileManager::get_target_free_bytes(void){
