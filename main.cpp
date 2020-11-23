@@ -301,8 +301,8 @@ int main (int argc, char **argv){
     if (args.get_value("verbosity") != ""){
         Util::set_log_level(args.get_value_int("verbosity"));
     }
-    LINFO("Starting Chiton...");
-    LINFO(std::string("\tVersion ") + GIT_VER);
+    LWARN("Starting Chiton...");
+    LWARN(std::string("\tVersion ") + GIT_VER);
     LINFO(std::string("\tBuilt ") + BUILD_DATE);
     load_ffmpeg();
     //load the signal handlers

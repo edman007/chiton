@@ -25,14 +25,14 @@
 
 std::mutex Util::lock;
 #ifdef DEBUG
-unsigned int Util::log_level = 5;
+unsigned int Util::log_level = CH_LOG_DEBUG;/* All Messages */
 #else
-unsigned int Util::log_level = 3;
+unsigned int Util::log_level = CH_LOG_INFO;/* WARN and above */
 #endif
 bool Util::use_syslog = false;
 
 void Util::log_msg(const LOG_LEVEL lvl, const std::string& msg){
-    if (lvl > log_level){
+    if (lvl >= log_level){
         return;//drop any message above our current logging level
     }
     if (use_syslog){
