@@ -52,6 +52,7 @@ if (!empty($_GET['start']) && ((int)$_GET['start']) != 0){
 
 header('Content-type: application/vnd.apple.mpegurl');
 
+$camera_cfg = new WebConfig($db, $camera);
 $packed_start = DateTime_to_dbtime($start_time);
 
 $yesterday = clone $cur_time;
@@ -72,10 +73,7 @@ if ($res){
     echo "#EXT-X-VERSION:3\n";
     echo '#EXT-X-PROGRAM-DATE-TIME:' . $start_time->format('c') . "\n";
     echo "#EXT-X-PLAYLIST-TYPE:EVENT\n";
-    echo "#EXT-X-TARGETDURATION:18\n";
-    if (!empty($endtime)){
-        echo "#EXT-X-TARGETDURATION:".($endtime->getTimestamp() - $start_time->getTimestamp()) ."\n";
-    }
+    echo "#EXT-X-TARGETDURATION:" . (3*$camera_cfg->get_value('seconds-per-file')). "\n";
     
     //master playlist requirements
     //EXT-X-STREAM-INF - CODECS and RESOLUTION
