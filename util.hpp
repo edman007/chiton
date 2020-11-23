@@ -29,15 +29,20 @@
 
 enum LOG_LEVEL {
     CH_LOG_FATAL = 0,
-    CH_LOG_ERROR,
-    CH_LOG_WARN,
-    CH_LOG_INFO,
-    CH_LOG_DEBUG,
+    CH_LOG_ERROR,//1
+    CH_LOG_WARN,//2
+    CH_LOG_INFO,//3
+    CH_LOG_DEBUG,//4
 };
 
 
 //basic macros
+#ifdef DEBUG
 #define LDEBUG(str) Util::log_msg(CH_LOG_DEBUG, str)
+#else
+#define LDEBUG(str)
+#endif
+
 #define LINFO(str) Util::log_msg(CH_LOG_INFO, str)
 #define LWARN(str) Util::log_msg(CH_LOG_WARN, str)
 #define LERROR(str) Util::log_msg(CH_LOG_ERROR, str)
