@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-eval $(gpg-agent --daemon)
+ssh debbuild -t 'touch /tmp/chiton-sign && gpg -s --default-key chiton@edman007.com /tmp/chiton-sign && rm /tmp/chiton-sign*'
 make clean
 make -j15 release
 

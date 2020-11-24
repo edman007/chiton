@@ -23,7 +23,7 @@ ACLOCAL_AMFLAGS = -I m4
 AM_CXXFLAGS = -std=gnu++11 -Wall -DSYSCFGPATH='"$(sysconfdir)/$(PACKAGE)/chiton.cfg"' -DDEFAULT_SOCKET_PATH='"$(defaultsocketpath)"'
 PRGM = chiton
 MAINTAINER=Ed Martin <edman007@edman007.com>
-
+DEBVERSION=$(shell echo -n $(VERSION) | sed s/pre/~pre/)
 #make things go a little faster when testing packaging
 export XZ_OPT = -e -T0
 
@@ -103,6 +103,7 @@ do_subst = sed -e 's,[@]PKGNAME[@],$(PRGM),g' \
 	-e 's,[@]runuser[@],$(runuser),g' \
 	-e 's,[@]cfgdir[@],$(cfgdir),g' \
 	-e 's,[@]releaseversion[@],$(VERSION),g' \
+	-e 's,[@]debianversion[@],$(DEBVERSION),g' \
 	-e 's,[@]fullversion[@],$(VERSION)$(VER_GITVER),g' \
 	-e 's,[@]homepage[@],$(PACKAGE_URL),g' \
 	-e 's,[@]maintainer[@],$(MAINTAINER),g' \
@@ -115,11 +116,10 @@ do_subst = sed -e 's,[@]PKGNAME[@],$(PRGM),g' \
 
 
 #the file for the debian packager source code (will be a symlink)
-DEBSRC=$(PACKAGE_TARNAME)_$(VERSION).orig.tar.gz
+DEBSRC=$(PACKAGE_TARNAME)_$(DEBVERSION).orig.tar.gz
 #the tarball for the packaging metadata
-DEBSRCPKG=$(PACKAGE_TARNAME)_$(VERSION)-1.debian.tar.gz
+DEBSRCPKG=$(PACKAGE_TARNAME)_$(DEBVERSION)-1.debian.tar.gz
 SLACKSRCPKG=$(PACKAGE_TARNAME)-$(VERSION).slackbuild.tar.xz
-
 
 dist-hook:
 	-chmod u+w $(distdir)/external/*/.git
@@ -299,17 +299,17 @@ CLEANFILES=$(EXTERNAL_NO_NPM_LICENSE) $(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE
 	packaging/scripts/rc.chiton chiton-install packaging/scripts/chiton.service \
 	web/inc/configdb.php web/static/pinch-zoom-min.js
 
-MAINTAINERCLEANFILES=dist-version chiton-$(VERSION).dsc
+MAINTAINERCLEANFILES=dist-version chiton-$(DEBVERSION).dsc
 
 maintainer-clean-local:
 	-rm -rf external/npm/node_modules external/npm/LICENSE.* external/npm/debian-license.in
 
 # This is for actual release production...Creates the directory 'release' with all the files in our release
 .PHONY: release
-release: chiton-$(VERSION).dsc dist $(SLACKSRCPKG)
+release: chiton-$(DEBVERSION).dsc dist $(SLACKSRCPKG)
 	-rm -rf release
 	$(MKDIR_P) release
-	mv $(PACKAGE_TARNAME)-$(VERSION).tar.* $(DEBSRC) chiton-$(VERSION).dsc \
+	mv $(PACKAGE_TARNAME)-$(VERSION).tar.* $(DEBSRC) chiton-$(DEBVERSION).dsc \
 		$(DEBSRCPKG) $(SLACKSRCPKG) \
 		release
 
@@ -322,7 +322,7 @@ packaging/debian/copyright: packaging/debian/copyright.in $(LICENSE_FILES) | ext
 
 #kinda crappy, but i need something that works
 packaging/debian/changelog: Makefile dist-version
-	echo $(PACKAGE_TARNAME) '('$(VERSION)'-1)' unstable\; urgency=low > $@
+	echo $(PACKAGE_TARNAME) '('$(DEBVERSION)'-1)' unstable\; urgency=low > $@
 	git log -n 5 | sed 's/^/  /' >> $@
 	echo -n ' -- $(MAINTAINER)  ' >> $@
 	date -R >> $@
@@ -343,20 +343,20 @@ $(SLACKSRCPKG): $(SLACKWARE_PACKAGE_FILES) $(SLACKWARE_PACKAGE_FILES_BUILT)
 
 DEBSRC_FILESIZE=$(shell wc -c $(DEBSRC) | cut -d ' ' -f 1)
 DEBSRCPKG_FILESIZE=$(shell wc -c $(DEBSRCPKG) | cut -d ' ' -f 1)
-chiton-$(VERSION).dsc: packaging/debian/chiton.dsc.in $(DEBSRC) $(DEBSRCPKG) dist
-	$(do_subst) < $(srcdir)/packaging/debian/chiton.dsc.in > chiton-$(VERSION).dsc
-	echo -n -e 'Files:\n  ' >> chiton-$(VERSION).dsc
-	md5sum $(DEBSRC) | sed -e 's/ / '$(DEBSRC_FILESIZE)'/' >> chiton-$(VERSION).dsc
-	echo -n -e '  ' >> chiton-$(VERSION).dsc
-	md5sum $(DEBSRCPKG) | sed -e 's/ / '$(DEBSRCPKG_FILESIZE)'/' >> chiton-$(VERSION).dsc
-	echo -n -e 'Checksums-Sha1:\n  '  >> chiton-$(VERSION).dsc
-	sha1sum $(DEBSRC) | sed -e 's/ / '$(DEBSRC_FILESIZE)'/' >> chiton-$(VERSION).dsc
-	echo -n -e '  ' >> chiton-$(VERSION).dsc
-	sha1sum $(DEBSRCPKG) | sed -e 's/ / '$(DEBSRCPKG_FILESIZE)'/' >> chiton-$(VERSION).dsc
-	echo -n -e 'Checksums-Sha256:\n  '  >> chiton-$(VERSION).dsc
-	sha256sum $(DEBSRC) | sed -e 's/ / '$(DEBSRC_FILESIZE)'/' >> chiton-$(VERSION).dsc
-	echo -n -e '  ' >> chiton-$(VERSION).dsc
-	sha256sum $(DEBSRCPKG) | sed -e 's/ / '$(DEBSRCPKG_FILESIZE)'/' >> chiton-$(VERSION).dsc
+chiton-$(DEBVERSION).dsc: packaging/debian/chiton.dsc.in $(DEBSRC) $(DEBSRCPKG) dist
+	$(do_subst) < $(srcdir)/packaging/debian/chiton.dsc.in > chiton-$(DEBVERSION).dsc
+	echo -n -e 'Files:\n  ' >> chiton-$(DEBVERSION).dsc
+	md5sum $(DEBSRC) | sed -e 's/ / '$(DEBSRC_FILESIZE)'/' >> chiton-$(DEBVERSION).dsc
+	echo -n -e '  ' >> chiton-$(DEBVERSION).dsc
+	md5sum $(DEBSRCPKG) | sed -e 's/ / '$(DEBSRCPKG_FILESIZE)'/' >> chiton-$(DEBVERSION).dsc
+	echo -n -e 'Checksums-Sha1:\n  '  >> chiton-$(DEBVERSION).dsc
+	sha1sum $(DEBSRC) | sed -e 's/ / '$(DEBSRC_FILESIZE)'/' >> chiton-$(DEBVERSION).dsc
+	echo -n -e '  ' >> chiton-$(DEBVERSION).dsc
+	sha1sum $(DEBSRCPKG) | sed -e 's/ / '$(DEBSRCPKG_FILESIZE)'/' >> chiton-$(DEBVERSION).dsc
+	echo -n -e 'Checksums-Sha256:\n  '  >> chiton-$(DEBVERSION).dsc
+	sha256sum $(DEBSRC) | sed -e 's/ / '$(DEBSRC_FILESIZE)'/' >> chiton-$(DEBVERSION).dsc
+	echo -n -e '  ' >> chiton-$(DEBVERSION).dsc
+	sha256sum $(DEBSRCPKG) | sed -e 's/ / '$(DEBSRCPKG_FILESIZE)'/' >> chiton-$(DEBVERSION).dsc
 
 web/inc/configdb.php: web/inc/configdb.php.in setting.hpp dist-version
 	$(do_subst) < web/inc/configdb.php.in > $@

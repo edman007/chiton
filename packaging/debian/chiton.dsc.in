@@ -1,7 +1,7 @@
 Format: 3.0 (quilt)
 Source: @PKGNAME@
 Architecture: any
-Version: @releaseversion@-1
+Version: @debianversion@-1
 Maintainer: @maintainer@
 Homepage: @homepage@
 Standards-Version: 4.5.0.2
