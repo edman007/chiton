@@ -4,6 +4,7 @@ set -e
 #set -x
 #dbc_debug=1
 #init for debian
+#DEBHELPER#
 if [ -f /usr/share/debconf/confmodule ]; then
     if [[ "$1" == "purge" || "$1" == "db_purge" ]]; then
         . /usr/share/debconf/confmodule

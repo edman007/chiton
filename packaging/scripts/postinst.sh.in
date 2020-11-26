@@ -18,6 +18,7 @@ MYSQL_USER=@PKGNAME@
 MYSQL_USER_PW=changeme
 
 #init for debian
+#DEBHELPER#
 if [ -f /usr/share/debconf/confmodule ]; then
     . /usr/share/debconf/confmodule
     HAVEDBCONF=true

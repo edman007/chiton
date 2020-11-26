@@ -3,6 +3,7 @@
 set -e
 #set -x
 #init for debian
+#DEBHELPER#
 if [ -f /usr/share/debconf/confmodule ]; then
     . /usr/share/debconf/confmodule
 fi

@@ -323,7 +323,7 @@ packaging/debian/copyright: packaging/debian/copyright.in $(LICENSE_FILES) | ext
 #kinda crappy, but i need something that works
 packaging/debian/changelog: Makefile dist-version
 	echo $(PACKAGE_TARNAME) '('$(DEBVERSION)'-1)' unstable\; urgency=low > $@
-	git log -n 5 | sed 's/^/  /' >> $@
+	git log -n 5 | sed -e 's/.\{70\}/&\n       /g' -e 's/^/  /' >> $@
 	echo -n ' -- $(MAINTAINER)  ' >> $@
 	date -R >> $@
 
