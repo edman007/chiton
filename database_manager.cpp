@@ -46,6 +46,8 @@ bool DatabaseManager::initilize_db(){
         "starttime bigint(20) NOT NULL, "
         "endtime bigint(20) DEFAULT NULL, "
         "camera int(11) NOT NULL, "
+        "`locked` tinyint(1) NOT NULL DEFAULT 0, "
+        "`segment` tinyint(1) NOT NULL DEFAULT 0, "
         "PRIMARY KEY (id,camera,starttime), "
         "KEY endtime (endtime), "
         "KEY starttime (starttime), "
@@ -104,7 +106,11 @@ bool DatabaseManager::check_database(void){
         if (cur_major > CURRENT_DB_VERSION_MAJOR){
             LFATAL("Error, current database version " + cur_version + " is incompible with this version of chiton");
         } else if (cur_major < CURRENT_DB_VERSION_MAJOR){
-            LFATAL("The database needs an upgrade, but no other version is known, is " + cur_version + " but expected " + CURRENT_DB_VERSION);//shouldn't happen
+            if (!upgrade_database(cur_major, cur_minor)){
+                LFATAL("The database needs an upgrade, but no other version is known, is " + cur_version + " but expected " + CURRENT_DB_VERSION);//shouldn't happen
+            } else {
+                ret = true;
+            }
             //normally we would just upgrade...but no such upgrade is possible
         } else {//equal
             if (cur_minor > CURRENT_DB_VERSION_MINOR){
@@ -112,7 +118,11 @@ bool DatabaseManager::check_database(void){
                       + "), continuing without changing the database version");
                 ret = true;//this is not an issue
             } else if (cur_minor < CURRENT_DB_VERSION_MINOR){
-                LFATAL("The database needs an upgrade, but no other version is known, is " + cur_version + " but expected " + CURRENT_DB_VERSION);//shouldn't happen
+                if (!upgrade_database(cur_major, cur_minor)){
+                    LFATAL("The database needs an upgrade, but no other version is known, is " + cur_version + " but expected " + CURRENT_DB_VERSION);//shouldn't happen
+                } else {
+                    ret = true;
+                }
             } else {//equal
                 LINFO("Detected latest database version " + CURRENT_DB_VERSION);
                 ret = true;
@@ -141,4 +151,29 @@ bool DatabaseManager::set_latest_version(void){
     }
     delete res;
     return ret;
+}
+
+bool DatabaseManager::upgrade_database(int major, int minor){
+    if (1 == major){
+        switch (minor){
+        case 0:
+            return upgrade_from_1_0();
+        default:
+            return false;
+        }
+    }
+    return false;
+}
+
+bool DatabaseManager::upgrade_from_1_0(void){
+    std::string alter_query = "ALTER TABLE `videos` ADD `locked` BOOLEAN NOT NULL DEFAULT FALSE AFTER `camera`, ADD `segment` BOOLEAN NOT NULL DEFAULT FALSE AFTER `locked`;";
+    DatabaseResult *res = db.query(alter_query);
+    if (res){
+        delete res;
+    } else {
+        LWARN("Database Upgrade Failed - " + alter_query);
+        return false;
+    }
+
+    return set_latest_version();
 }

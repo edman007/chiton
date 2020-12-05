@@ -43,6 +43,10 @@ private:
     bool initilize_db(void);//initilized the database to the current version from an empty database
 
     bool set_latest_version(void);//marks the database version as the latest
+
+    bool upgrade_database(int major, int minor);//selects the upgrade routine, returns true if successfully upgraded
+
+    bool upgrade_from_1_0(void);//upgrade from 1_0 to latest
 };
 
 #endif

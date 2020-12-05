@@ -100,7 +100,8 @@ void FileManager::clean_disk(void){
     long target_clear = get_target_free_bytes();
     if (target_clear){
         LINFO("Cleaning the disk, removing " + std::to_string(target_clear));
-        std::string sql = "SELECT v.id, v.path, c.value FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' ORDER BY starttime ASC LIMIT 50";
+        std::string sql = "SELECT v.id, v.path, c.value FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' AND locked = 0 "
+            " ORDER BY starttime ASC LIMIT 50";
 
         DatabaseResult* res = db.query(sql);
         while (target_clear > 0 && res && res->next_row()){
