@@ -357,7 +357,7 @@ function drawGaps(camera, vcontrol, jsonData){
 
         var left = (jsonData.gaps[i].start_ts / fullDay) * width  /*- total_offset*/;
         total_offset += gapWidth;
-        newHTML += '<div class="gap" style="width:' + gapWidth+ 'px; left:'+ left+';"></div>';
+        newHTML += '<div class="gap" style="width:' + gapWidth+ 'px; left:'+ left+'px;"></div>';
     }
     newHTML += '<div class="future"></div>';
 
