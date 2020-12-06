@@ -47,13 +47,21 @@ bool DatabaseManager::initilize_db(){
         "endtime bigint(20) DEFAULT NULL, "
         "camera int(11) NOT NULL, "
         "`locked` tinyint(1) NOT NULL DEFAULT 0, "
-        "`segment` tinyint(1) NOT NULL DEFAULT 0, "
         "PRIMARY KEY (id,camera,starttime), "
         "KEY endtime (endtime), "
         "KEY starttime (starttime), "
         "KEY camera (camera) "
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
-
+    const std::string exports_tbl = "CREATE TABLE `exports` ( "
+        "`id` int(10) unsigned NOT NULL AUTO_INCREMENT, "
+        "`camera` int(11) NOT NULL, "
+        "`path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL, "
+        "`starttime` bigint(20) NOT NULL, "
+        "`endtime` bigint(20) NOT NULL, "
+        "`progress` int(11) NOT NULL, "
+        "PRIMARY KEY (`id`), "
+        "KEY `camera` (`camera`,`starttime`,`progress`) "
+        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
     //create the config table
     DatabaseResult *res = db.query(config_tbl);
     bool ret = true;
@@ -71,6 +79,17 @@ bool DatabaseManager::initilize_db(){
             delete res;
         } else {
             LFATAL("Could not create videos table");
+            ret = false;
+        }
+    }
+
+    //create the exports table
+    if (ret){
+        res = db.query(exports_tbl);
+        if (res){
+            delete res;
+        } else {
+            LFATAL("Could not create exports table");
             ret = false;
         }
     }
@@ -166,14 +185,41 @@ bool DatabaseManager::upgrade_database(int major, int minor){
 }
 
 bool DatabaseManager::upgrade_from_1_0(void){
-    std::string alter_query = "ALTER TABLE `videos` ADD `locked` BOOLEAN NOT NULL DEFAULT FALSE AFTER `camera`, ADD `segment` BOOLEAN NOT NULL DEFAULT FALSE AFTER `locked`;";
+    const std::string alter_query = "ALTER TABLE `videos` ADD `locked` BOOLEAN NOT NULL DEFAULT FALSE AFTER `camera`";
+    const std::string exports_tbl = "CREATE TABLE `exports` ( "
+        "`id` int(10) unsigned NOT NULL AUTO_INCREMENT, "
+        "`camera` int(11) NOT NULL, "
+        "`path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL, "
+        "`starttime` bigint(20) NOT NULL, "
+        "`endtime` bigint(20) NOT NULL, "
+        "`progress` int(11) NOT NULL, "
+        "PRIMARY KEY (`id`), "
+        "KEY `camera` (`camera`,`starttime`,`progress`) "
+        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+
     DatabaseResult *res = db.query(alter_query);
+    bool ret = true;
     if (res){
         delete res;
     } else {
         LWARN("Database Upgrade Failed - " + alter_query);
-        return false;
+        ret = false;
     }
 
-    return set_latest_version();
+    //create the exports table
+    if (ret){
+        res = db.query(exports_tbl);
+        if (res){
+            delete res;
+        } else {
+            LFATAL("Could not create exports table");
+            ret = false;
+        }
+    }
+
+    if (ret){
+        return set_latest_version();
+    } else {
+        return ret;
+    }
 }
