@@ -22,6 +22,9 @@
 #include "util.hpp"
 #include <sys/time.h>
 #include <syslog.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <sys/syscall.h>
 
 std::mutex Util::lock;
 #ifdef DEBUG
@@ -131,4 +134,41 @@ bool Util::disable_syslog(void){
         use_syslog = false;
     }
     return !use_syslog;
+}
+
+//reduces the priority of the calling thread
+void Util::set_low_priority(void){
+    sched_param sch;
+    int policy;
+    pthread_getschedparam(pthread_self(), &policy, &sch);
+    //set SCHED_IDLE  and priority of 0
+    sch.sched_priority = 0;
+    policy = SCHED_IDLE;
+    if (pthread_setschedparam(pthread_self(), policy, &sch)){
+        LWARN("Could not reduce the scheduling priority");
+    }
+
+#ifdef SYS_ioprio_set
+    //this is actually constants from the kernel source...glibc is missing them,
+    //we could include them, but I don't know if it's worth making that a dep for this
+    //source for this is $LINUX_SRC/include/linux/ioprio.h
+    const int IOPRIO_CLASS_SHIFT = 13;
+    enum {
+        IOPRIO_CLASS_NONE,
+        IOPRIO_CLASS_RT,
+        IOPRIO_CLASS_BE,
+        IOPRIO_CLASS_IDLE,
+    };
+
+    enum {
+        IOPRIO_WHO_PROCESS = 1,
+        IOPRIO_WHO_PGRP,
+        IOPRIO_WHO_USER,
+    };
+
+    //reduce IO priority
+    if (syscall(SYS_ioprio_set, IOPRIO_WHO_PROCESS, 0, IOPRIO_CLASS_IDLE << IOPRIO_CLASS_SHIFT, 0)){
+        LWARN("Could not reduce the IO Priority");
+    }
+#endif
 }

@@ -30,7 +30,7 @@
 #include "chiton_ffmpeg.hpp"
 #include "database_manager.hpp"
 #include "remote.hpp"
-
+#include "export.hpp"
 
 #include <csignal>
 #include <atomic>
@@ -109,6 +109,8 @@ void run(Config& args){
 
     Remote remote(db, cfg);
     FileManager fm(db, cfg);
+    Export expt(db, cfg);
+
     //Launch all cameras
     res = db.query("SELECT camera FROM config WHERE camera != -1 AND name = 'active' AND value = '1' GROUP BY camera");
     std::vector<Camera*> cams;
@@ -157,6 +159,7 @@ void run(Config& args){
             }
         }
         fm.clean_disk();
+        expt.check_for_jobs();
         std::this_thread::sleep_for(std::chrono::seconds(10));
     } while (!exit_requested && !remote.get_reload_request() && !reload_requested);
 

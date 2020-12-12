@@ -83,6 +83,7 @@ public:
     static bool enable_syslog(void);
     static bool disable_syslog(void);
 
+    static void set_low_priority(void);//reduce the current thread to low priority
 private:
     static std::mutex lock;//lock for actually printing messages
     static unsigned int log_level;//the output logging level
