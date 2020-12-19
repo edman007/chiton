@@ -131,3 +131,17 @@ const std::string& Config::get_default_value(const std::string& key){
     LWARN("Code used undocumented config value '" + key + "'");
     return EMPTY_STR;
 }
+
+bool Config::load_camera_config(int camera, Database &db){
+    //loads the global and then overwrites it with the local
+    DatabaseResult *res = db.query("SELECT name, value FROM config WHERE camera = -1 OR camera = " + std::to_string(camera) + " ORDER by camera ASC" );
+    if (!res){
+        return false;
+    }
+    while (res && res->next_row()){
+        set_value(res->get_field(0), res->get_field(1));
+    }
+    delete res;
+    set_value("camera-id", std::to_string(camera));//to allow us to pull this later
+    return true;
+}

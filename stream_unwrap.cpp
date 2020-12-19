@@ -31,13 +31,20 @@ StreamUnwrap::StreamUnwrap(Config& cfg) : cfg(cfg) {
 }
 
 StreamUnwrap::~StreamUnwrap(){
+    close();
+}
+
+bool StreamUnwrap::close(void){
     //the reorder queue should be freed
     for (auto pkt : reorder_queue){
         unref_frame(pkt);
     }
+    reorder_queue.clear();
+    reorder_len = 0;
     
     avformat_close_input(&input_format_context);
-
+    input_format_context = NULL;
+    return true;
 }
 
 bool StreamUnwrap::connect(void) {
@@ -51,11 +58,14 @@ bool StreamUnwrap::connect(void) {
 
     int error;
     AVDictionary *opts = get_options();
+#ifdef DEBUG
     /* Open the input file to read from it. */
     if (av_dict_count(opts)){
         LWARN("Setting Options:");
         dump_options(opts);
     }
+#endif
+
     if ((error = avformat_open_input(&input_format_context, url.c_str(), NULL, &opts)) < 0) {
         LERROR( "Could not open camera url '" + url + "' (error '" + std::string(av_err2str(error)) +")");
         input_format_context = NULL;
@@ -66,11 +76,13 @@ bool StreamUnwrap::connect(void) {
     
     Util::get_videotime(connect_time);
 
-    
+#ifdef DEBUG
     if (av_dict_count(opts)){
         LWARN("Invalid Options:");
         dump_options(opts);
     }
+#endif
+
     av_dict_free(&opts);
     
     /* Get information on the input file (number of streams etc.). */
@@ -174,7 +186,9 @@ void StreamUnwrap::dump_options(AVDictionary* dict){
 
 bool StreamUnwrap::charge_reorder_queue(void){
     while (reorder_queue.size() < reorder_len){
-        read_frame();
+        if (!read_frame()){
+            break;//error reading a frame we exit
+        }
     }
     return true;
 }
@@ -254,6 +268,10 @@ bool StreamUnwrap::read_frame(void){
     
     sort_reorder_queue();
 
+    //check if this is a file, if yes we skip timestamp resyncing
+    if (input_format_context->filename && input_format_context->filename[0] == '/'){
+        return true;
+    }
     //check the time of the youngest packet...
     double delta = recv_time.tv_sec;
     delta -= av_q2d(input_format_context->streams[reorder_queue.back().stream_index]->time_base) * reorder_queue.back().dts;

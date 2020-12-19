@@ -64,7 +64,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST'){
             $messages[] = 'Locked ' . $db->affected_rows . ' segments';
         }
     } else if (!empty($_POST['unlock_segment'])){
-        print_r($_POST);
         $from_ts = (int)isset($_POST['start_day_ts'])  ? $_POST['start_day_ts'] : 0;
         $from_ts += (int)isset($_POST['start_h']) ? $_POST['start_h']*3600 : 0;
         $from_ts += (int)isset($_POST['start_m']) ? $_POST['start_m']*60 : 0;
@@ -85,9 +84,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST'){
 
             $sql = "UPDATE videos SET locked = 0 WHERE camera = $camera_id AND (( endtime >= $from_ts_packed AND endtime <= $to_ts_packed ) ".
                  " OR (starttime >= $from_ts_packed AND starttime <= $to_ts_packed )) ";
-            echo $sql;
             $db->query($sql);
             $messages[] = 'UnLocked ' . $db->affected_rows . ' segments';
+        }
+
+    } else if (!empty($_POST['export'])){
+        $from_ts = (int)isset($_POST['start_day_ts'])  ? $_POST['start_day_ts'] : 0;
+        $from_ts += (int)isset($_POST['start_h']) ? $_POST['start_h']*3600 : 0;
+        $from_ts += (int)isset($_POST['start_m']) ? $_POST['start_m']*60 : 0;
+        $from_ts += (int)isset($_POST['start_s']) ? $_POST['start_s'] : 0;
+
+        $to_ts = (int)isset($_POST['end_day_ts'])  ? $_POST['end_day_ts'] : 0;
+        $to_ts += (int)isset($_POST['end_h']) ? $_POST['end_h']*3600 : 0;
+        $to_ts += (int)isset($_POST['end_m']) ? $_POST['end_m']*60 : 0;
+        $to_ts += (int)isset($_POST['end_s']) ? $_POST['end_s'] : 0;
+
+        $start_ts = $from_ts;
+
+        if ($to_ts <= $from_ts){
+            $messages[] = 'To Time is before From Time';
+        } else {
+            $from_ts_packed = $from_ts * 1000;
+            $to_ts_packed = $to_ts * 1000;
+
+            $sql = "INSERT INTO exports (camera, starttime, endtime) VALUES ($camera_id, $from_ts_packed, $to_ts_packed ) ";
+            echo $sql;
+            $db->query($sql);
+            $messages[] = 'Export Job Started ';
         }
 
     }

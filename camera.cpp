@@ -37,13 +37,7 @@ Camera::~Camera(){
 }
 
 void Camera::load_cfg(void){
-    //loads the global and then overwrites it with the local
-    DatabaseResult *res = db.query("SELECT name, value FROM config WHERE camera = -1 OR camera = " + std::to_string(id) + " ORDER by camera DESC" );
-    while (res && res->next_row()){
-        cfg.set_value(res->get_field(0), res->get_field(1));
-    }
-    delete res;
-    cfg.set_value("camera-id", std::to_string(id));//to allow us to pull this later
+    cfg.load_camera_config(id, db);
 }
     
 void Camera::run(void){

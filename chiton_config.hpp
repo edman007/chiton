@@ -30,16 +30,19 @@
 
 /* Autoconf parameters */
 #include "config_build.hpp"
+#include "database.hpp"
 
 //we have to have valid values for these, these are the defaults when the user sets a bad value
 const long DEFAULT_SECONDS_PER_FILE = 6;//Apple recommends 6 seconds per file to make live streaming reasonable
 const long DEFAULT_MIN_FREE_SPACE = 1073741824;//1G in bytes
+const std::string FILE_EXT = ".ts";
+const std::string EXPORT_EXT = ".mp4";
 
 class Config {
 public:
     Config();
-    bool load_config(const std::string& path);
-
+    bool load_config(const std::string& path);//load the config from the path
+    bool load_camera_config(int camera, Database &db);//load the config from the database for a specific camera
     
     const std::string& get_value(const std::string& key);
     int get_value_int(const std::string& key);//returns the value as an int

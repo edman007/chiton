@@ -33,8 +33,11 @@ public:
     //returns a valid path starting at start_time, writes out it's ID to int &file_id
     std::string get_next_path(long int &file_id, int camera, const struct timeval &start_time);
 
-    //returns the path for the file referenced as id
-    std::string get_path(long int file_id);
+    //returns a path to export a file to, updating the database to include the path
+    std::string get_export_path(long int export_id, int camera, const struct timeval &start_time);
+
+    //returns the real for the segments referenced as id and path name from the database
+    std::string get_path(long int file_id, const std::string &db_path);
 
     //update metadata about the file
     bool update_file_metadata(long int file_id, struct timeval &end_time);
@@ -42,6 +45,8 @@ public:
     void clean_disk(void);//clean up the disk by deleting files
 
     void delete_broken_segments(void);//looks for impossible segments and wipes them
+
+    long rm_file(const std::string &path);//delete specific file (not a segment), returns number of bytes removed (-1 if nothing deleted)
 private:
     Database &db;
     Config &cfg;
@@ -50,6 +55,9 @@ private:
     void rmdir_r(const std::string &path);//delete directory and all empty parent directories
     long get_target_free_bytes(void);//return the bytes that must be deleted
     long rm_segment(const std::string &base, const std::string &path, const std::string &id);//deletes a target segment, returns number of bytes removed
+    long rm(const std::string &path);//delete a specific file and parent directories, returns negative if there was an error
+    std::string get_date_path(int camera, const struct timeval &start_time);//returns a path in the form of <camera>/<YYYY>/<MM>/<DD>/<HH>
+    std::string get_output_dir(void);//returns the output-dir cfg setting, with some fixups/sanity checks ensuring it always ends in a "/"
 };
 
 #endif

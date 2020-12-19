@@ -37,6 +37,8 @@ public:
     ~StreamUnwrap();
     
     bool connect(void);//returns true on success
+    bool close(void);//close the connection
+
     AVCodecContext* get_codec_context(void);
     AVFormatContext* get_format_context(void);
     unsigned int get_stream_count(void);

@@ -46,6 +46,9 @@ To: <select name="to_d">
  <br />
  <input type="submit" value="Lock Video"/>
 </form>
+
+
+
 {/if}
 
 {if !empty($locked_videos)}
@@ -66,6 +69,19 @@ Locked Videos:<br />
 <input type="text" name="end_s" value="{$lock.end_s}" size="2"/>
 <input type="submit" value="Unlock"/>
 </form>
+<form action="camera.php?id={$camera_id}" method="post">
+<input type="hidden" name="export" value="1">
+{$lock.start_day_txt} <input type="hidden" name="start_day_ts" value="{$lock.start_day_ts}"/>
+<input type="text" name="start_h" value="{$lock.start_h}" size="2"/> :
+<input type="text" name="start_m" value="{$lock.start_m}" size="2"/> :
+<input type="text" name="start_s" value="{$lock.start_s}" size="2"/> -
+{$lock.end_day_txt} <input type="hidden" name="end_day_ts" value="{$lock.end_day_ts}"/>
+<input type="text" name="end_h" value="{$lock.end_h}" size="2"/> :
+<input type="text" name="end_m" value="{$lock.end_m}" size="2"/> :
+<input type="text" name="end_s" value="{$lock.end_s}" size="2"/>
+<input type="submit" value="Export"/>
+</form>
+
 </li>
 {/foreach}
 </ul>

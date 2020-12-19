@@ -28,30 +28,12 @@
 #include <dirent.h>
 #include "util.hpp"
 
-
-const std::string FILE_EXT = ".ts";
-
 std::string FileManager::get_next_path(long int &file_id, int camera, const struct timeval &start_time){
-    const std::string &base = cfg.get_value("output-dir");
-    VideoDate date;
-    Util::get_time_parts(start_time, date);
+    const std::string base = get_output_dir();
+    const std::string dir = get_date_path(camera, start_time);
     std::string ptime = std::to_string(Util::pack_time(start_time));
-    const std::string dir = std::to_string(camera) + "/"
-        + std::to_string(date.year) + "/"
-        + std::to_string(date.month) + "/"
-        + std::to_string(date.day) + "/"
-        + std::to_string(date.hour);
-
-    //make sure the config value is correct
-    std::string modified_base = std::string(base);
-    if (modified_base == ""){
-        modified_base = "./";
-    } else if (modified_base.back() != '/'){
-        modified_base += "/";
-    }
-    
     //make sure dir exists
-    std::string path = modified_base + dir;
+    std::string path = base + dir;
     mkdir_recursive(path);
     
     std::string sql = "INSERT INTO videos (path, starttime, camera) VALUES ('" + dir + "/'," + ptime + ", " + std::to_string(camera) + " )";    
@@ -61,16 +43,25 @@ std::string FileManager::get_next_path(long int &file_id, int camera, const stru
     return path + "/" + std::to_string(file_id) + FILE_EXT;
 }
 
-//returns the path for the file referenced as id
-std::string FileManager::get_path(long int id){
-    std::string path;
-    std::string sql = "SELECT path from videos WHERE id = " + std::to_string(id);
-    DatabaseResult *res = db.query(sql);
-    if (res->next_row()){
-        path = std::string(res->get_field(0)) + std::to_string(id) + FILE_EXT;
-    }
+std::string FileManager::get_export_path(long int export_id, int camera, const struct timeval &start_time){
+    const std::string base = get_output_dir();
+    const std::string dir = get_date_path(camera, start_time);
+
+    //make sure dir exists
+    std::string path = base + dir;
+    mkdir_recursive(path);
+
+    std::string sql = "UPDATE exports SET path = '" + dir + "/' WHERE id = " + std::to_string(export_id);
+    DatabaseResult* res = db.query(sql);
     delete res;
-    return path;
+
+    return path + "/" + std::to_string(export_id) + EXPORT_EXT;
+}
+//returns the path for the file referenced as id
+std::string FileManager::get_path(long int id, const std::string &db_path){
+    std::string path;
+    path = db_path + std::to_string(id) + FILE_EXT;
+    return get_output_dir() + path;
 }
 
 bool FileManager::mkdir_recursive(std::string path){
@@ -105,8 +96,12 @@ void FileManager::clean_disk(void){
 
         DatabaseResult* res = db.query(sql);
         while (target_clear > 0 && res && res->next_row()){
+            long rm_size = 0;//size of file deleted
             const std::string &id = res->get_field(0);
-            target_clear -= rm_segment(res->get_field(2), res->get_field(1), id);
+            rm_size = rm_segment(res->get_field(2), res->get_field(1), id);
+            if (rm_size > 0){
+                target_clear -= rm_size;
+            }
             //delete it from the database
             sql = "DELETE FROM videos WHERE id = " + id;
             DatabaseResult* del_res = db.query(sql);
@@ -119,10 +114,9 @@ void FileManager::clean_disk(void){
 
 long FileManager::rm_segment(const std::string &base, const std::string &path, const std::string &id){
     long filesize = 0;
-    struct stat statbuf;
     std::string target_file;
     if (base == "NULL"){
-        target_file = cfg.get_value("output-dir");
+        target_file = get_output_dir();
     } else {
         target_file = base;
     }
@@ -135,18 +129,7 @@ long FileManager::rm_segment(const std::string &base, const std::string &path, c
     std::string target_dir = target_file;//copy the parent directory for after we delete all the content
 
     target_file += id + FILE_EXT;
-    if (!stat(target_file.c_str(), &statbuf)){
-        filesize = statbuf.st_size;
-        //and delete it
-        LINFO("Deleting " + target_file);
-        if (unlink(target_file.c_str())){
-            LWARN("Cannot delete file " + target_file + " (" + std::to_string(errno) + ")");
-            filesize = 0;
-        }
-    } else {
-        LWARN("Cannot stat " + target_file + " (" + std::to_string(errno) + ")");
-    }
-
+    filesize = rm_file(target_file);
     rmdir_r(target_dir);//and delete any empty parents
     return filesize;
 }
@@ -250,4 +233,52 @@ bool FileManager::update_file_metadata(long int file_id, struct timeval &end_tim
 
     return affected == 1;
     
+}
+
+long FileManager::rm(const std::string &path){
+    struct stat statbuf;
+    if (!stat(path.c_str(), &statbuf)){
+        //and delete it
+        LINFO("Deleting " + path);
+        if (unlink(path.c_str())){
+            LWARN("Cannot delete file " + path + " (" + std::to_string(errno) + ")");
+            return -2;
+        }
+        return statbuf.st_size;
+    } else {
+        LWARN("Cannot stat " + path + " (" + std::to_string(errno) + ")");
+        return -1;
+    }
+}
+
+long FileManager::rm_file(const std::string &path){
+    const std::string base = get_output_dir();
+
+    long filesize = rm(base + path);
+    rmdir_r(base + path);
+    return filesize;
+}
+
+std::string FileManager::get_date_path(int camera, const struct timeval &start_time){
+    VideoDate date;
+    Util::get_time_parts(start_time, date);
+    std::string dir = std::to_string(camera) + "/"
+        + std::to_string(date.year) + "/"
+        + std::to_string(date.month) + "/"
+        + std::to_string(date.day) + "/"
+        + std::to_string(date.hour);
+    return dir;
+}
+
+std::string FileManager::get_output_dir(void){
+    const std::string base = cfg.get_value("output-dir");
+
+    //make sure the config value is correct
+    std::string modified_base = std::string(base);
+    if (modified_base == ""){
+        modified_base = "./";
+    } else if (modified_base.back() != '/'){
+        modified_base += "/";
+    }
+    return modified_base;
 }

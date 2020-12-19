@@ -47,12 +47,15 @@ private:
     long camera;
     std::string path;
     long progress;
+    Config camera_cfg;
 
     std::thread runner;
-    std::atomic<bool> force_exit;
+    std::atomic<bool> export_in_progress;//set to true when the runner is active
+    std::atomic<bool> force_exit;//will cause the runner to exis ASAP when true
 
     bool start_job(void);//kicks off a thread to perform the export
     void run_job(void);//main loop for exporting
+    bool update_progress();//sets the current progress
 };
 
 #endif

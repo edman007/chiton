@@ -30,6 +30,9 @@ StreamWriter::StreamWriter(Config& cfg, std::string path, StreamUnwrap &unwrap) 
 
 bool StreamWriter::open(void){
     int error;
+    if (file_opened){
+        return true;//already opened
+    }
     file_opened = false;
     avformat_alloc_output_context2(&output_format_context, NULL, NULL, path.c_str());
     if (!output_format_context) {
