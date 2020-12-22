@@ -107,9 +107,10 @@ void run(Config& args){
     //load system config
     load_sys_cfg(cfg);
 
-    Remote remote(db, cfg);
+
     FileManager fm(db, cfg);
-    Export expt(db, cfg);
+    Export expt(db, cfg, fm);
+    Remote remote(db, cfg, expt);
 
     //Launch all cameras
     res = db.query("SELECT camera FROM config WHERE camera != -1 AND name = 'active' AND value = '1' GROUP BY camera");

@@ -37,8 +37,11 @@ $start_ts = empty($_GET['start']) ? (new DateTime('midnight', $tz))->getTimeStam
 $camera_cfg = new WebConfig($db, $camera_id);
 $smarty->assign('camera_name', $camera_cfg->get_value('display-name'));
 $messages = array();
+
+
 //check for POST
 if ($_SERVER['REQUEST_METHOD'] == 'POST'){
+    require_once('./inc/remote.php');
     if (!empty($_POST['from_d'])){
         $from_ts = (int)isset($_POST['from_d'])  ? $_POST['from_d'] : 0;
         $from_ts += (int)isset($_POST['from_h']) ? $_POST['from_h']*3600 : 0;
@@ -108,11 +111,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST'){
             $to_ts_packed = $to_ts * 1000;
 
             $sql = "INSERT INTO exports (camera, starttime, endtime) VALUES ($camera_id, $from_ts_packed, $to_ts_packed ) ";
-            echo $sql;
             $db->query($sql);
             $messages[] = 'Export Job Started ';
         }
 
+    } else if (!empty($_POST['delete_export'])){
+        $export_id = empty($_POST['export_id']) ? 0 : (int)$_POST['export_id'];
+        //we request the backend delete it since it manages files
+        $remote = new Remote($db);
+        if ($remote->rm_export($export_id)){
+            $messages[] = 'Export Job Deleted ';
+        } else {
+            $messages[] = 'Could not delete export job, ' . $remote->get_error();
+        }
     }
 }
 
@@ -226,6 +237,24 @@ function generate_lock_info($lockstart, $lockend){
 }
 $smarty->assign('locked_videos', $lock_data);
 
+//get the list of exports
+$exports = array();
+$sql = "SELECT id, progress, path, starttime, endtime FROM exports WHERE camera = $camera_id ORDER BY starttime ASC";
+$res = $db->query($sql);
+if ($res){
+    while ($row = $res->fetch_assoc()){
+        $exp_info = array();
+        $exp_info['id'] = $row['id'];
+        $exp_info['url'] = 'vids/' . $row['path']  . $row['id'] . '.mp4';
+        $exp_info['progress'] = $row['progress'];
+        $start_date = dbtime_to_DateTime($row['starttime']);
+        $end_date = dbtime_to_DateTime($row['endtime']);
+        $exp_info['start_txt'] = $start_date->format('D M jS H:i:s');
+        $exp_info['end_txt'] = $end_date->format('D M jS H:i:s');
+        $exports[] = $exp_info;
+    }
+}
+$smarty->assign('exports', $exports);
 $video_info = array('url' => 'stream.php?id=' . (int)$_GET['id'] . '&start='. $start_ts,
                     'camera' => (int)$_GET['id'],
                     'start_ts' => $start_ts
@@ -235,5 +264,3 @@ $smarty->assign('video_info', $video_info);
 $smarty->assign('system_msg', $messages);
 
 $smarty->display('camera.tpl');
-
-?>

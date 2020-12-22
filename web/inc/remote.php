@@ -28,6 +28,7 @@ class Remote {
     private $db;
     private $sock;
     private $error_msg = null;
+    private $read_buf = "";
 
     function __construct($db){
         $this->db = $db;
@@ -79,11 +80,11 @@ class Remote {
                 //cut the cmd up and try again
                 $cmd = substr($cmd, $len);
             } else {
-                //all data was sent
-                return true;
+                break;//all data sent
             }
         }
-        return true;//should never actually get here
+
+        return true;
     }
 
     //requests that the backend performs a full reload
@@ -94,6 +95,18 @@ class Remote {
         return $this->send_cmd('RELOAD');
     }
 
+    //requests that the backend deletes the export
+    public function rm_export($id){
+        if (!$this->connect()){
+            return false;
+        }
+        if ($this->send_cmd('RM-EXPORT ' . (int)$id)){
+            return $this->get_next_line() == 'OK';
+        } else {
+            return false;
+        }
+    }
+
     public function get_error(){
         if (!empty($this->error_msg)){
             return $this->error_msg;
@@ -102,4 +115,23 @@ class Remote {
         }
     }
 
+    private function get_next_line(){
+        $end = strpos($this->read_buf, "\n");
+        if ($end === FALSE){
+            //read more data and call this again
+            $data = socket_read($this->sock, 1024, PHP_NORMAL_READ);
+            if ($data == ""){
+                $data = $this->read_buf;
+                $this->read_buf = "";
+                return $data;
+            } else {
+                $this->read_buf .= $data;
+                return $this->get_next_line();//try again
+            }
+        }
+        //get the data up to end and delete the character at the end
+        $data = substr($this->read_buf, 0, $end);
+        $this->read_buf = substr($this->read_buf, $end + 1);
+        return $data;
+    }
   }

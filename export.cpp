@@ -23,25 +23,33 @@
 #include "util.hpp"
 #include "stream_unwrap.hpp"
 #include "stream_writer.hpp"
-#include "file_manager.hpp"
 
-Export::Export(Database &db, Config &cfg) : db(db), cfg(cfg) {
+Export::Export(Database &db, Config &cfg, FileManager &fm) : db(db), cfg(cfg), g_fm(fm) {
     force_exit = false;
     export_in_progress = false;
+    id = 0;
 }
 
 Export::~Export(void){
+    lock.lock();
     force_exit = true;
     if (runner.joinable()){
-        runner.join();
+        runner.join();//always join holding the lock since it could be joined from different threads
     }
+    lock.unlock();
 }
 
 bool Export::check_for_jobs(void){
+    if (export_in_progress){
+        return true;//return true because it's already in progress
+    }
+
+    lock.lock();
     //check if the job is running
-    if (!export_in_progress && runner.joinable()){
+    if (runner.joinable()){
         runner.join();
     }
+
     const std::string sql = "SELECT id, starttime, endtime, camera, path, progress FROM exports WHERE progress != 100 LIMIT 1";
     DatabaseResult *res = db.query(sql);
     if (res && res->next_row()){
@@ -55,21 +63,21 @@ bool Export::check_for_jobs(void){
 
         return start_job();
     }
+    lock.unlock();
     return false;
 }
 
+//should always be called while holding the lock
 bool Export::start_job(void){
-    if (export_in_progress){
-        return true;//we will refuse, but return true because it's already in progress
-    }
     export_in_progress = true;
+    force_exit = false;
+    lock.unlock();
     runner = std::thread(&Export::run_job, this);
     return runner.joinable();
 }
 
 void Export::run_job(void){
     Util::set_low_priority();//reduce the thread priority
-    LWARN("THREAD RUNNING");
 
     camera_cfg.load_camera_config(camera, db);
 
@@ -84,7 +92,7 @@ void Export::run_job(void){
     Util::unpack_time(starttime, start);
     path = fm.get_export_path(id, camera, start);
     progress = 1;
-
+    LINFO("Performing Export for camera " + std::to_string(camera));
     update_progress();
 
     //query all segments we need
@@ -135,6 +143,7 @@ void Export::run_job(void){
     out.close();
     progress = 100;
     update_progress();
+    id = 0;
     export_in_progress = false;
 }
 
@@ -146,4 +155,30 @@ bool Export::update_progress(){
         delete res;
     }
     return affected != 0;
+}
+
+bool Export::rm_export(int export_id){
+    //rm the export
+    lock.lock();
+    if (id == export_id){
+        force_exit = true;//but we do not need to wait
+    }
+
+    std::string sql = "SELECT path, id FROM exports WHERE id = " + std::to_string(export_id);
+    DatabaseResult *res = db.query(sql);
+    long del_count = 0;
+    if (res){
+        if (res->next_row()){
+            std::string path = res->get_field(0) + res->get_field(1) + EXPORT_EXT;
+            g_fm.rm_file(path);
+            delete res;
+
+            sql = "DELETE FROM exports WHERE id = " + std::to_string(export_id);
+            res = db.query(sql, &del_count, NULL);
+
+        }
+        delete res;
+    }
+    lock.unlock();
+    return del_count > 0;
 }

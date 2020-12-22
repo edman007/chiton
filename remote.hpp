@@ -24,11 +24,12 @@
 
 #include "chiton_config.hpp"
 #include "database.hpp"
+#include "export.hpp"
 #include <atomic>
 #include <thread>
 #include <list>
 #include <map>
-
+#include <vector>
 /*
  * This class creates a socket to listen for commands from the web interface
  * It will spawn off a worker thread that listens for and handles actions requested
@@ -55,6 +56,10 @@
  *  - Server will respond with "OK" when processed correctly
  *  - This will reload the backend, as if the HUP signal was sent
  *
+ * RM-EXPORT <INT1>
+ *  - Server will delete the export with the export ID <INT1>
+ *  - Server will cancel the export in progress if this id is currently being exported
+ *
  * CLOSE
  *  - Server responds by closing the connection
  *
@@ -64,7 +69,7 @@
  */
 class Remote {
 public:
-    Remote(Database &db, Config &cfg);
+    Remote(Database &db, Config &cfg, Export &expt);
     ~Remote();
 
     //returns if a reload was requested an clears any pending request
@@ -73,6 +78,8 @@ public:
 private:
     Database &db;
     Config &cfg;
+    Export &expt;
+
     std::atomic_bool reload_requested;
     int sockfd;
     std::string path;
@@ -90,6 +97,10 @@ private:
     std::map<int,std::string> write_buffers;//unwritten responses, indexed by fd
     std::map<int, std::string> read_buffers;
 
+    //the callback below calls a member function to process the command, with the args: fd, rc (this rc struct), cmd (the full line being processed)
+    struct RemoteCommand;
+    std::vector<RemoteCommand> command_vec;
+
     bool create_socket(void);//create the socket and bind to it
     bool spawn_worker(void);
     void run_worker(void);
@@ -101,6 +112,12 @@ private:
     void execute_cmd(int fd, std::string &cmd);//executes the command received
     void stop_worker(void);//sends the shutdown signal to the worker
     void close_conn(int fd);//close the connection associated with fd and any associated data
+
+    //the methods to process each command:
+    void cmd_reload(int fd, RemoteCommand& rc, std::string &cmd);
+    void cmd_rm_export(int fd, RemoteCommand& rc, std::string &cmd);
+    void cmd_close(int fd, RemoteCommand& rc, std::string &cmd);
+    void cmd_help(int fd, RemoteCommand& rc, std::string &cmd);
 };
 
 #endif

@@ -28,15 +28,25 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-
+#include <functional>
 
 const int socket_backlog = 5;//maxiumn connection backlog for the socket
+struct Remote::RemoteCommand {const std::string cmd;
+        std::function<void(Remote&, int, RemoteCommand&, std::string&)> cbk;
+        };
 
-Remote::Remote(Database &db, Config &cfg) : db(db), cfg(cfg) {
+Remote::Remote(Database &db, Config &cfg, Export &expt) : db(db), cfg(cfg), expt(expt) {
     sockfd = -1;
     killfd_worker = -1;
     killfd_master = -1;
     reload_requested = false;
+
+    //fill the supproted commands
+    command_vec.push_back({"RELOAD", &Remote::cmd_reload});
+    command_vec.push_back({"RM-EXPORT", &Remote::cmd_rm_export});
+    command_vec.push_back({"CLOSE", &Remote::cmd_close});
+    command_vec.push_back({"HELP", &Remote::cmd_help});
+
     if (create_socket()){
         spawn_worker();
     }
@@ -343,13 +353,39 @@ void Remote::close_conn(int fd){
 }
 
 void Remote::execute_cmd(int fd, std::string &cmd){
-    if (cmd == "RELOAD"){
-        LINFO("Reload Requested via socket");
-        reload_requested.exchange(true);
-        write_data(fd, "OK\n");
-    } else if (cmd == "CLOSE"){
-        close_conn(fd);
-    } else if (cmd == "HELP"){
-        write_data(fd, "SUPPORTED COMMANDS: RELOAD CLOSE HELP\n");
+    for (auto rc : command_vec){
+        if (cmd.find(rc.cmd) == 0){
+            LDEBUG("Calling " + rc.cmd);
+            rc.cbk(*this, fd, rc, cmd);
+            return;
+        }
     }
+    write_data(fd, "Unknown Command: " + cmd +"\n");
+}
+
+void Remote::cmd_reload(int fd, RemoteCommand& rc, std::string &cmd){
+    LINFO("Reload Requested via socket");
+    reload_requested.exchange(true);
+    write_data(fd, "OK\n");
+}
+
+void Remote::cmd_rm_export(int fd, RemoteCommand& rc, std::string &cmd){
+    int export_id = std::stoi(cmd.substr(rc.cmd.length() + 1));
+    if (expt.rm_export(export_id)){
+        write_data(fd, "OK\n");
+    } else {
+        write_data(fd, "ERROR\n");
+    }
+}
+
+void Remote::cmd_close(int fd, RemoteCommand& rc, std::string &cmd){
+    close_conn(fd);
+}
+
+void Remote::cmd_help(int fd, RemoteCommand& rc, std::string &cmd){
+    std::string supported_commands = "";
+    for (auto rc : command_vec){
+        supported_commands += " " + rc.cmd;
+    }
+    write_data(fd, "SUPPORTED COMMANDS:" + supported_commands + "\n");
 }

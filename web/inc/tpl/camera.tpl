@@ -86,4 +86,25 @@ Locked Videos:<br />
 {/foreach}
 </ul>
 {/if}
+
+{if !empty($exports)}
+<h3>Exports</h3>
+<ul>
+{foreach from=$exports item=exp name=EXPORT_LIST}
+<li>
+{if $exp['progress'] != 100}{* Not started or in progress *}
+{$exp.start_txt} - {$exp.end_txt} ({$exp['progress']}%)
+{else}{* Completed *}
+<a href="{$exp['url']}" download="{if !empty($camera_name)}{$camera_name|escape}{else}Camera {$camera_id}{/if} - {$exp.start_txt}">
+{$exp.start_txt} - {$exp.end_txt}</a>
+{/if}
+<form action="camera.php?id={$camera_id}" method="post">
+<input type="hidden" name="delete_export" value="1">
+<input type="hidden" name="export_id" value="{$exp['id']}">
+<input type="submit" value="Delete">
+</form>
+</li>
+{/foreach}
+</ul>
+{/if}
 {include file="footer.tpl"}

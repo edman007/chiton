@@ -255,7 +255,9 @@ long FileManager::rm_file(const std::string &path){
     const std::string base = get_output_dir();
 
     long filesize = rm(base + path);
-    rmdir_r(base + path);
+    std::string dir = base;
+    dir += path.substr(0, path.find_last_of('/', path.length()));
+    rmdir_r(dir);
     return filesize;
 }
 
