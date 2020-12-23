@@ -34,7 +34,7 @@ Scroll: Skip<br/>
 {if !empty($avail_days)}
 <div onclick="toggleBlock(this, 'hidden_lock_div', 'Lock Video');" class="td_col">Lock Video</div>
 <div id="hidden_lock_div" class="hidden">
-<form method="post" action="camera.php?id={$camera_id}">
+<form method="post" action="camera.php?id={$camera_id}" class="timeFormInput">
 From: <select name="from_d">
 {foreach name=date_select item=day from=$avail_days}
 <option value="{$day['timestamp']}" {if !empty($day['selected'])}selected="selected"{/if}>{$day['long']}</option>
@@ -60,7 +60,7 @@ Locked Videos:<br />
 <li>{$lock.start_txt} - {$lock.end_txt}
 <div class="td_col" onclick="toggleBlock(this, 'locked_vid_unlock_{$smarty.foreach.LOCK_DATA.index}', 'Unlock:');">Unlock</div>
 <span class="hidden" id="locked_vid_unlock_{$smarty.foreach.LOCK_DATA.index}"
-<form action="camera.php?id={$camera_id}" method="post">
+<form action="camera.php?id={$camera_id}" method="post" class="timeFormInput">
 <input type="hidden" name="unlock_segment" value="1">
 {$lock.start_day_txt} <input type="hidden" name="start_day_ts" value="{$lock.start_day_ts}"/>
 <input type="text" name="start_h" value="{$lock.start_h}" size="2"/> :
@@ -75,7 +75,7 @@ Locked Videos:<br />
 </span>
 <div class="td_col" onclick="toggleBlock(this, 'locked_vid_export_{$smarty.foreach.LOCK_DATA.index}', 'Export:');">Export</div>
 <span class="hidden" id="locked_vid_export_{$smarty.foreach.LOCK_DATA.index}"
-<form action="camera.php?id={$camera_id}" method="post">
+<form action="camera.php?id={$camera_id}" method="post" class="timeFormInput">
 <input type="hidden" name="export" value="1">
 {$lock.start_day_txt} <input type="hidden" name="start_day_ts" value="{$lock.start_day_ts}"/>
 <input type="text" name="start_h" value="{$lock.start_h}" size="2"/> :

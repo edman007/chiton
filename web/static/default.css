@@ -223,6 +223,9 @@ ul.settings li  {
     background-color:rgb(180, 240, 180);
 }
 
+.timeFormInput input {
+    font-family:monospace;
+}
 /*
 * Mobile Website
 */
