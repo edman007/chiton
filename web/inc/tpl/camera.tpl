@@ -5,6 +5,7 @@
 {include file="player.tpl" video=$video_info}
 </div>
 
+<div class="camera_sidebar">
 {if !empty($camera_name)}
 <h2>{$camera_name|escape}</h2>
 {else}
@@ -12,7 +13,6 @@
 {/if}
 Shift+Scroll: Zoom<br/>
 Scroll: Skip<br/>
-
 {if !empty($avail_days)}
 <div class="dateSwitch">
 <form method="get" action="camera.php">
@@ -28,10 +28,13 @@ Scroll: Skip<br/>
 </div><br/>
 {/if}
 
+</div>{* camera_sidebar *}
+
+<div class="camera_below">
 {if !empty($avail_days)}
-<br />
+<div onclick="toggleBlock(this, 'hidden_lock_div', 'Lock Video');" class="td_col">Lock Video</div>
+<div id="hidden_lock_div" class="hidden">
 <form method="post" action="camera.php?id={$camera_id}">
-Lock Video:<br />
 From: <select name="from_d">
 {foreach name=date_select item=day from=$avail_days}
 <option value="{$day['timestamp']}" {if !empty($day['selected'])}selected="selected"{/if}>{$day['long']}</option>
@@ -46,17 +49,17 @@ To: <select name="to_d">
  <br />
  <input type="submit" value="Lock Video"/>
 </form>
-
-
-
+</div>
 {/if}
 
 {if !empty($locked_videos)}
 <br />
 Locked Videos:<br />
-<ul>
+<ul class="locked_vids">
 {foreach from=$locked_videos item=lock name=LOCK_DATA}
 <li>{$lock.start_txt} - {$lock.end_txt}
+<div class="td_col" onclick="toggleBlock(this, 'locked_vid_unlock_{$smarty.foreach.LOCK_DATA.index}', 'Unlock:');">Unlock</div>
+<span class="hidden" id="locked_vid_unlock_{$smarty.foreach.LOCK_DATA.index}"
 <form action="camera.php?id={$camera_id}" method="post">
 <input type="hidden" name="unlock_segment" value="1">
 {$lock.start_day_txt} <input type="hidden" name="start_day_ts" value="{$lock.start_day_ts}"/>
@@ -69,6 +72,9 @@ Locked Videos:<br />
 <input type="text" name="end_s" value="{$lock.end_s}" size="2"/>
 <input type="submit" value="Unlock"/>
 </form>
+</span>
+<div class="td_col" onclick="toggleBlock(this, 'locked_vid_export_{$smarty.foreach.LOCK_DATA.index}', 'Export:');">Export</div>
+<span class="hidden" id="locked_vid_export_{$smarty.foreach.LOCK_DATA.index}"
 <form action="camera.php?id={$camera_id}" method="post">
 <input type="hidden" name="export" value="1">
 {$lock.start_day_txt} <input type="hidden" name="start_day_ts" value="{$lock.start_day_ts}"/>
@@ -81,7 +87,7 @@ Locked Videos:<br />
 <input type="text" name="end_s" value="{$lock.end_s}" size="2"/>
 <input type="submit" value="Export"/>
 </form>
-
+</span>
 </li>
 {/foreach}
 </ul>
@@ -89,7 +95,7 @@ Locked Videos:<br />
 
 {if !empty($exports)}
 <h3>Exports</h3>
-<ul>
+<ul class="exports">
 {foreach from=$exports item=exp name=EXPORT_LIST}
 <li>
 {if $exp['progress'] != 100}{* Not started or in progress *}
@@ -107,4 +113,6 @@ Locked Videos:<br />
 {/foreach}
 </ul>
 {/if}
+
+</div>{* camera_below *}
 {include file="footer.tpl"}

@@ -436,3 +436,13 @@ function tsToStr(ts){
     }
     return hours +":" + min + ":" + ts;
 }
+
+//Manages collapsable blocks
+function toggleBlock(caller, target, nextName){
+    document.getElementById(target).classList.toggle("hidden");
+    caller.classList.toggle("td_exp");
+    caller.classList.toggle("td_col");
+    var oldName = caller.innerHTML;
+    caller.innerHTML = nextName;
+    caller.onclick=function(){toggleBlock(caller, target, oldName);};
+}

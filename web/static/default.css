@@ -50,6 +50,31 @@ ul.sitemap li a {
 .singleViewer video {
     width:100%;
 }
+
+
+.camera_sidebar {
+    float:left;
+    width:23%;
+}
+
+.camera_below {
+    padding-top:1em;
+    width:95%;
+    clear:left;
+}
+
+/* Toggable Name Blocks */
+.td_col, .td_exp {
+    display:inline;
+    cursor:pointer;
+}
+.td_col::before {
+    content:"[+] ";
+}
+
+.td_exp::before {
+    content:"[-] ";
+}
 .tiledViewer {
     float:left;
     width:30%;
@@ -208,5 +233,9 @@ ul.settings li  {
     }
     .singleViewer{
         width:100%;
+    }
+    .camera_sidebar {
+        width:95%;
+        clear:both;
     }
 }
