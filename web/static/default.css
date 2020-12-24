@@ -166,6 +166,9 @@ ul.sitemap li a {
     float:right;
 }
 
+.volume img, .fullscreen img, .play img {
+    height:100%;
+}
 .progress {
     position:absolute;
     bottom:30%;
@@ -230,6 +233,9 @@ ul.settings li  {
 * Mobile Website
 */
 @media (max-width: 1023px) {
+    body {
+        font-size:20pt;
+    }
     .tiledViewer {
         width:100%;
         height:auto;
@@ -240,5 +246,14 @@ ul.settings li  {
     .camera_sidebar {
         width:95%;
         clear:both;
+    }
+    .control_box {
+        height:60%;
+    }
+    .progress {
+        bottom:60%;
+    }
+    .volume, .fullscreen, .play {
+        height:90%;
     }
 }
