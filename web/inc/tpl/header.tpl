@@ -2,7 +2,7 @@
 <html>
 <head>
 <title>{$title} - Chiton</title>
-<link rel="stylesheet" href="static/default.css">
+<link rel="stylesheet" href="static/default.css?v={$CHITON_VERSION}">
 <script src="static/pinch-zoom-min.js?v={$CHITON_VERSION}" type="text/javascript"></script>
 <script src="static/chiton.js?v={$CHITON_VERSION}" type="text/javascript"></script>
 <script src="static/hls.light.min.js?v={$CHITON_VERSION}" type="text/javascript"></script>
