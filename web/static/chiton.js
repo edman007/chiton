@@ -18,6 +18,10 @@ function loadPlayer(){
 function loadHLS(video){
     var pinchZ;
     if (Hls.isSupported()) {
+        var videoWrapper = video.parentElement;
+        var videoViewPort = videoWrapper.parentElement;
+        var vcontrol = videoViewPort.getElementsByClassName("vcontrol")[0];
+
         // bind them together
         var cfg = {
             //"debug": true,
@@ -32,13 +36,11 @@ function loadHLS(video){
             if (source.length >= 1){
                 hls.loadSource(source[0].src);
                 hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+                    initVolume(video, vcontrol);
                     playVideo(video, vcontrol);
                 });
             }
         });
-        var videoWrapper = video.parentElement;
-        var videoViewPort = videoWrapper.parentElement;
-        var vcontrol = videoViewPort.getElementsByClassName("vcontrol")[0];
         function lockViewPortSize(){
             videoViewPort.style.height = videoWrapper.scrollHeight + "px";
             hls.off(Hls.Events.FRAG_BUFFERED, lockViewPortSize);
@@ -94,6 +96,12 @@ function loadShortcuts(video){
     //play/pause callbacks
     vcontrol.getElementsByClassName("playbtn")[0].addEventListener('click', (ev) => {playVideo(video, vcontrol);}, false);
     vcontrol.getElementsByClassName("pausebtn")[0].addEventListener('click', (ev) => {pauseVideo(video, vcontrol);}, false);
+
+    //volume callbacks
+    var volButtons = vcontrol.getElementsByClassName("volume");
+    for (vb of volButtons){
+        vb.addEventListener('click', (ev) => {cycleVolume(video, vcontrol);}, true);
+    }
 
     //callback to manage switching out of fullscreen both through the exif fullscreen or if the browser forced it
     function clearFS(){
@@ -203,6 +211,72 @@ function pauseVideo(video, vcontrol){
     
 }
 
+const audioLevels = ["high", "medium", "low", "mute"];
+
+//cycles between the volume levels of the volume
+function cycleVolume(video, vcontrol){
+    var vol = getVolumeLevelIdx(video, vcontrol);
+    var newVol = (vol + 1) % audioLevels.length;//pick the next one
+    //make the update
+    var volControl = vcontrol.getElementsByClassName("volume");
+    for (e of volControl){
+        if (e.classList.contains("volume_" + audioLevels[vol])){
+            e.classList.add("hidden");
+        }
+        if (e.classList.contains("volume_" + audioLevels[newVol])){
+            e.classList.remove("hidden");
+        }
+    }
+    setVolume(video, vcontrol, newVol);
+}
+
+//set the volume to one of the Indexes of audioLevels
+function setVolume(video, vcontrol, level){
+    //and set the new volume
+    switch (level){
+    case 0:
+        video.volume = 1.0;
+        break;
+    case 1:
+        video.volume = 0.67;
+        break;
+    case 2:
+        video.volume = 0.33;
+        break;
+    case 3:
+        video.volume = 0;
+        break;
+    default:
+        console.log('Unsupported Volume');
+    }
+}
+
+//checks the current playback volume and returns the index of audioLevels corrasponding to it
+function getVolumeLevelIdx(video, vcontrol){
+    var vol = video.volume;
+    if (vol > 0.95){
+        return 0;//high (1.0)
+    } else if (vol > 0.4) {
+        return 1;//medium (0.67)
+    } else if (vol > 0) {
+        return 2;//low (0.33)
+    } else {
+        return 3;//mute (0)
+    }
+}
+
+//checks the HTML for the default volume and selects that
+function initVolume(video, vcontrol){
+    for (var i = 0; i < audioLevels.level; i++){
+        var el = vcontrol.getElementsByClassName("volume_" + audioLevels[i]);
+        if (el.classList.contains("hidden")){
+            setVolume(video, vcontrol, i);
+            return i;
+        }
+    }
+    setVolume(video, vcontrol, 3);
+    return 3;//shouldn't get here, pick mute
+}
 //brings a video fullscreen
 function goFullscreen(video, vcontrol){
     if (!document.fullscreenElement) {
