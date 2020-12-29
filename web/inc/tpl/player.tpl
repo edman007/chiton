@@ -1,5 +1,5 @@
 <div class="video_viewport">
-<pinch-zoom class="video_wrapper">
+<pinch-zoom class="video_wrapper" min-scale="1" max-scale="10" two-finger-pan="1">
 <video controls>
 <source src="{$video.url}"/>
 Video is not supported by your browser
