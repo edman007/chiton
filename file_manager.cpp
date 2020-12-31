@@ -28,6 +28,11 @@
 #include <dirent.h>
 #include "util.hpp"
 
+FileManager::FileManager(Database &db, Config &cfg) : db(db), cfg(cfg) {
+    bytes_per_segment = 1024*1024;//1M is our default guess
+
+}
+
 std::string FileManager::get_next_path(long int &file_id, int camera, const struct timeval &start_time){
     const std::string base = get_output_dir();
     const std::string dir = get_date_path(camera, start_time);
@@ -91,16 +96,23 @@ void FileManager::clean_disk(void){
     long target_clear = get_target_free_bytes();
     if (target_clear){
         LINFO("Cleaning the disk, removing " + std::to_string(target_clear));
-        std::string sql = "SELECT v.id, v.path, c.value FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' AND locked = 0 "
-            " ORDER BY starttime ASC LIMIT 50";
 
+        //estimate the number of segments, add 10
+        long segment_count = target_clear/bytes_per_segment + 10;
+        std::string sql = "SELECT v.id, v.path, c.value FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' AND locked = 0 "
+            " ORDER BY starttime ASC LIMIT " + std::to_string(segment_count);
+
+        segment_count = 0;
+        long actual_segment_bytes = 0;
         DatabaseResult* res = db.query(sql);
         while (target_clear > 0 && res && res->next_row()){
+            segment_count++;
             long rm_size = 0;//size of file deleted
             const std::string &id = res->get_field(0);
             rm_size = rm_segment(res->get_field(2), res->get_field(1), id);
             if (rm_size > 0){
                 target_clear -= rm_size;
+                actual_segment_bytes += rm_size;
             }
             //delete it from the database
             sql = "DELETE FROM videos WHERE id = " + id;
@@ -108,6 +120,15 @@ void FileManager::clean_disk(void){
             delete del_res;
         }
         delete res;
+
+        if (segment_count > 0){
+            bytes_per_segment = actual_segment_bytes/segment_count;
+            if (bytes_per_segment < 100){
+                //probably some issue, set to 1M
+                LINFO("Deleting Segments, average segment size appears to be below 100b");
+                bytes_per_segment = 1024*1024;
+            }
+        }
     }
 
 }

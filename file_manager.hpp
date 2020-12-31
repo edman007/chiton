@@ -28,7 +28,7 @@
 
 class FileManager {
 public:
-    FileManager(Database &db, Config &cfg) : db(db), cfg(cfg) {};
+    FileManager(Database &db, Config &cfg);
 
     //returns a valid path starting at start_time, writes out it's ID to int &file_id
     std::string get_next_path(long int &file_id, int camera, const struct timeval &start_time);
@@ -50,6 +50,8 @@ public:
 private:
     Database &db;
     Config &cfg;
+    long bytes_per_segment;//estimate of segment size for our database to optimize our calls
+
     bool mkdir_recursive(std::string path);
 
     void rmdir_r(const std::string &path);//delete directory and all empty parent directories
