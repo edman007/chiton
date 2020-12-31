@@ -26,7 +26,7 @@
 //we increment Major when we break backwards compatibility
 static const int CURRENT_DB_VERSION_MAJOR = 1;
 //we increment minor when we add a backwards compatible version
-static const int CURRENT_DB_VERSION_MINOR = 0;
+static const int CURRENT_DB_VERSION_MINOR = 1;
 static const std::string CURRENT_DB_VERSION = std::to_string(CURRENT_DB_VERSION_MAJOR) + "." + std::to_string(CURRENT_DB_VERSION_MINOR);
 
 DatabaseManager::DatabaseManager(Database &db) : db(db) {
@@ -126,7 +126,7 @@ bool DatabaseManager::check_database(void){
             LFATAL("Error, current database version " + cur_version + " is incompible with this version of chiton");
         } else if (cur_major < CURRENT_DB_VERSION_MAJOR){
             if (!upgrade_database(cur_major, cur_minor)){
-                LFATAL("The database needs an upgrade, but no other version is known, is " + cur_version + " but expected " + CURRENT_DB_VERSION);//shouldn't happen
+                LFATAL("The database needs an upgrade, but the upgrade from " + cur_version + " to " + CURRENT_DB_VERSION);//shouldn't happen
             } else {
                 ret = true;
             }
