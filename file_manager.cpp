@@ -114,23 +114,10 @@ void FileManager::clean_disk(void){
 
 long FileManager::rm_segment(const std::string &base, const std::string &path, const std::string &id){
     long filesize = 0;
-    std::string target_file;
-    if (base == "NULL"){
-        target_file = get_output_dir();
-    } else {
-        target_file = base;
-    }
-
-    if (target_file.back() != '/'){
-        target_file += "/";
-    }
-
-    target_file += path;
-    std::string target_dir = target_file;//copy the parent directory for after we delete all the content
+    std::string target_file = path;
 
     target_file += id + FILE_EXT;
-    filesize = rm_file(target_file);
-    rmdir_r(target_dir);//and delete any empty parents
+    filesize = rm_file(target_file, base);
     return filesize;
 }
 
@@ -251,15 +238,21 @@ long FileManager::rm(const std::string &path){
     }
 }
 
-long FileManager::rm_file(const std::string &path){
-    const std::string base = get_output_dir();
+long FileManager::rm_file(const std::string &path, const std::string &base/* = std::string("NULL")*/){
+    std::string real_base = base;
+    if (base == "NULL"){
+        real_base = get_output_dir();
+    } else if (real_base.back() != '/'){
+        real_base += "/";
+    }
 
-    long filesize = rm(base + path);
-    std::string dir = base;
+    long filesize = rm(real_base + path);
+    std::string dir = real_base;
     dir += path.substr(0, path.find_last_of('/', path.length()));
     rmdir_r(dir);
     return filesize;
 }
+
 
 std::string FileManager::get_date_path(int camera, const struct timeval &start_time){
     VideoDate date;

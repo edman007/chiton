@@ -46,7 +46,7 @@ public:
 
     void delete_broken_segments(void);//looks for impossible segments and wipes them
 
-    long rm_file(const std::string &path);//delete specific file (not a segment), returns number of bytes removed (-1 if nothing deleted)
+    long rm_file(const std::string &path, const std::string &base = std::string("NULL"));//delete specific file (not a segment), returns number of bytes removed (-1 if nothing deleted)
 private:
     Database &db;
     Config &cfg;
