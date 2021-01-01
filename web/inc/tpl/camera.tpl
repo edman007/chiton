@@ -59,7 +59,7 @@ Locked Videos:<br />
 {foreach from=$locked_videos item=lock name=LOCK_DATA}
 <li>{$lock.start_txt} - {$lock.end_txt}
 <div class="td_col" onclick="toggleBlock(this, 'locked_vid_unlock_{$smarty.foreach.LOCK_DATA.index}', 'Unlock:');">Unlock</div>
-<span class="hidden" id="locked_vid_unlock_{$smarty.foreach.LOCK_DATA.index}"
+<span class="hidden" id="locked_vid_unlock_{$smarty.foreach.LOCK_DATA.index}">
 <form action="camera.php?id={$camera_id}" method="post" class="timeFormInput">
 <input type="hidden" name="unlock_segment" value="1">
 {$lock.start_day_txt} <input type="hidden" name="start_day_ts" value="{$lock.start_day_ts}"/>
@@ -74,7 +74,7 @@ Locked Videos:<br />
 </form>
 </span>
 <div class="td_col" onclick="toggleBlock(this, 'locked_vid_export_{$smarty.foreach.LOCK_DATA.index}', 'Export:');">Export</div>
-<span class="hidden" id="locked_vid_export_{$smarty.foreach.LOCK_DATA.index}"
+<span class="hidden" id="locked_vid_export_{$smarty.foreach.LOCK_DATA.index}">
 <form action="camera.php?id={$camera_id}" method="post" class="timeFormInput">
 <input type="hidden" name="export" value="1">
 {$lock.start_day_txt} <input type="hidden" name="start_day_ts" value="{$lock.start_day_ts}"/>
