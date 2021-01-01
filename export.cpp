@@ -81,7 +81,7 @@ void Export::run_job(void){
 
     camera_cfg.load_camera_config(camera, db);
 
-    FileManager fm = FileManager(db, camera_cfg);
+    FileManager fm(db, camera_cfg);
     if (path != ""){
         fm.rm_file(path + std::to_string(id) + EXPORT_EXT);
         path = "";
@@ -96,7 +96,6 @@ void Export::run_job(void){
     update_progress();
 
     //query all segments we need
-
     std::string sql = "SELECT id, path, endtime FROM videos WHERE camera = " + std::to_string(camera) + " AND ( "
         "( endtime >= " + std::to_string(starttime) + "  AND endtime <= " + std::to_string(endtime) + "  ) "
         " OR (starttime >= " + std::to_string(starttime) + " AND starttime <= " + std::to_string(endtime) + " )) "
@@ -112,12 +111,24 @@ void Export::run_job(void){
     StreamWriter out = StreamWriter(camera_cfg, path, in);
     long total_time_target = endtime - starttime;
 
-
+    long reserved_bytes = 0;
     while (res->next_row()){
         std::string segment = fm.get_path(res->get_field_long(0), res->get_field(1));
         LDEBUG("Exporting " + segment);
         //we control the input stream by replacing the video-url with the segment
         camera_cfg.set_value("video-url", segment);
+
+        //get the filesize of the segment and subtrack from reserved bytes
+        long seg_size = fm.get_filesize(segment);
+        if (seg_size > 0){
+            if (reserved_bytes < seg_size){
+                //reserve more bytes
+                long req_bytes = 50*seg_size;//should be 5min of video
+                fm.reserve_bytes(req_bytes, camera);
+                reserved_bytes += req_bytes;
+            }
+            reserved_bytes -= seg_size;
+        }
 
         AVPacket pkt;
         in.connect();

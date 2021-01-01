@@ -25,6 +25,8 @@
 #include <string>
 #include "database.hpp"
 #include "chiton_config.hpp"
+#include <mutex>
+#include <atomic>
 
 class FileManager {
 public:
@@ -47,15 +49,26 @@ public:
     void delete_broken_segments(void);//looks for impossible segments and wipes them
 
     long rm_file(const std::string &path, const std::string &base = std::string("NULL"));//delete specific file (not a segment), returns number of bytes removed (-1 if nothing deleted)
+
+    bool reserve_bytes(long bytes, int camera);//reserve bytes for camera
+
+    long get_filesize(const std::string &path);//return the filesize of the file at path
 private:
     Database &db;
     Config &cfg;
-    long bytes_per_segment;//estimate of segment size for our database to optimize our calls
+    long bytes_per_segment;//estimate of segment size for our database to optimize our cleanup calls
+    long min_free_bytes;//the config setting min-free-space as computed for the output-dir
+
+    //global variables for cleanup and space reseverations
+    static std::mutex cleanup_mtx;//lock when cleanup is in progress, locks just the clean_disk()
+    static std::atomic<long> reserved_bytes;//total reserved bytes
 
     bool mkdir_recursive(std::string path);
 
     void rmdir_r(const std::string &path);//delete directory and all empty parent directories
     long get_target_free_bytes(void);//return the bytes that must be deleted
+    long get_free_bytes(void);//return the free bytes on the disk
+    long get_min_free_bytes(void);//return the miniumn free bytes on the disk
     long rm_segment(const std::string &base, const std::string &path, const std::string &id);//deletes a target segment, returns number of bytes removed
     long rm(const std::string &path);//delete a specific file and parent directories, returns negative if there was an error
     std::string get_date_path(int camera, const struct timeval &start_time);//returns a path in the form of <camera>/<YYYY>/<MM>/<DD>/<HH>

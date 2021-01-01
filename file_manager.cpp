@@ -28,9 +28,13 @@
 #include <dirent.h>
 #include "util.hpp"
 
+//static globals
+std::mutex FileManager::cleanup_mtx;//lock when cleanup is in progress, locks just the clean_disk() to prevent iterating over the same database results twice
+std::atomic<long> FileManager::reserved_bytes(0);
+
 FileManager::FileManager(Database &db, Config &cfg) : db(db), cfg(cfg) {
     bytes_per_segment = 1024*1024;//1M is our default guess
-
+    min_free_bytes = -1;
 }
 
 std::string FileManager::get_next_path(long int &file_id, int camera, const struct timeval &start_time){
@@ -93,6 +97,7 @@ bool FileManager::mkdir_recursive(std::string path){
 }
 
 void FileManager::clean_disk(void){
+    cleanup_mtx.lock();
     long target_clear = get_target_free_bytes();
     if (target_clear){
         LINFO("Cleaning the disk, removing " + std::to_string(target_clear));
@@ -128,9 +133,17 @@ void FileManager::clean_disk(void){
                 LINFO("Deleting Segments, average segment size appears to be below 100b");
                 bytes_per_segment = 1024*1024;
             }
+            LDEBUG("Average segment was " + std::to_string(bytes_per_segment) + " bytes");
+        }
+
+        if (target_clear > 0){
+            //this may mean that we are not going to clear out the reserved space
+            //but we don't add it to the reserved count because it could be more than the reserved space
+            //we don't want it to snowball so we just print a warning
+            LWARN(std::to_string(target_clear) + " bytes were not removed from the disk as requested");
         }
     }
-
+    cleanup_mtx.unlock();
 }
 
 long FileManager::rm_segment(const std::string &base, const std::string &path, const std::string &id){
@@ -172,12 +185,38 @@ void FileManager::delete_broken_segments(void){
 }
 
 long FileManager::get_target_free_bytes(void){
+    long free_bytes = get_free_bytes();
+    long min_free = get_min_free_bytes();
+    min_free += reserved_bytes.exchange(0);
+    if (free_bytes < min_free){
+        return min_free - free_bytes;
+    }
+    return 0;
+}
+
+long FileManager::get_free_bytes(void){
     std::string check_path = cfg.get_value("output-dir");
     struct statvfs info;
     if (!statvfs(check_path.c_str(), &info)){
         long free_bytes = info.f_bsize * info.f_bavail;
-        long min_free = cfg.get_value_long("min-free-space");
-        if (cfg.get_value("min-free-space").find('%') != std::string::npos){
+        return free_bytes;
+    } else {
+        LWARN("Failed to get filesystem info for " + check_path + " ( " +std::to_string(errno)+" ) will assume it is full");
+    }
+    return 0;
+}
+
+long FileManager::get_min_free_bytes(void){
+    if (min_free_bytes > 0){
+        return min_free_bytes;
+    }
+    //we only perform this syscall on the first call
+    long min_free = cfg.get_value_long("min-free-space");
+    if (cfg.get_value("min-free-space").find('%') != std::string::npos){
+        std::string check_path = cfg.get_value("output-dir");
+        struct statvfs info;
+        if (!statvfs(check_path.c_str(), &info)){
+
             double min_freed = cfg.get_value_double("min-free-space");//absolute bytes are set
             min_freed /= 100;
             long total_bytes = info.f_bsize * (info.f_blocks - info.f_bfree + info.f_bavail);//ignore root's space we can't use when calculating filesystem space
@@ -185,21 +224,19 @@ long FileManager::get_target_free_bytes(void){
             if (min_free < 0){
                 min_free = 0;//they set something wrong...I don't know, this will result in the defualt
             }
-            
+        } else {
+            min_free = 0;//use the default
         }
         
-        //absolute byte mode
-        if (min_free <= 1024){
-            LWARN("min-free-space was set too small");
-            min_free = DEFAULT_MIN_FREE_SPACE;
-        }
-        if (free_bytes < min_free){
-            return min_free - free_bytes;
-        }
-    } else {
-        LWARN("Failed to get filesystem info for " + check_path + " ( " +std::to_string(errno)+" ) will not clean from this directory");
     }
-    return 0;
+
+    //absolute byte mode
+    if (min_free <= 1024){
+        LWARN("min-free-space was set too small");
+        min_free = DEFAULT_MIN_FREE_SPACE;
+    }
+    min_free_bytes = min_free;
+    return min_free_bytes;
 }
 
 void FileManager::rmdir_r(const std::string &path){
@@ -259,6 +296,14 @@ long FileManager::rm(const std::string &path){
     }
 }
 
+long FileManager::get_filesize(const std::string &path){
+    struct stat statbuf;
+    if (!stat(path.c_str(), &statbuf)){
+        return statbuf.st_size;
+    }
+    return -1;
+}
+
 long FileManager::rm_file(const std::string &path, const std::string &base/* = std::string("NULL")*/){
     std::string real_base = base;
     if (base == "NULL"){
@@ -297,4 +342,19 @@ std::string FileManager::get_output_dir(void){
         modified_base += "/";
     }
     return modified_base;
+}
+
+bool FileManager::reserve_bytes(long bytes, int camera){
+    long free_space = get_free_bytes();
+    long min_space = get_min_free_bytes();
+    reserved_bytes += bytes;
+    free_space -= min_space/2;
+    free_space -= reserved_bytes;
+    //if this reservation would eat up more than half our free space we clean the disk
+    if (free_space < 0){
+        clean_disk();
+        return true;
+    }
+    //otherwise we leave it as is
+    return true;
 }
