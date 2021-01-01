@@ -140,20 +140,23 @@ void Export::run_job(void){
         }
         in.close();
         if (force_exit){
+            LWARN("Export was canceled due to shutdown");
             break;
         }
 
         //compute the progress
-        long new_progress = (endtime - res->get_field_long(2)) / total_time_target;
-
+        long new_progress = 100 - (100*(endtime - res->get_field_long(2))) / total_time_target;
         if (new_progress > progress && new_progress < 100){//this can result in number over 100, we don't put 100 in until it's actually done
             progress = new_progress;
             update_progress();
         }
     }
     out.close();
-    progress = 100;
-    update_progress();
+    if (!force_exit){
+        //if we are force exiting then we didn't finish
+        progress = 100;
+        update_progress();
+    }
     id = 0;
     export_in_progress = false;
 }
