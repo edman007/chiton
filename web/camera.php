@@ -134,7 +134,7 @@ if ($tz_min < 10){
     $tz_min = '0' . $tz_min;
 }
 $tz_offset = (int)$tz_offset/60 . ':' . $tz_min;
-$sql = "SET timezone = '$tz_offset'";
+$sql = "SET time_zone = '$tz_offset'";
 $db->query($sql);
 
 
