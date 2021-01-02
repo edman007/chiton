@@ -9,6 +9,8 @@ if [ ! -r license-meta.csv ]; then
 fi
 
 rm debian-license.in LICENSE.* || true
+#make this a temp file so we don't have race conditions if it's run twice concurrently
+TMP_TARGET=$(mktemp debian-license.in.XXXXXX )
 while read line; do
     name=$(echo "$line" | cut -d , -f 2 | sed -e 's/^"//' -e 's/"$//')
     version=$(echo "$line" | cut -d , -f 3 | sed -e 's/^"//' -e 's/"$//' )
@@ -26,7 +28,8 @@ while read line; do
     cp $licenseFile LICENSE.$name
 
     #make the debian license file
-    echo "Files: $NPM_DIR/node_modules/$name/*" >> debian-license.in
+    echo >> $TMP_TARGET
+    echo "Files: $NPM_DIR/node_modules/$name/*" >> $TMP_TARGET
     if [ "x$copyright" == "x" ]; then
         #make upp a copyright message
         if [ "x$publisher" != "x" ]; then
@@ -34,11 +37,17 @@ while read line; do
         fi
     fi
 
-    if [ "x$copyright" == "x" ]; then
-        echo "Copyright: $copyright" >> debian-license.in
+    if [ "x$copyright" != "x" ]; then
+        echo "Copyright: $copyright" >> $TMP_TARGET
+    else
+        #these are missing..Google needs to learn licensing.
+        if [ "$name" == "pinch-zoom-element" ] || [ "$name" == "pointer-tracker" ]; then
+            echo "Copyright: Google Chrome Labs 2020" >> $TMP_TARGET
+        fi
     fi
 
-    echo "Upstream-Name: $name" >> debian-license.in
-    echo "License: $licenses" >> debian-license.in
-    sed -e 's/^/ /' -e 's/^\s*$/ ./' < $licenseFile >> debian-license.in
+    echo "Upstream-Name: $name" >> $TMP_TARGET
+    echo "License: $name-$licenses" >> $TMP_TARGET
+    sed -e 's/^/ /' -e 's/^\s*$/ ./' < $licenseFile >> $TMP_TARGET
 done < $INPUTF
+mv $TMP_TARGET debian-license.in

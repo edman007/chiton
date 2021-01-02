@@ -197,8 +197,8 @@ external/npm/node_modules:
 	$(MKDIR_P) external/npm/
 	(cd external/npm/ && npm install --only-prod hls.js pinch-zoom-element )
 
-$(NPM_LICENSE) external/npm/debian-license.in  &: | external/npm/node_modules
-		(cd external/npm/ && license-checker --relativeLicensePath --csv --customPath license-format.json --out license-meta.csv && ./create-license.sh )
+$(NPM_LICENSE) external/npm/debian-license.in  &: external/npm/create-license.sh | external/npm/node_modules
+	(cd external/npm/ && license-checker --relativeLicensePath --csv --customPath license-format.json --out license-meta.csv && ./create-license.sh )
 $(HLS_FILES) external/npm/node_modules/pinch-zoom-element/dist/pinch-zoom-min.js &: | external/npm/node_modules
 
 LICENSE.breeze-icons: $(BREEZE_2X_PNG) $(BREEZE_4X_PNG)
@@ -317,16 +317,21 @@ release: chiton-$(DEBVERSION).dsc dist $(SLACKSRCPKG)
 packaging/debian/control: packaging/debian/control.in Makefile
 	$(do_subst) < $< > $@
 
-packaging/debian/copyright: packaging/debian/copyright.in $(LICENSE_FILES) | external/npm/node_modules
-	$(do_subst) < $< > $@
-	cat external/npm/debian-license.in >> $@
+#these next two rules have special syntax to deal with make running two instances during make dist and having a race against itself
+packaging/debian/copyright &: packaging/debian/copyright.in $(LICENSE_FILES) | external/npm/node_modules
+	$(shell tmp=$$(mktemp $@.XXXXXX ) && \
+	$(do_subst) < $< > $$tmp && \
+	cat external/npm/debian-license.in >> $$tmp && \
+	mv $$tmp $@ )
 
 #kinda crappy, but i need something that works
-packaging/debian/changelog: Makefile dist-version
-	echo $(PACKAGE_TARNAME) '('$(DEBVERSION)'-1)' unstable\; urgency=low > $@
-	git log -n 5 | sed -e 's/.\{70\}/&\n       /g' -e 's/^/  /' >> $@
-	echo -n ' -- $(MAINTAINER)  ' >> $@
-	date -R >> $@
+packaging/debian/changelog: Makefile.am dist-version
+	$(shell tmp=$$(mktemp $@.XXXXXX ) && \
+	echo $(PACKAGE_TARNAME) '('$(DEBVERSION)'-1)' unstable\; urgency=low > $$tmp && \
+	git log -n 5 | sed -e 's/.\{70\}/&\n       /g' -e 's/^/  /' >> $$tmp && \
+	echo -n ' -- $(MAINTAINER)  ' >> $$tmp && \
+	date -R >> $$tmp && \
+	mv $$tmp $@ )
 
 packaging/debian/rules: packaging/debian/rules.in Makefile
 	$(do_subst) < $< > $@
