@@ -19,7 +19,7 @@
  #
  ##########################################################################
 
-define([BUILDVER], [0.2.0])
+define([BUILDVER], [0.3.0pre])
 AC_INIT([Chiton Security], BUILDVER, [edman007@edman007.com], [chiton], [https://edman007.com/])
 AC_CONFIG_SRCDIR([main.cpp])
 AC_CONFIG_MACRO_DIR([m4])
@@ -46,7 +46,7 @@ AS_IF([test "x$git_version" != "xUnknown"],
             AC_SUBST([VER_GITVER], [_$git_version]),
             AC_SUBST([VER_GITVER], [])
             AC_MSG_WARN([Unable to detect the git revision of this build]))
-define([CONFDATE], [$(echo '"'$(date -R)'"')])
+define([CONFDATE], [$(echo \"$(date -R)\")])
 AC_DEFINE_UNQUOTED([BUILD_DATE], CONFDATE, [Build Date])
 
 AC_PROG_CC
