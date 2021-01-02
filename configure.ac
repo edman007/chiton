@@ -19,7 +19,7 @@
  #
  ##########################################################################
 
-define([BUILDVER], [0.2.0pre])
+define([BUILDVER], [0.2.0])
 AC_INIT([Chiton Security], BUILDVER, [edman007@edman007.com], [chiton], [https://edman007.com/])
 AC_CONFIG_SRCDIR([main.cpp])
 AC_CONFIG_MACRO_DIR([m4])
