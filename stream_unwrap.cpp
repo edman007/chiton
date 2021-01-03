@@ -269,7 +269,7 @@ bool StreamUnwrap::read_frame(void){
     sort_reorder_queue();
 
     //check if this is a file, if yes we skip timestamp resyncing
-    if (input_format_context->filename && input_format_context->filename[0] == '/'){
+    if (input_format_context->url && input_format_context->url[0] == '/'){
         return true;
     }
     //check the time of the youngest packet...
