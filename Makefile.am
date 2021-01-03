@@ -15,7 +15,7 @@
  #   You should have received a copy of the GNU General Public License
  #   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  #
- #   Copyright 2020 Ed Martin <edman007@edman007.com>
+ #   Copyright 2020-2021 Ed Martin <edman007@edman007.com>
  #
  ########################################################################
 
@@ -44,13 +44,18 @@ sbin_SCRIPTS = chiton-install
 noinst_DATA=dist-version
 chiton_CXXFLAGS = $(AM_CXXFLAGS)
 
-NPM_LICENSE=external/npm/LICENSE.*
+#this should be derived from external/npm/package-lock.json
+NPM_LICENSE_LIST=external/npm/LICENSE.eventemitter3 external/npm/LICENSE.pointer-tracker \
+	external/npm/LICENSE.hls.js external/npm/LICENSE.pinch-zoom-element
+NPM_LICENSE=external/npm/license-meta.csv $(NPM_LICENSE_LIST)
 EXTERNAL_NO_NPM_LICENSE=LICENSE.breeze-icons LICENSE.smarty
 EXTERNAL_LICENSE=$(EXTERNAL_NO_NPM_LICENSE) $(NPM_LICENSE)
 LICENSE_FILES=COPYING $(EXTERNAL_LICENSE)
 
 DEBIAN_PKG_FILES=packaging/debian/source-format packaging/debian/compat \
-	packaging/debian/chiton.templates
+	packaging/debian/chiton.templates packaging/debian/control.in \
+	packaging/debian/copyright.in packaging/debian/rules.in \
+	external/npm/debian-license.in
 DEBIAN_PKG_FILES_EARLY=packaging/debian/control packaging/debian/copyright \
 	packaging/debian/changelog packaging/debian/rules
 DEBIAN_PKG_FILES_BUILT=$(DEBIAN_PKG_FILES_EARLY) \
@@ -126,7 +131,7 @@ dist-hook:
 	-chmod u+w $(distdir)/external/*/.git
 	-rm -rf $(distdir)/external/*/.git
 	-rm $(distdir)/web/inc/tpl_cache/* $(distdir)/web/inc/tpl_compile/* $(distdir)/web/vids
-	-cp external/npm/LICENSE.* $(distdir)/external/npm/
+	-cp $(NPM_LICENSE_LIST) $(distdir)/external/npm/
 	find $(distdir) -name .placeholder -delete
 
 #install the web directory with some cp commands...
@@ -192,13 +197,16 @@ $(BREEZE_4X_PNG): $(BREEZE_SVG)
 	$(CONVERT) -background none -density 288 $(word $(call getpos,$@,$(BREEZE_4X_PNG)),$(BREEZE_SVG))  $@
 
 
-
 external/npm/node_modules:
-	$(MKDIR_P) external/npm/
+	$(MKDIR_P) $(abs_builddir)/external/npm/
 	(cd external/npm/ && npm install --only-prod hls.js pinch-zoom-element )
 
 $(NPM_LICENSE) external/npm/debian-license.in  &: external/npm/create-license.sh | external/npm/node_modules
-	(cd external/npm/ && license-checker --relativeLicensePath --csv --customPath license-format.json --out license-meta.csv && ./create-license.sh )
+	($(MKDIR_P) $(abs_builddir)/external/npm/ && \
+	cd $(abs_srcdir)/external/npm/ && \
+	license-checker --relativeLicensePath --csv --customPath license-format.json --out $(abs_builddir)/external/npm/license-meta.csv && \
+	cd $(abs_builddir)/external/npm/ && \
+	$(abs_srcdir)/external/npm/create-license.sh $(abs_srcdir) )
 $(HLS_FILES) external/npm/node_modules/pinch-zoom-element/dist/pinch-zoom-min.js &: | external/npm/node_modules
 
 LICENSE.breeze-icons: $(BREEZE_2X_PNG) $(BREEZE_4X_PNG)
@@ -213,18 +221,21 @@ LICENSE.smarty web/inc/external/smarty:
 
 #These are developer install rules
 .PHONY: hls
-hls: | external/npm/node_modules
+hls: | external/npm/node_modules $(abs_builddir)/web/static
+	-rm -f web/static/hls*.js web/static/hls.light.*
 	cp $(top_srcdir)/external/npm/node_modules/hls.js/dist/hls.light.* web/static/
 .PHONY: pinch-zoom
 pinch-zoom: | external/npm/node_modules
+	-rm -f web/static/pinch-zoom-min.js
 	cp $(top_srcdir)/external/npm/node_modules/pinch-zoom-element/dist/pinch-zoom-min.js  web/static/pinch-zoom-min.js
 
-web/static/2x-bottom-cursor.png: $(top_srcdir)/web/static/bottom-cursor.svg
+web/static/2x-bottom-cursor.png: $(top_srcdir)/web/static/bottom-cursor.svg | $(abs_builddir)/web/static
 	$(CONVERT) -background none -density 144 $<  $@
 
-web/static/4x-bottom-cursor.png: $(top_srcdir)/web/static/bottom-cursor.svg
+web/static/4x-bottom-cursor.png: $(top_srcdir)/web/static/bottom-cursor.svg | $(abs_builddir)/web/static
 	$(CONVERT) -background none -density 288 $<  $@
-
+$(abs_builddir)/web/static:
+	$(MKDIR_P) web/static
 chiton-install: chiton-install.in Makefile
 	$(do_subst) < $(srcdir)/chiton-install.in > chiton-install
 	chmod +x chiton-install
@@ -300,10 +311,10 @@ CLEANFILES=$(EXTERNAL_NO_NPM_LICENSE) $(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE
 	packaging/scripts/rc.chiton chiton-install packaging/scripts/chiton.service \
 	web/inc/configdb.php web/static/pinch-zoom-min.js
 
-MAINTAINERCLEANFILES=dist-version chiton-$(DEBVERSION).dsc
+MAINTAINERCLEANFILES=dist-version chiton-$(DEBVERSION).dsc external/npm/license-meta.csv external/npm/debian-license.in
 
 maintainer-clean-local:
-	-rm -rf external/npm/node_modules external/npm/LICENSE.* external/npm/debian-license.in
+	-rm -rf external/npm/node_modules $(NPM_LICENSE_LIST)
 
 # This is for actual release production...Creates the directory 'release' with all the files in our release
 .PHONY: release
@@ -314,18 +325,18 @@ release: chiton-$(DEBVERSION).dsc dist $(SLACKSRCPKG)
 		$(DEBSRCPKG) $(SLACKSRCPKG) \
 		release
 
-packaging/debian/control: packaging/debian/control.in Makefile
+packaging/debian/control: packaging/debian/control.in Makefile | $(abs_builddir)/packaging/debian/
 	$(do_subst) < $< > $@
 
 #these next two rules have special syntax to deal with make running two instances during make dist and having a race against itself
-packaging/debian/copyright &: packaging/debian/copyright.in $(LICENSE_FILES) | external/npm/node_modules
+packaging/debian/copyright: packaging/debian/copyright.in external/npm/debian-license.in $(LICENSE_FILES) | external/npm/node_modules $(abs_builddir)/packaging/debian/
 	$(shell tmp=$$(mktemp $@.XXXXXX ) && \
 	$(do_subst) < $< > $$tmp && \
-	cat external/npm/debian-license.in >> $$tmp && \
+	cat $(srcdir)/external/npm/debian-license.in >> $$tmp ; \
 	mv $$tmp $@ )
 
 #kinda crappy, but i need something that works
-packaging/debian/changelog: Makefile.am dist-version
+packaging/debian/changelog: Makefile.am dist-version | $(abs_builddir)/packaging/debian/
 	$(shell tmp=$$(mktemp $@.XXXXXX ) && \
 	echo $(PACKAGE_TARNAME) '('$(DEBVERSION)'-1)' unstable\; urgency=low > $$tmp && \
 	git log -n 5 | sed -e 's/.\{70\}/&\n       /g' -e 's/^/  /' >> $$tmp && \
@@ -333,9 +344,10 @@ packaging/debian/changelog: Makefile.am dist-version
 	date -R >> $$tmp && \
 	mv $$tmp $@ )
 
-packaging/debian/rules: packaging/debian/rules.in Makefile
+packaging/debian/rules: packaging/debian/rules.in Makefile | $(abs_builddir)/packaging/debian/
 	$(do_subst) < $< > $@
-
+$(abs_builddir)/packaging/debian/:
+	$(MKDIR_P) $(abs_builddir)/packaging/debian/
 
 $(DEBSRC): dist Makefile
 	-rm -f $@
@@ -365,7 +377,7 @@ chiton-$(DEBVERSION).dsc: packaging/debian/chiton.dsc.in $(DEBSRC) $(DEBSRCPKG) 
 	sha256sum $(DEBSRCPKG) | sed -e 's/ / '$(DEBSRCPKG_FILESIZE)'/' >> chiton-$(DEBVERSION).dsc
 
 web/inc/configdb.php: web/inc/configdb.php.in setting.hpp dist-version
-	$(do_subst) < web/inc/configdb.php.in > $@
+	$(do_subst) < $(abs_srcdir)/web/inc/configdb.php.in > $@
 	echo '/* DO NO EDIT!!! autogenerated from setting.hpp, edit setting.hpp */' >> $@
 	grep -A 1000 '//PHP BELOW' setting.hpp | sed -E -e 's/^\s*\{"([^"]*?)",/"\1" \=\> array(/'  -e 's/\}/)/g' -e 's/^\s+\"/.\"/' >> $@
 

@@ -1,11 +1,9 @@
 #!/bin/bash
 INPUTF=license-meta.csv
 NPM_DIR=external/npm
+SRC_DIR=${1:-../..}/$NPM_DIR
 if [ ! -r $INPUTF ]; then
     exit 1
-fi
-if [ ! -r license-meta.csv ]; then
-    exit 2
 fi
 
 rm debian-license.in LICENSE.* || true
@@ -25,6 +23,12 @@ while read line; do
         continue
     fi
     #copy the license file for later install
+    if [ -r $licenseFile ]; then
+        cp $licenseFile LICENSE.$name
+    else
+        cp $SRC_DIR/$licenseFile LICENSE.$name
+    fi
+
     cp $licenseFile LICENSE.$name
 
     #make the debian license file
@@ -48,6 +52,6 @@ while read line; do
 
     echo "Upstream-Name: $name" >> $TMP_TARGET
     echo "License: $name-$licenses" >> $TMP_TARGET
-    sed -e 's/^/ /' -e 's/^\s*$/ ./' < $licenseFile >> $TMP_TARGET
+    sed -e 's/^/ /' -e 's/^\s*$/ ./' < LICENSE.$name >> $TMP_TARGET
 done < $INPUTF
 mv $TMP_TARGET debian-license.in
