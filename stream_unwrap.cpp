@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2021 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -32,6 +32,9 @@ StreamUnwrap::StreamUnwrap(Config& cfg) : cfg(cfg) {
 
 StreamUnwrap::~StreamUnwrap(){
     close();
+    for (auto ctx : decode_ctx){
+        av
+    }
 }
 
 bool StreamUnwrap::close(void){
@@ -109,39 +112,51 @@ unsigned int StreamUnwrap::get_stream_count(void){
     return input_format_context->nb_streams;
 }
 
-AVCodecContext* StreamUnwrap::alloc_decode_context(unsigned int stream){
+bool StreamUnwrap::alloc_decode_context(unsigned int stream){
     AVCodecContext *avctx;
     AVCodec *input_codec;
     int error;
-    
+    if (decode_ctx.find(stream) != decode_ctx.end()){
+        LDEBUG("Not generating decode context, it already exists");
+        return true;//already exists, bail early
+    }
+
     if (stream >= get_stream_count()){
         LERROR("Attempted to access stream that doesn't exist");
-        return NULL;
+        return false;
     }
-    
+
+    //locate a decoder for the codec
+    input_codec = avcodec_find_decoder(input_format_context->streams[stream]->codecpar->codec_id);
+    if (!input_codec){
+        LWARN("Could not find decoder");
+        return false;
+    }
+
     /* Allocate a new decoding context. */
     avctx = avcodec_alloc_context3(input_codec);
     if (!avctx) {
         LERROR("Could not allocate a decoding context");
-        return NULL;
+        return false;
     }
     
     /* Initialize the stream parameters with demuxer information. */
     error = avcodec_parameters_to_context(avctx, input_format_context->streams[stream]->codecpar);
     if (error < 0) {
         avcodec_free_context(&avctx);
-        return NULL;
+        return false;
     }
     
     /* Open the decoder. */
     if ((error = avcodec_open2(avctx, input_codec, NULL)) < 0) {
         LERROR("Could not open input codec (error '" + std::string(av_err2str(error)) + "')");
         avcodec_free_context(&avctx);
-        return NULL;
+        return false;
     }
     
     /* Save the decoder context for easier access later. */
-    return avctx;
+    decode_ctx[stream] = avctx;
+    return true;
 
 }
 
@@ -285,4 +300,50 @@ bool StreamUnwrap::read_frame(void){
 
 const struct timeval& StreamUnwrap::get_start_time(void){
     return connect_time;
+}
+
+bool StreamUnwrap::decode_packet(AVPacket &packet){
+    int ret;
+    if (decode_ctx.find(packet.stream_index) == decode_ctx.end()){
+        if (!alloc_decode_context(packet.stream_index)){
+            return false;
+        }
+    }
+
+    ret = avcodec_send_packet(decode_ctx[packet.stream_index], &packet);
+    if (ret == AVERROR(EAGAIN)){
+        //probably should return ret instead of this as it's a soft error
+        LWARN("Attempted to decode data without reading all frames");
+        return false;
+    } else if (ret == AVERROR(EINVAL)){
+        return false;
+        LWARN("Codec error: needs a flush?");
+    } else if (ret == AVERROR(ENOMEM)){
+        //probably need to think about restarting the camera
+        LWARN("Error Decoding Packet, buffer is full");
+        return false;
+    } else if (ret < 0){
+        //probably should restart the camera
+        LWARN("Unknown decoding error");
+        return false;
+    }
+    return true;
+}
+
+bool StreamUnwrap::get_decoded_frame(int stream, AVFrame *frame){
+    if (decode_ctx.find(stream) == decode_ctx.end()){
+        LWARN("Tried to decode a frame without a decoder!");
+        return false;
+    }
+    int ret = avcodec_receive_frame(decode_ctx[stream], frame);
+    if (ret == 0){
+        return true;
+    } else if (ret == AVERROR(EAGAIN)){
+        //need to call decode packet
+        return false;
+    } else {
+        //probably need to think about restarting the camera
+        LWARN("Error reading frame");
+        return false;
+    }
 }

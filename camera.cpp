@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2021 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -59,6 +59,14 @@ void Camera::run(void){
     
     AVPacket pkt;
     bool valid_keyframe = false;
+
+    //allocate a frame (we only allocate when we want to decode, an unallocated frame means we skip decoding)
+    AVFrame *frame = NULL;
+    frame = av_frame_alloc();
+    if (!frame){
+        LWARN("Failed to allocate frame");
+        frame = NULL;
+    }
 
     //variables for cutting files...
     AVRational last_cut = av_make_q(0, 1);
@@ -105,6 +113,15 @@ void Camera::run(void){
             valid_keyframe = true;
             //LINFO("Got Frame " + std::to_string(id));
         }
+
+        //decode the packets
+        if (frame){
+            if (stream.decode_packet(pkt)){
+                while (stream.get_decoded_frame(pkt.stream_index, frame)){
+                    LWARN("Decoded Frame");
+                }
+            }
+        }
         
         stream.unref_frame(pkt);
     }
@@ -114,7 +131,11 @@ void Camera::run(void){
     Util::compute_timestamp(stream.get_start_time(), end, last_pts, stream.get_format_context()->streams[last_stream_index]->time_base);
     out.close();
     fm.update_file_metadata(file_id, end);
-    
+
+    if (frame){
+        av_frame_free(&frame);
+        frame = NULL;
+    }
 
     alive = false;
 }

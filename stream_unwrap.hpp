@@ -26,6 +26,7 @@
 #include "chiton_ffmpeg.hpp"
 #include <list>
 #include <vector>
+#include <map>
 
 class StreamUnwrap {
     /*
@@ -42,8 +43,9 @@ public:
     AVCodecContext* get_codec_context(void);
     AVFormatContext* get_format_context(void);
     unsigned int get_stream_count(void);
-    AVCodecContext* alloc_decode_context(unsigned int stream);//alloc and return the codec context for the stream, caller must free it
     bool get_next_frame(AVPacket &packet);//writes the next frame out to packet, returns true on success, false on error (end of file)
+    bool decode_packet(AVPacket &packet);//reads packet and decodes it
+    bool get_decoded_frame(int stream, AVFrame *frame);//gets the next decoded frame
     void unref_frame(AVPacket &packet);//free resources from frame
     const struct timeval& get_start_time(void);
     
@@ -55,8 +57,11 @@ private:
     bool charge_reorder_queue(void);//loads frames until the reorder queue is full
     void sort_reorder_queue(void);//ensures the last frame is in the correct position in the queue, sorting it if required
     bool read_frame(void);//read the next frame (internally used)
+    bool alloc_decode_context(unsigned int stream);//alloc the codec context, returns true if the context exists or was allocated
     
     AVFormatContext *input_format_context;
+    std::map<int,AVCodecContext*> decode_ctx;//decode context for each stream
+
     AVPacket pkt;
 
     unsigned int reorder_len;
