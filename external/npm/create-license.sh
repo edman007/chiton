@@ -6,9 +6,9 @@ if [ ! -r $INPUTF ]; then
     exit 1
 fi
 
-rm debian-license.in LICENSE.* || true
+rm debian.license.in LICENSE.* || true
 #make this a temp file so we don't have race conditions if it's run twice concurrently
-TMP_TARGET=$(mktemp debian-license.in.XXXXXX )
+TMP_TARGET=$(mktemp debian.license.in.XXXXXX )
 while read line; do
     name=$(echo "$line" | cut -d , -f 2 | sed -e 's/^"//' -e 's/"$//')
     version=$(echo "$line" | cut -d , -f 3 | sed -e 's/^"//' -e 's/"$//' )
@@ -54,4 +54,4 @@ while read line; do
     echo "License: $name-$licenses" >> $TMP_TARGET
     sed -e 's/^/ /' -e 's/^\s*$/ ./' < LICENSE.$name >> $TMP_TARGET
 done < $INPUTF
-mv $TMP_TARGET debian-license.in
+mv $TMP_TARGET debian.license.in
