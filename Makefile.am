@@ -55,7 +55,7 @@ LICENSE_FILES=COPYING $(EXTERNAL_LICENSE)
 DEBIAN_PKG_FILES=packaging/debian/source-format packaging/debian/compat \
 	packaging/debian/chiton.templates packaging/debian/control.in \
 	packaging/debian/copyright.in packaging/debian/rules.in \
-	external/npm/debian-license.in
+	external/npm/debian.license.in
 DEBIAN_PKG_FILES_EARLY=packaging/debian/control packaging/debian/copyright \
 	packaging/debian/changelog packaging/debian/rules
 DEBIAN_PKG_FILES_BUILT=$(DEBIAN_PKG_FILES_EARLY) \
@@ -77,7 +77,7 @@ PACKAGING_FILES=packaging/scripts/rc.chiton.in packaging/scripts/chiton.service.
 noinst_SCRIPTS=packaging/scripts/rc.chiton
 
 EXTRA_DIST=external chiton-install.in $(PACKAGING_FILES) dist-version README.md \
-	README NEWS AUTHORS ChangeLog web/inc/configdb.php.in external/npm/debian-license.in $(NPM_LICENSE)
+	README NEWS AUTHORS ChangeLog web/inc/configdb.php.in external/npm/debian.license.in $(NPM_LICENSE)
 
 dist_cfg_DATA=config/chiton.cfg.template web/inc/config.template.php
 cfgdir=$(sysconfdir)/$(PACKAGE)
@@ -199,9 +199,9 @@ $(BREEZE_4X_PNG): $(BREEZE_SVG)
 
 external/npm/node_modules:
 	$(MKDIR_P) $(abs_builddir)/external/npm/
-	(cd external/npm/ && npm install --only-prod hls.js pinch-zoom-element )
+	(cd external/npm/ && npm install --only-prod hls.js 'github:edman007/pinch-zoom#494b4a2a26ab6307e9f70f2f9a3d9a82844f2709' )
 
-$(NPM_LICENSE) external/npm/debian-license.in  &: external/npm/create-license.sh | external/npm/node_modules
+$(NPM_LICENSE) external/npm/debian.license.in  &: external/npm/create-license.sh | external/npm/node_modules
 	($(MKDIR_P) $(abs_builddir)/external/npm/ && \
 	cd $(abs_srcdir)/external/npm/ && \
 	license-checker --relativeLicensePath --csv --customPath license-format.json --out $(abs_builddir)/external/npm/license-meta.csv && \
@@ -311,7 +311,7 @@ CLEANFILES=$(EXTERNAL_NO_NPM_LICENSE) $(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE
 	packaging/scripts/rc.chiton chiton-install packaging/scripts/chiton.service \
 	web/inc/configdb.php web/static/pinch-zoom-min.js
 
-MAINTAINERCLEANFILES=dist-version chiton-$(DEBVERSION).dsc external/npm/license-meta.csv external/npm/debian-license.in
+MAINTAINERCLEANFILES=dist-version chiton-$(DEBVERSION).dsc external/npm/license-meta.csv external/npm/debian.license.in
 
 maintainer-clean-local:
 	-rm -rf external/npm/node_modules $(NPM_LICENSE_LIST)
@@ -329,10 +329,10 @@ packaging/debian/control: packaging/debian/control.in Makefile | $(abs_builddir)
 	$(do_subst) < $< > $@
 
 #these next two rules have special syntax to deal with make running two instances during make dist and having a race against itself
-packaging/debian/copyright: packaging/debian/copyright.in external/npm/debian-license.in $(LICENSE_FILES) | external/npm/node_modules $(abs_builddir)/packaging/debian/
+packaging/debian/copyright: packaging/debian/copyright.in external/npm/debian.license.in $(LICENSE_FILES) | external/npm/node_modules $(abs_builddir)/packaging/debian/
 	$(shell tmp=$$(mktemp $@.XXXXXX ) && \
 	$(do_subst) < $< > $$tmp && \
-	cat $(srcdir)/external/npm/debian-license.in >> $$tmp ; \
+	cat $(srcdir)/external/npm/debian.license.in >> $$tmp ; \
 	mv $$tmp $@ )
 
 #kinda crappy, but i need something that works
