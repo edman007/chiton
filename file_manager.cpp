@@ -104,8 +104,8 @@ void FileManager::clean_disk(void){
 
         //estimate the number of segments, add 10
         long segment_count = target_clear/bytes_per_segment + 10;
-        std::string sql = "SELECT v.id, v.path, c.value FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' AND locked = 0 "
-            " ORDER BY starttime ASC LIMIT " + std::to_string(segment_count);
+        std::string sql = "SELECT v.id, v.path, c.value FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' "
+            " WHERE v.locked = 0 ORDER BY starttime ASC LIMIT " + std::to_string(segment_count);
 
         segment_count = 0;
         long actual_segment_bytes = 0;
