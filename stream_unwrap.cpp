@@ -32,8 +32,8 @@ StreamUnwrap::StreamUnwrap(Config& cfg) : cfg(cfg) {
 
 StreamUnwrap::~StreamUnwrap(){
     close();
-    for (auto ctx : decode_ctx){
-        av
+    for (auto &ctx : decode_ctx){
+        avcodec_free_context(&ctx.second);
     }
 }
 

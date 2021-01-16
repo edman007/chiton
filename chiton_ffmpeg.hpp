@@ -67,4 +67,7 @@ inline AVRounding operator|(AVRounding a, AVRounding b)
 
 void load_ffmpeg(void);
 
+//for passing image coordinates
+struct rect { int x, y, w, h; };
+
 #endif

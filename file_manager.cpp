@@ -305,12 +305,7 @@ long FileManager::get_filesize(const std::string &path){
 }
 
 long FileManager::rm_file(const std::string &path, const std::string &base/* = std::string("NULL")*/){
-    std::string real_base = base;
-    if (base == "NULL"){
-        real_base = get_output_dir();
-    } else if (real_base.back() != '/'){
-        real_base += "/";
-    }
+    std::string real_base = get_real_base(base);
 
     long filesize = rm(real_base + path);
     std::string dir = real_base;
@@ -357,4 +352,24 @@ bool FileManager::reserve_bytes(long bytes, int camera){
     }
     //otherwise we leave it as is
     return true;
+}
+
+std::fstream FileManager::get_fstream(const std::string &path, const std::string base/* = std::string("NULL")*/){
+    std::fstream s;
+    std::string real_base = get_real_base(base);
+    s.open(real_base + path, std::ios::binary | std::fstream::out | std::fstream::in);
+    if (!s.is_open()){
+        LWARN("Failed to open '" + real_base + path + "', " + std::to_string(errno));
+    }
+    return s;
+}
+
+std::string FileManager::get_real_base(const std::string base){
+    std::string real_base;
+    if (base == "NULL"){
+        real_base = get_output_dir();
+    } else if (real_base.back() != '/'){
+        real_base += "/";
+    }
+    return real_base;
 }

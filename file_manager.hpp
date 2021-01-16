@@ -27,6 +27,8 @@
 #include "chiton_config.hpp"
 #include <mutex>
 #include <atomic>
+#include <iostream>
+#include <fstream>
 
 class FileManager {
 public:
@@ -53,6 +55,9 @@ public:
     bool reserve_bytes(long bytes, int camera);//reserve bytes for camera
 
     long get_filesize(const std::string &path);//return the filesize of the file at path
+
+    //open and return a fstream for name located in path, if there was a failure fstream.is_open() will fail
+    std::fstream get_fstream(const std::string &path, const std::string base = "NULL");
 private:
     Database &db;
     Config &cfg;
@@ -73,6 +78,7 @@ private:
     long rm(const std::string &path);//delete a specific file and parent directories, returns negative if there was an error
     std::string get_date_path(int camera, const struct timeval &start_time);//returns a path in the form of <camera>/<YYYY>/<MM>/<DD>/<HH>
     std::string get_output_dir(void);//returns the output-dir cfg setting, with some fixups/sanity checks ensuring it always ends in a "/"
+    std::string get_real_base(const std::string base);//given an input base, returns a real path that always ends in a /
 };
 
 #endif

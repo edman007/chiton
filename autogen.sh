@@ -29,4 +29,4 @@ libtoolize
 aclocal
 autoconf
 automake --add-missing --foreign
-./configure
+./configure --enable-debug

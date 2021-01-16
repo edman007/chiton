@@ -23,6 +23,7 @@
 #include "camera.hpp"
 #include "util.hpp"
 #include "stream_writer.hpp"
+#include "image_util.hpp"
 
 Camera::Camera(int camera, Database& db) : id(camera), db(db), stream(cfg), fm(db, cfg) {
     //load the config
@@ -118,7 +119,11 @@ void Camera::run(void){
         if (frame){
             if (stream.decode_packet(pkt)){
                 while (stream.get_decoded_frame(pkt.stream_index, frame)){
-                    LWARN("Decoded Frame");
+                    if (stream.get_format_context()->streams[pkt.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){
+                        ImageUtil iu(db, cfg);
+                        iu.write_frame_jpg(frame);
+                        LWARN("Decoded Video Frame");
+                    }
                 }
             }
         }
