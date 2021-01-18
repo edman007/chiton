@@ -32,13 +32,7 @@ ImageUtil::~ImageUtil(){
 
 }
 
-bool ImageUtil::write_frame_jpg(const AVFrame *frame, rect src/* = {-1, -1, 0, 0}*/){
-    static int framecnt = 0;
-    framecnt++;
-    if (framecnt != 135){
-        LWARN("Rejecting " + std::to_string(framecnt));
-        return true;
-    }
+bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const struct timeval *start_time /* = NULL */, rect src/* = {-1, -1, 0, 0}*/){
     LDEBUG("Writing JPEG");
     //check if it's valid
     if (!frame){
@@ -103,21 +97,27 @@ bool ImageUtil::write_frame_jpg(const AVFrame *frame, rect src/* = {-1, -1, 0, 0
 
     //write out the packet
     FileManager fm(db, cfg);
-    std::fstream out_s = fm.get_fstream("test.jpg");
+    std::string path;
     bool success = false;
-    if (out_s.is_open()){
-        out_s.write(reinterpret_cast<char*>(pkt.data), pkt.size);
-        success = out_s.good();
-        out_s.close();
+    if (fm.get_image_path(path, name, ".jpg", start_time)){
+        std::ofstream out_s = fm.get_fstream_write(name, path);
+        LWARN("Writing to " + name);
+        if (out_s.is_open()){
+            out_s.write(reinterpret_cast<char*>(pkt.data), pkt.size);
+            success = out_s.good();
+            out_s.close();
+        } else {
+            LWARN("Couldn't open JPG");
+        }
     } else {
-        LWARN("Couldfil not open JPG");
+        LWARN("Failed to get image path");
     }
     av_packet_unref(&pkt);
 
     return success;
 }
 
-bool ImageUtil::write_frame_png(const AVFrame *frame, rect src/* = {-1, -1, 0, 0}*/){
+bool ImageUtil::write_frame_png(const AVFrame *frame, std::string &name, const struct timeval *start_time /* = NULL */, rect src/* = {-1, -1, 0, 0}*/){
     LWARN("Can't write out PNGs");
     return false;
 }

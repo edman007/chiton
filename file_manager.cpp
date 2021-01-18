@@ -45,7 +45,7 @@ std::string FileManager::get_next_path(long int &file_id, int camera, const stru
     std::string path = base + dir;
     mkdir_recursive(path);
     
-    std::string sql = "INSERT INTO videos (path, starttime, camera) VALUES ('" + dir + "/'," + ptime + ", " + std::to_string(camera) + " )";    
+    std::string sql = "INSERT INTO videos (path, starttime, camera) VALUES ('" + db.escape(dir + "/") + "'," + ptime + ", " + std::to_string(camera) + " )";
     DatabaseResult* res = db.query(sql, NULL, &file_id);
     delete res;
     
@@ -104,11 +104,12 @@ void FileManager::clean_disk(void){
 
         //estimate the number of segments, add 10
         long segment_count = target_clear/bytes_per_segment + 10;
-        std::string sql = "SELECT v.id, v.path, c.value FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' "
+        std::string sql = "SELECT v.id, v.path, c.value, v.starttime FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' "
             " WHERE v.locked = 0 ORDER BY starttime ASC LIMIT " + std::to_string(segment_count);
 
         segment_count = 0;
         long actual_segment_bytes = 0;
+        unsigned long oldest_record = 0;
         DatabaseResult* res = db.query(sql);
         while (target_clear > 0 && res && res->next_row()){
             segment_count++;
@@ -123,6 +124,9 @@ void FileManager::clean_disk(void){
             sql = "DELETE FROM videos WHERE id = " + id;
             DatabaseResult* del_res = db.query(sql);
             delete del_res;
+
+            //record the starttime of this
+            oldest_record = res->get_field_long(3);
         }
         delete res;
 
@@ -134,6 +138,9 @@ void FileManager::clean_disk(void){
                 bytes_per_segment = 1024*1024;
             }
             LDEBUG("Average segment was " + std::to_string(bytes_per_segment) + " bytes");
+
+            //clean the images
+            target_clear -= clean_images(oldest_record);
         }
 
         if (target_clear > 0){
@@ -354,12 +361,23 @@ bool FileManager::reserve_bytes(long bytes, int camera){
     return true;
 }
 
-std::fstream FileManager::get_fstream(const std::string &path, const std::string base/* = std::string("NULL")*/){
-    std::fstream s;
+std::ofstream FileManager::get_fstream_write(const std::string &name, const std::string &path /* = "" */, const std::string &base/* = "NULL" */){
+    std::ofstream s;
     std::string real_base = get_real_base(base);
-    s.open(real_base + path, std::ios::binary | std::fstream::out | std::fstream::in);
+    mkdir_recursive(real_base + path);
+    s.open(real_base + path + name, std::ios::binary | std::fstream::out | std::fstream::trunc);
     if (!s.is_open()){
-        LWARN("Failed to open '" + real_base + path + "', " + std::to_string(errno));
+        LWARN("Failed to open '" + real_base + path + name + "', " + std::to_string(errno));
+    }
+    return s;
+}
+
+std::ifstream FileManager::get_fstream_read(const std::string &name, const std::string &path /* = "" */, const std::string &base/* = "NULL"*/){
+    std::ifstream s;
+    std::string real_base = get_real_base(base);
+    s.open(real_base + path + name, std::ios::binary | std::fstream::in);
+    if (!s.is_open()){
+        LWARN("Failed to open '" + real_base + path + name + "', " + std::to_string(errno));
     }
     return s;
 }
@@ -372,4 +390,56 @@ std::string FileManager::get_real_base(const std::string base){
         real_base += "/";
     }
     return real_base;
+}
+
+bool FileManager::get_image_path(std::string &path, std::string &name, const std::string &extension, const struct timeval *start_time /* = NULL */){
+    if (start_time != NULL){
+        path = get_date_path(cfg.get_value_int("camera-id"), *start_time) + "/";
+        if (name != ""){
+            name += "-";
+        }
+        std::string ptime = std::to_string(Util::pack_time(*start_time));
+        std::string sql = "INSERT INTO images (camera, path, prefix, extension, starttime) VALUES (" +
+            cfg.get_value("camera-id") + ",'" + db.escape(path) + "','" + db.escape(name) + "','" + db.escape(extension) + "'," + ptime + ")";
+        long file_id = 0;
+        DatabaseResult* res = db.query(sql, NULL, &file_id);
+        if (res){
+            name += std::to_string(file_id) + extension;
+            delete res;
+        } else {
+            return false;
+        }
+    } else {
+        name += extension;
+    }
+
+    return true;
+}
+
+long FileManager::clean_images(unsigned long start_time){
+    if (start_time == 0){
+        return 0;//bail if it's invalid
+    }
+
+    long bytes_deleted = 0;
+
+    std::string sql = "SELECT id, path, prefix, extension, c.value FROM images as i LEFT JOIN config AS c ON i.camera=c.camera AND c.name = 'output-dir' "
+        " WHERE starttime < " + std::to_string(start_time);
+    DatabaseResult *res = db.query(sql);
+    while (res && res->next_row()){
+        std::string img_id = res->get_field(0);
+        std::string path = res->get_field(1);
+        std::string name = res->get_field(2) + img_id + res->get_field(3);
+        std::string base = res->get_field(4);
+        long del_bytes = rm_file(path + name, base);
+        if (del_bytes > 0){
+            bytes_deleted++;
+        }
+        LWARN("Deleting image " + name);
+        //delete it from the database
+        sql = "DELETE FROM images WHERE id = " + img_id;
+        DatabaseResult* del_res = db.query(sql);
+        delete del_res;
+    }
+    return bytes_deleted;
 }

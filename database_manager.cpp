@@ -26,7 +26,7 @@
 //we increment Major when we break backwards compatibility
 static const int CURRENT_DB_VERSION_MAJOR = 1;
 //we increment minor when we add a backwards compatible version
-static const int CURRENT_DB_VERSION_MINOR = 1;
+static const int CURRENT_DB_VERSION_MINOR = 2;
 static const std::string CURRENT_DB_VERSION = std::to_string(CURRENT_DB_VERSION_MAJOR) + "." + std::to_string(CURRENT_DB_VERSION_MINOR);
 
 DatabaseManager::DatabaseManager(Database &db) : db(db) {
@@ -62,6 +62,17 @@ bool DatabaseManager::initilize_db(){
         "PRIMARY KEY (`id`), "
         "KEY `camera` (`camera`,`starttime`,`progress`) "
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    const std::string images_tbl = "CREATE TABLE `images` ( "
+        "`id` int(11) NOT NULL AUTO_INCREMENT, "
+        " camera int(11) NOT NULL, "
+        "`path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL, "
+        "`prefix` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL, "
+        "`extension` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL, "
+        "`starttime` bigint(20) NOT NULL, "
+        "PRIMARY KEY (`id`), "
+        "KEY starttime (starttime) "
+        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+
     //create the config table
     DatabaseResult *res = db.query(config_tbl);
     bool ret = true;
@@ -90,6 +101,17 @@ bool DatabaseManager::initilize_db(){
             delete res;
         } else {
             LFATAL("Could not create exports table");
+            ret = false;
+        }
+    }
+
+    //create the images table
+    if (ret){
+        res = db.query(images_tbl);
+        if (res){
+            delete res;
+        } else {
+            LFATAL("Could not create images table");
             ret = false;
         }
     }
@@ -177,6 +199,8 @@ bool DatabaseManager::upgrade_database(int major, int minor){
         switch (minor){
         case 0:
             return upgrade_from_1_0();
+        case 1:
+            return upgrade_from_1_1();
         default:
             return false;
         }
@@ -218,8 +242,36 @@ bool DatabaseManager::upgrade_from_1_0(void){
     }
 
     if (ret){
+        return upgrade_from_1_1();
+    } else {
+        return ret;
+    }
+}
+
+bool DatabaseManager::upgrade_from_1_1(void){
+    const std::string images_tbl = "CREATE TABLE `images` ( "
+        "`id` int(11) NOT NULL AUTO_INCREMENT, "
+        "camera int(11) NOT NULL, "
+        "`path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL, "
+        "`prefix` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL, "
+        "`extension` varchar(60) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL, "
+        "`starttime` bigint(20) NOT NULL, "
+        "PRIMARY KEY (`id`), "
+        "KEY starttime (starttime) "
+        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    bool ret = true;
+    DatabaseResult *res = db.query(images_tbl);
+    if (res){
+        delete res;
+    } else {
+        LFATAL("Could not create images table");
+        ret = false;
+    }
+
+    if (ret){
         return set_latest_version();
     } else {
         return ret;
     }
+
 }

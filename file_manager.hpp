@@ -40,6 +40,12 @@ public:
     //returns a path to export a file to, updating the database to include the path
     std::string get_export_path(long int export_id, int camera, const struct timeval &start_time);
 
+    //generates and writes path and name given start_time and extension, returns true on success
+    //enters the image into the database if starttime is not NULL
+    //if starttime is NULL, path is kept as is
+    //name will be re-written to include the extension, if non-empty will become a prefix
+    bool get_image_path(std::string &path, std::string &name, const std::string &extension, const struct timeval *start_time = NULL);
+
     //returns the real for the segments referenced as id and path name from the database
     std::string get_path(long int file_id, const std::string &db_path);
 
@@ -56,8 +62,9 @@ public:
 
     long get_filesize(const std::string &path);//return the filesize of the file at path
 
-    //open and return a fstream for name located in path, if there was a failure fstream.is_open() will fail
-    std::fstream get_fstream(const std::string &path, const std::string base = "NULL");
+    //open and return a fstream for name located in path, if there was a failure fstream.is_open() will fail, path must end in /
+    std::ofstream get_fstream_write(const std::string &name, const std::string &path = "" , const std::string &base = "NULL");
+    std::ifstream get_fstream_read(const std::string &name, const std::string &path = "" , const std::string &base = "NULL");
 private:
     Database &db;
     Config &cfg;
@@ -79,6 +86,7 @@ private:
     std::string get_date_path(int camera, const struct timeval &start_time);//returns a path in the form of <camera>/<YYYY>/<MM>/<DD>/<HH>
     std::string get_output_dir(void);//returns the output-dir cfg setting, with some fixups/sanity checks ensuring it always ends in a "/"
     std::string get_real_base(const std::string base);//given an input base, returns a real path that always ends in a /
+    long clean_images(unsigned long start_time);//deletes images older than start_time, returns bytes deleted
 };
 
 #endif

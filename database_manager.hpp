@@ -47,6 +47,7 @@ private:
     bool upgrade_database(int major, int minor);//selects the upgrade routine, returns true if successfully upgraded
 
     bool upgrade_from_1_0(void);//upgrade from 1_0 to latest
+    bool upgrade_from_1_1(void);//upgrade from 1_1 to latest
 };
 
 #endif

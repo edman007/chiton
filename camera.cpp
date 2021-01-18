@@ -81,7 +81,9 @@ void Camera::run(void){
     //used for calculating shutdown time for the last segment
     long last_pts = 0;
     long last_stream_index = 0;
+    int frame_count = 0;
     while (!shutdown && stream.get_next_frame(pkt)){
+        frame_count++;
         watchdog = true;
         last_pts = pkt.pts;
         last_stream_index = pkt.stream_index;
@@ -120,8 +122,14 @@ void Camera::run(void){
             if (stream.decode_packet(pkt)){
                 while (stream.get_decoded_frame(pkt.stream_index, frame)){
                     if (stream.get_format_context()->streams[pkt.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){
-                        ImageUtil iu(db, cfg);
-                        iu.write_frame_jpg(frame);
+                        if (frame_count % 30 == 0){
+                            ImageUtil iu(db, cfg);
+                            struct timeval framestart;
+                            Util::compute_timestamp(stream.get_start_time(), framestart, pkt.pts, stream.get_format_context()->streams[pkt.stream_index]->time_base);
+                            std::string filename = "test";
+                            LWARN("Writing image");
+                            iu.write_frame_jpg(frame, filename, &framestart);
+                        }
                         LWARN("Decoded Video Frame");
                     }
                 }
