@@ -29,6 +29,7 @@ extern "C" {
 #include <libavutil/timestamp.h>
 #include <libavutil/avutil.h>
 };
+#include <mutex>
 
 //fix FFMPEG and c++1x issues
 #ifdef av_err2str
@@ -70,4 +71,6 @@ void load_ffmpeg(void);
 //for passing image coordinates
 struct rect { int x, y, w, h; };
 
+//used to lock non-thread safe libav* functions
+extern std::mutex global_codec_lock;
 #endif

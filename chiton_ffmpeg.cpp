@@ -23,6 +23,7 @@
 #include "util.hpp"
 #include <cstdio>
 
+std::mutex global_codec_lock;
 void ffmpeg_log_callback(void * avcl, int level, const char * fmt, va_list vl){
     //compute the level first...
     enum LOG_LEVEL chiton_level;

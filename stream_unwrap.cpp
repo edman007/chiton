@@ -148,11 +148,14 @@ bool StreamUnwrap::alloc_decode_context(unsigned int stream){
     }
     
     /* Open the decoder. */
+    global_codec_lock.lock();
     if ((error = avcodec_open2(avctx, input_codec, NULL)) < 0) {
+        global_codec_lock.unlock();
         LERROR("Could not open input codec (error '" + std::string(av_err2str(error)) + "')");
         avcodec_free_context(&avctx);
         return false;
     }
+    global_codec_lock.unlock();
     
     /* Save the decoder context for easier access later. */
     decode_ctx[stream] = avctx;
