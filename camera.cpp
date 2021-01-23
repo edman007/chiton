@@ -22,7 +22,6 @@
 
 #include "camera.hpp"
 #include "util.hpp"
-#include "stream_writer.hpp"
 #include "image_util.hpp"
 
 Camera::Camera(int camera, Database& db) : id(camera), db(db), stream(cfg), fm(db, cfg) {
@@ -32,6 +31,16 @@ Camera::Camera(int camera, Database& db) : id(camera), db(db), stream(cfg), fm(d
     alive = true;
     watchdog = false;
     startup = true;
+
+    //variables for cutting files...
+    last_cut = av_make_q(0, 1);
+    int seconds_per_file_raw = cfg.get_value_int("seconds-per-file");
+    if (seconds_per_file_raw <= 0){
+        LWARN("seconds-per-file was invalid");
+        seconds_per_file_raw = DEFAULT_SECONDS_PER_FILE;
+    }
+    seconds_per_file = av_make_q(seconds_per_file_raw, 1);
+
 }
 Camera::~Camera(){
     
@@ -52,88 +61,57 @@ void Camera::run(void){
     startup = false;
 
     LINFO("Camera " + std::to_string(id) + " connected...");
-    long int file_id;
-    std::string new_output = fm.get_next_path(file_id, id, stream.get_start_time());
+    std::string out_filename = fm.get_next_path(file_id, id, stream.get_start_time());
 
-    StreamWriter out = StreamWriter(cfg, new_output, stream);
+    StreamWriter out = StreamWriter(cfg);
+    out.change_path(out_filename);
+    out.copy_streams(stream);
     out.open();
     
     AVPacket pkt;
     bool valid_keyframe = false;
 
+    bool decode = true;//should we decode frames?
     //allocate a frame (we only allocate when we want to decode, an unallocated frame means we skip decoding)
     AVFrame *frame = NULL;
-    frame = av_frame_alloc();
-    if (!frame){
-        LWARN("Failed to allocate frame");
-        frame = NULL;
+    if (decode){
+        frame = av_frame_alloc();
+        if (!frame){
+            LWARN("Failed to allocate frame");
+            frame = NULL;
+        }
     }
-
-    //variables for cutting files...
-    AVRational last_cut = av_make_q(0, 1);
-    int seconds_per_file_raw = cfg.get_value_int("seconds-per-file");
-    if (seconds_per_file_raw <= 0){
-        LWARN("seconds-per-file was invalid");
-        seconds_per_file_raw = DEFAULT_SECONDS_PER_FILE;
-    }
-    AVRational seconds_per_file = av_make_q(seconds_per_file_raw, 1);
 
     //used for calculating shutdown time for the last segment
     long last_pts = 0;
     long last_stream_index = 0;
-    int frame_count = 0;
     while (!shutdown && stream.get_next_frame(pkt)){
-        frame_count++;
         watchdog = true;
         last_pts = pkt.pts;
         last_stream_index = pkt.stream_index;
         
-        if (pkt.flags & AV_PKT_FLAG_KEY && stream.get_format_context()->streams[pkt.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){
-            //calculate the seconds:
-            AVRational sec = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);//current time..
-            sec = av_sub_q(sec, last_cut);
-            if (av_cmp_q(sec, seconds_per_file) == 1 || sec.num < 0){
-                //cutting the video
-                struct timeval start;
-                Util::compute_timestamp(stream.get_start_time(), start, pkt.pts, stream.get_format_context()->streams[pkt.stream_index]->time_base);
-                out.close();
-                fm.update_file_metadata(file_id, start);
-                if (sec.num < 0){
-                    //this will cause a discontinuity which will be picked up and cause it to play correctly
-                    start.tv_usec += 1000;
-                }
-                new_output = fm.get_next_path(file_id, id, start);
-                out.change_path(new_output);
-                if (!out.open()){
-                    shutdown = true;
-                }
-                //save out this position
-                last_cut = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);
-            }
-        }        
-        if (valid_keyframe || (pkt.flags & AV_PKT_FLAG_KEY && stream.get_format_context()->streams[pkt.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)){
-            out.write(pkt);//log it
-            valid_keyframe = true;
-            //LINFO("Got Frame " + std::to_string(id));
-        }
-
         //decode the packets
         if (frame){
-            if (stream.decode_packet(pkt)){
-                while (stream.get_decoded_frame(pkt.stream_index, frame)){
-                    if (stream.get_format_context()->streams[pkt.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){
-                        if (frame_count % 30 == 0){
-                            ImageUtil iu(db, cfg);
-                            struct timeval framestart;
-                            Util::compute_timestamp(stream.get_start_time(), framestart, pkt.pts, stream.get_format_context()->streams[pkt.stream_index]->time_base);
-                            std::string filename = "test";
-                            LWARN("Writing image");
-                            iu.write_frame_jpg(frame, filename, &framestart);
-                        }
+            if (stream.is_video(pkt)){
+                if (stream.decode_packet(pkt)){
+                    while (stream.get_decoded_frame(pkt.stream_index, frame)){
                         LWARN("Decoded Video Frame");
                     }
                 }
+            } else if (stream.is_audio(pkt)){
+                if (stream.decode_packet(pkt)){
+                    while (stream.get_decoded_frame(pkt.stream_index, frame)){
+                        LWARN("Decoded Audio Frame");
+                    }
+                }
             }
+        }
+
+        cut_video(pkt, out);
+        if (valid_keyframe || (pkt.flags & AV_PKT_FLAG_KEY && stream.is_video(pkt))){
+            out.write(pkt, stream.get_stream(pkt));//log it
+            valid_keyframe = true;
+            //LINFO("Got Frame " + std::to_string(id));
         }
         
         stream.unref_frame(pkt);
@@ -175,4 +153,32 @@ void Camera::set_thread_id(std::thread::id tid){
 }
 std::thread::id Camera::get_thread_id(void){
     return thread_id;
+}
+
+void Camera::cut_video(AVPacket &pkt, StreamWriter &out){
+    if (pkt.flags & AV_PKT_FLAG_KEY && stream.is_video(pkt)){
+        //calculate the seconds:
+        AVRational sec = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);//current time..
+        sec = av_sub_q(sec, last_cut);
+        if (av_cmp_q(sec, seconds_per_file) == 1 || sec.num < 0){
+            //cutting the video
+            struct timeval start;
+            stream.timestamp(pkt, start);
+            out.close();
+            fm.update_file_metadata(file_id, start);
+            if (sec.num < 0){
+                //this will cause a discontinuity which will be picked up and cause it to play correctly
+                start.tv_usec += 1000;
+            }
+            std::string out_filename = fm.get_next_path(file_id, id, start);
+            out.change_path(out_filename);
+            out.copy_streams(stream);
+            if (!out.open()){
+                shutdown = true;
+            }
+            //save out this position
+            last_cut = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);
+        }
+    }
+
 }

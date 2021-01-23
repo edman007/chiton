@@ -25,6 +25,7 @@
 #include "database.hpp"
 #include "chiton_config.hpp"
 #include "stream_unwrap.hpp"
+#include "stream_writer.hpp"
 #include "file_manager.hpp"
 #include <atomic>
 #include <thread>
@@ -58,5 +59,12 @@ private:
     std::atomic_bool shutdown;//signals that we should exit
     std::atomic_bool startup;//used to identify if we are in an extended wait due to startup
     std::thread::id thread_id;//used for tracking our thread
+
+    AVRational last_cut;
+    AVRational seconds_per_file;
+
+    long int file_id;//database id of current file we are writing to
+    //check if packet is a keyframe and switch the filename as needed
+    void cut_video(AVPacket &pkt, StreamWriter &out);
 };
 #endif

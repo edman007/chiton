@@ -47,6 +47,11 @@ public:
     bool decode_packet(AVPacket &packet);//reads packet and decodes it
     bool get_decoded_frame(int stream, AVFrame *frame);//gets the next decoded frame
     void unref_frame(AVPacket &packet);//free resources from frame
+    void timestamp(const AVPacket &packet, struct timeval &time);//write the actual timestamp of packet to time
+    bool is_audio(const AVPacket &packet);//return true if packet is audio packet
+    bool is_video(const AVPacket &packet);//return true if packet is video packet
+    AVStream *get_stream(const AVPacket &packet);//return a pointer to the stream that packet is part of
+    AVStream *get_stream(const int id);//return a pointer to the stream given the stream index
     const struct timeval& get_start_time(void);
     
 private:

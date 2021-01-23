@@ -24,7 +24,7 @@
 #include "chiton_ffmpeg.hpp"
 #include <assert.h>
 
-StreamWriter::StreamWriter(Config& cfg, std::string path, StreamUnwrap &unwrap) : cfg(cfg), path(path), unwrap(unwrap) {
+StreamWriter::StreamWriter(Config& cfg) : cfg(cfg) {
     file_opened = false;
 }
 
@@ -33,64 +33,11 @@ bool StreamWriter::open(void){
     if (file_opened){
         return true;//already opened
     }
-    file_opened = false;
-    avformat_alloc_output_context2(&output_format_context, NULL, NULL, path.c_str());
-    if (!output_format_context) {
-        LERROR("Could not create output context");
-        error = AVERROR_UNKNOWN;
-        LERROR("Error occurred: " + std::string(av_err2str(error)));
-        return false;
-    }
-
-    stream_mapping_size = unwrap.get_stream_count();
-    stream_mapping = NULL;
-    stream_mapping = (int*)av_mallocz_array(stream_mapping_size, sizeof(*stream_mapping));
-    if (!stream_mapping) {
-        error = AVERROR(ENOMEM);
-        LERROR("Error occurred: " + std::string(av_err2str(error)));
-        return false;
-    }
-
     
     AVOutputFormat *ofmt = output_format_context->oformat;
-    int stream_index = 0;
     stream_offset.clear();
     last_dts.clear();
     
-    for (unsigned int i = 0; i < unwrap.get_stream_count(); i++) {
-        AVStream *out_stream;
-        AVStream *in_stream = unwrap.get_format_context()->streams[i];
-        AVCodecParameters *in_codecpar = in_stream->codecpar;
-
-        if (in_codecpar->codec_type != AVMEDIA_TYPE_AUDIO &&
-            in_codecpar->codec_type != AVMEDIA_TYPE_VIDEO &&
-            in_codecpar->codec_type != AVMEDIA_TYPE_SUBTITLE) {
-            stream_mapping[i] = -1;
-            continue;
-        }
-
-        stream_mapping[i] = stream_index++;
-
-        //set the offset to -1, indicating unknown
-        stream_offset.push_back(-1);
-        last_dts.push_back(-1);
-        
-        out_stream = avformat_new_stream(output_format_context, NULL);
-        if (!out_stream) {
-            LERROR("Failed allocating output stream");
-            error = AVERROR_UNKNOWN;
-            LERROR("Error occurred: " + std::string(av_err2str(error)));
-            return false;
-        }
-
-        error = avcodec_parameters_copy(out_stream->codecpar, in_codecpar);
-        if (error < 0) {
-            LERROR("Failed to copy codec parameters\n");
-            LERROR("Error occurred: " + std::string(av_err2str(error)));
-            return false;
-        }
-        out_stream->codecpar->codec_tag = 0;
-    }
     av_dump_format(output_format_context, 0, path.c_str(), 1);
     
     if (!(ofmt->flags & AVFMT_NOFILE)) {
@@ -115,15 +62,16 @@ bool StreamWriter::open(void){
 
 
 StreamWriter::~StreamWriter(){
-    /* close output */
-    if (output_format_context && !(output_format_context->flags & AVFMT_NOFILE))
-        avio_closep(&output_format_context->pb);
-    avformat_free_context(output_format_context);
-
-    av_freep(&stream_mapping);
+    if (file_opened){
+        close();
+    }
+    free_context();
 }
 
 void StreamWriter::close(void){
+    if (!file_opened){
+        LWARN("Attempted to close a output stream that wasn't open");
+    }
     //flush it...
     if (0 > av_interleaved_write_frame(output_format_context, NULL)){
         LERROR("Error flushing muxing output for camera " + cfg.get_value("camera-id"));
@@ -133,8 +81,8 @@ void StreamWriter::close(void){
     file_opened = false;
 }
 
-bool StreamWriter::write(const AVPacket &packet){
-    AVStream *in_stream, *out_stream;
+bool StreamWriter::write(const AVPacket &packet, const AVStream *in_stream){
+    AVStream *out_stream;
     AVPacket out_pkt;
 
     if (!file_opened){
@@ -145,8 +93,7 @@ bool StreamWriter::write(const AVPacket &packet){
         return false;
     }
     
-    in_stream  = unwrap.get_format_context()->streams[out_pkt.stream_index];
-    if (out_pkt.stream_index >= stream_mapping_size ||
+    if (out_pkt.stream_index >= static_cast<int>(stream_mapping.size()) ||
         stream_mapping[out_pkt.stream_index] < 0) {
         av_packet_unref(&out_pkt);
         return true;//we processed the stream we don't care about
@@ -210,13 +157,81 @@ void StreamWriter::log_packet(const AVFormatContext *fmt_ctx, const AVPacket &pk
 }
 
 void StreamWriter::change_path(std::string &new_path){
-    path = new_path;
+    if (!new_path.empty()){
+        path = new_path;
+        free_context();
+    }
+}
 
-    //free the output context, we will need to create a new one
-    if (output_format_context && !(output_format_context->flags & AVFMT_NOFILE))
+void StreamWriter::free_context(void){
+    if (output_format_context && !(output_format_context->flags & AVFMT_NOFILE)){
         avio_closep(&output_format_context->pb);
+    }
     avformat_free_context(output_format_context);
-    
-    av_freep(&stream_mapping);
+    output_format_context = NULL;
+    stream_mapping.clear();
+}
 
+bool StreamWriter::alloc_context(void){
+    if (output_format_context){
+        return true;
+    }
+    avformat_alloc_output_context2(&output_format_context, NULL, NULL, path.c_str());
+    if (!output_format_context) {
+        LERROR("Could not create output context");
+        int error = AVERROR_UNKNOWN;
+        LERROR("Error occurred: " + std::string(av_err2str(error)));
+        return false;
+    }
+    return true;
+}
+
+bool StreamWriter::add_stream(const AVStream *in_stream){
+    if (!output_format_context){
+        if (!alloc_context()){
+            return false;
+        }
+    }
+    
+    AVStream *out_stream = NULL;;
+    AVCodecParameters *in_codecpar = in_stream->codecpar;
+    int error = 0;
+
+    if (in_codecpar->codec_type != AVMEDIA_TYPE_AUDIO &&
+        in_codecpar->codec_type != AVMEDIA_TYPE_VIDEO &&
+        in_codecpar->codec_type != AVMEDIA_TYPE_SUBTITLE) {
+        stream_mapping.push_back(-1);
+        return true;
+    }
+
+    stream_mapping.push_back(output_format_context->nb_streams);
+
+    //set the offset to -1, indicating unknown
+    stream_offset.push_back(-1);
+    last_dts.push_back(-1);
+
+    out_stream = avformat_new_stream(output_format_context, NULL);
+    if (!out_stream) {
+        LERROR("Failed allocating output stream");
+        error = AVERROR_UNKNOWN;
+        LERROR("Error occurred: " + std::string(av_err2str(error)));
+        return false;
+    }
+
+    error = avcodec_parameters_copy(out_stream->codecpar, in_codecpar);
+    if (error < 0) {
+        LERROR("Failed to copy codec parameters\n");
+        LERROR("Error occurred: " + std::string(av_err2str(error)));
+        return false;
+    }
+    out_stream->codecpar->codec_tag = 0;
+    return true;
+}
+
+bool StreamWriter::copy_streams(StreamUnwrap &unwrap){
+    bool ret = false;
+    for (unsigned int i = 0; i < unwrap.get_stream_count(); i++) {
+        ret |= add_stream(unwrap.get_format_context()->streams[i]);
+    }
+    return ret;
 }

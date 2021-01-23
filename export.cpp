@@ -108,10 +108,13 @@ void Export::run_job(void){
     }
 
     StreamUnwrap in = StreamUnwrap(camera_cfg);
-    StreamWriter out = StreamWriter(camera_cfg, path, in);
+    StreamWriter out = StreamWriter(camera_cfg);
+    out.change_path(path);
+
     long total_time_target = endtime - starttime;
 
     long reserved_bytes = 0;
+    bool output_opened = false;
     while (res->next_row()){
         std::string segment = fm.get_path(res->get_field_long(0), res->get_field(1));
         LDEBUG("Exporting " + segment);
@@ -130,12 +133,21 @@ void Export::run_job(void){
             reserved_bytes -= seg_size;
         }
 
-        AVPacket pkt;
-        in.connect();
-        out.open();
+        if (!in.connect()){
+            //try the next one...
+            continue;
+        }
 
+        if (!output_opened){
+            if (!out.copy_streams(in)){
+                continue;
+            }
+            output_opened = out.open();
+        }
+
+        AVPacket pkt;
         while (in.get_next_frame(pkt)){
-            out.write(pkt);
+            out.write(pkt, in.get_stream(pkt));
             in.unref_frame(pkt);
         }
         in.close();
@@ -145,10 +157,12 @@ void Export::run_job(void){
         }
 
         //compute the progress
-        long new_progress = 100 - (100*(endtime - res->get_field_long(2))) / total_time_target;
-        if (new_progress > progress && new_progress < 100){//this can result in number over 100, we don't put 100 in until it's actually done
-            progress = new_progress;
-            update_progress();
+        if (res->get_field(2) != "NULL"){//do not compute the progress if we don't know how long this is
+            long new_progress = 100 - (100*(endtime - res->get_field_long(2))) / total_time_target;
+            if (new_progress > progress && new_progress < 100){//this can result in number over 100, we don't put 100 in until it's actually done
+                progress = new_progress;
+                update_progress();
+            }
         }
     }
     out.close();

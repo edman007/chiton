@@ -350,3 +350,23 @@ bool StreamUnwrap::get_decoded_frame(int stream, AVFrame *frame){
         return false;
     }
 }
+
+void StreamUnwrap::timestamp(const AVPacket &packet, struct timeval &time){
+    Util::compute_timestamp(get_start_time(), time, packet.pts, input_format_context->streams[pkt.stream_index]->time_base);
+}
+
+bool StreamUnwrap::is_audio(const AVPacket &packet){
+    return input_format_context->streams[pkt.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO;
+}
+
+bool StreamUnwrap::is_video(const AVPacket &packet){
+    return input_format_context->streams[pkt.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
+}
+
+AVStream *StreamUnwrap::get_stream(const AVPacket &packet){
+    return get_stream(packet.stream_index);
+}
+
+AVStream *StreamUnwrap::get_stream(const int id){
+    return input_format_context->streams[id];
+}

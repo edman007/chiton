@@ -26,23 +26,25 @@
 
 class StreamWriter {
 public:
-    StreamWriter(Config &cfg, std::string path, StreamUnwrap &unwrap);
+    StreamWriter(Config &cfg, std::string path);
+    StreamWriter(Config &cfg);
     ~StreamWriter();
     
-    bool open();//open the file for writing, returns true on success
+    bool open(void);//open the file for writing, returns true on success
     void close(void);
-    bool write(const AVPacket &pkt);//write the packet to the file
+    bool write(const AVPacket &pkt, const AVStream *in_stream);//write the packet to the file
     void change_path(std::string &new_path);
+    bool add_stream(const AVStream *in_stream);//add in_stream to output
+    bool copy_streams(StreamUnwrap &unwrap);//copy all streams from unwrap to output
 private:
     Config &cfg;
     Config *cfg1;
     Config *cfg2;
     std::string path;
-    StreamUnwrap &unwrap;
+    //StreamUnwrap &unwrap;
     
     AVFormatContext *output_format_context = NULL;
-    int stream_mapping_size = 0;
-    int *stream_mapping = NULL;
+    std::vector<int> stream_mapping;
 
     //these offsets are used to shift the time when receiving something
     std::vector<long> stream_offset;
@@ -53,5 +55,8 @@ private:
     bool file_opened;
     
     void log_packet(const AVFormatContext *fmt_ctx, const AVPacket &pkt, const std::string &tag);
+
+    void free_context(void);//free the context associated with a file
+    bool alloc_context(void);
 };
 #endif
