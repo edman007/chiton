@@ -89,7 +89,7 @@ void Camera::run(void){
         watchdog = true;
         last_pts = pkt.pts;
         last_stream_index = pkt.stream_index;
-        
+
         //decode the packets
         if (frame){
             if (stream.is_video(pkt)){

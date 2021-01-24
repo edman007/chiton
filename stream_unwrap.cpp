@@ -95,6 +95,15 @@ bool StreamUnwrap::connect(void) {
         return false;
     }
     LINFO("Video Stream has " + std::to_string(input_format_context->nb_streams) + " streams");
+
+#ifdef DEBUG
+    //print all the stream info
+    for (int i = 0; i < input_format_context->nb_streams; i++){
+        LINFO("Stream " + std::to_string(i) + " details, codec " + std::to_string(input_format_context->streams[i]->codecpar->codec_type)+ ":");
+        av_dump_format(input_format_context, i, url.c_str(), 0);
+    }
+#endif
+
     input_format_context->flags |= AVFMT_FLAG_GENPTS;//fix the timestamps...
     
     
@@ -352,15 +361,15 @@ bool StreamUnwrap::get_decoded_frame(int stream, AVFrame *frame){
 }
 
 void StreamUnwrap::timestamp(const AVPacket &packet, struct timeval &time){
-    Util::compute_timestamp(get_start_time(), time, packet.pts, input_format_context->streams[pkt.stream_index]->time_base);
+    Util::compute_timestamp(get_start_time(), time, packet.pts, input_format_context->streams[packet.stream_index]->time_base);
 }
 
 bool StreamUnwrap::is_audio(const AVPacket &packet){
-    return input_format_context->streams[pkt.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO;
+    return input_format_context->streams[packet.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO;
 }
 
 bool StreamUnwrap::is_video(const AVPacket &packet){
-    return input_format_context->streams[pkt.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
+    return input_format_context->streams[packet.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
 }
 
 AVStream *StreamUnwrap::get_stream(const AVPacket &packet){

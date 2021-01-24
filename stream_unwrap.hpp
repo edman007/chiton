@@ -67,8 +67,6 @@ private:
     AVFormatContext *input_format_context;
     std::map<int,AVCodecContext*> decode_ctx;//decode context for each stream
 
-    AVPacket pkt;
-
     unsigned int reorder_len;
     std::list<AVPacket> reorder_queue;
 
