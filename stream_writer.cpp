@@ -168,8 +168,13 @@ void StreamWriter::free_context(void){
         avio_closep(&output_format_context->pb);
     }
     avformat_free_context(output_format_context);
+
     output_format_context = NULL;
     stream_mapping.clear();
+
+    for (auto &encoder :  encode_ctx){
+        avcodec_free_context(&encoder.second);
+    }
 }
 
 bool StreamWriter::alloc_context(void){
@@ -187,38 +192,11 @@ bool StreamWriter::alloc_context(void){
 }
 
 bool StreamWriter::add_stream(const AVStream *in_stream){
-    if (!output_format_context){
-        if (!alloc_context()){
-            return false;
-        }
-    }
-    
-    AVStream *out_stream = NULL;;
-    AVCodecParameters *in_codecpar = in_stream->codecpar;
-    int error = 0;
-
-    if (in_codecpar->codec_type != AVMEDIA_TYPE_AUDIO &&
-        in_codecpar->codec_type != AVMEDIA_TYPE_VIDEO &&
-        in_codecpar->codec_type != AVMEDIA_TYPE_SUBTITLE) {
-        stream_mapping.push_back(-1);
-        return true;
-    }
-
-    stream_mapping.push_back(output_format_context->nb_streams);
-
-    //set the offset to -1, indicating unknown
-    stream_offset.push_back(-1);
-    last_dts.push_back(-1);
-
-    out_stream = avformat_new_stream(output_format_context, NULL);
-    if (!out_stream) {
-        LERROR("Failed allocating output stream");
-        error = AVERROR_UNKNOWN;
-        LERROR("Error occurred: " + std::string(av_err2str(error)));
+    AVStream *out_stream = init_stream(in_stream);
+    if (out_stream == NULL){
         return false;
     }
-
-    error = avcodec_parameters_copy(out_stream->codecpar, in_codecpar);
+    int error = avcodec_parameters_copy(out_stream->codecpar, in_stream->codecpar);
     if (error < 0) {
         LERROR("Failed to copy codec parameters\n");
         LERROR("Error occurred: " + std::string(av_err2str(error)));
@@ -234,4 +212,154 @@ bool StreamWriter::copy_streams(StreamUnwrap &unwrap){
         ret |= add_stream(unwrap.get_format_context()->streams[i]);
     }
     return ret;
+}
+
+bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecContext *dec_ctx){
+    if (dec_ctx == NULL){
+        return false;
+    }
+
+    AVStream *out_stream = init_stream(in_stream);
+    if (out_stream == NULL){
+        return false;
+    }
+
+    AVCodec *encoder = NULL;
+    //Audio
+    if (dec_ctx->codec_type == AVMEDIA_TYPE_AUDIO){
+        if (cfg.get_value("encode-format-audio") == "ac3"){
+            encoder = avcodec_find_encoder(AV_CODEC_ID_AC3);
+        }
+        if (!encoder) {//default or above option(s) failed
+            encoder = avcodec_find_encoder(AV_CODEC_ID_AAC);
+        }
+        if (encoder){
+            encode_ctx[out_stream->index] = avcodec_alloc_context3(encoder);
+            if (!encode_ctx[out_stream->index]){
+                LERROR("Could not alloc audio encoding context");
+                return false;
+            }
+            encode_ctx[out_stream->index]->sample_rate = dec_ctx->sample_rate;
+            encode_ctx[out_stream->index]->channel_layout = dec_ctx->channel_layout;
+            encode_ctx[out_stream->index]->channels = av_get_channel_layout_nb_channels(encode_ctx[out_stream->index]->channel_layout);
+            encode_ctx[out_stream->index]->sample_fmt = encoder->sample_fmts[0];
+            encode_ctx[out_stream->index]->time_base = (AVRational){1, encode_ctx[out_stream->index]->sample_rate};
+        } else {
+            LWARN("Could not find audio encoder");
+            return false;
+        }
+
+    } else if (dec_ctx->codec_type == AVMEDIA_TYPE_VIDEO){//video
+        if (cfg.get_value("encode-format-video") == "hevc"){
+            encoder = avcodec_find_encoder(AV_CODEC_ID_HEVC);
+        }
+        if (!encoder) {//default or above option(s) failed
+            encoder = avcodec_find_encoder(AV_CODEC_ID_H264);
+        }
+        if (encoder){
+            encode_ctx[out_stream->index] = avcodec_alloc_context3(encoder);
+            if (!encode_ctx[out_stream->index]){
+                LERROR("Could not alloc video encoding context");
+                return false;
+            }
+            encode_ctx[out_stream->index]->width = dec_ctx->width;
+            encode_ctx[out_stream->index]->sample_aspect_ratio = dec_ctx->sample_aspect_ratio;
+
+            //take first pixel format
+            if (encoder->pix_fmts) {
+                encode_ctx[out_stream->index]->pix_fmt = encoder->pix_fmts[0];
+            } else {
+                encode_ctx[out_stream->index]->pix_fmt = dec_ctx->pix_fmt;
+            }
+
+            encode_ctx[out_stream->index]->time_base = in_stream->time_base;//av_inv_q(dec_ctx->framerate);
+        } else {
+            LWARN("Could not find video encoder");
+            return false;
+        }
+    } else {
+        return false;//not audio or video, can't encode it
+    }
+
+    
+    if (output_format_context->oformat->flags & AVFMT_GLOBALHEADER){
+        encode_ctx[out_stream->index]->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    }
+
+    int ret = avcodec_open2(encode_ctx[out_stream->index], encoder, NULL);
+    if (ret < 0) {
+        LERROR("Cannot open encoder for stream " + std::to_string(out_stream->index));
+        return false;
+    }
+
+    ret = avcodec_parameters_from_context(out_stream->codecpar, encode_ctx[out_stream->index]);
+    if (ret < 0) {
+        LERROR("Failed to copy encoder parameters to output stream " + std::to_string(out_stream->index));
+        return false;
+    }
+
+    out_stream->time_base = encode_ctx[out_stream->index]->time_base;
+    return true;
+}
+
+bool StreamWriter::write(const AVFrame *frame, const AVStream *in_stream){
+    int ret = 0;
+    AVPacket enc_pkt;
+    av_init_packet(&enc_pkt);
+    enc_pkt.data = NULL;
+    enc_pkt.size = 0;
+    ret = avcodec_send_frame(encode_ctx[stream_mapping[in_stream->index]], frame);
+    if (ret < 0){
+        LWARN("Error during encoding. Error code: " +  std::string(av_err2str(ret)));
+        return false;
+    }
+    while (1) {
+        ret = avcodec_receive_packet(encode_ctx[stream_mapping[in_stream->index]], &enc_pkt);
+        if (ret){
+            break;
+        }
+        enc_pkt.stream_index = in_stream->index;//revert stream index because write will adjust this
+
+        bool write_ret = write(enc_pkt, in_stream);
+        if (!write_ret){
+            return false;
+        }
+    }
+    return true;
+}
+
+AVStream *StreamWriter::init_stream(const AVStream *in_stream){
+    if (!output_format_context){
+        if (!alloc_context()){
+            return NULL;
+        }
+    }
+
+    if (in_stream == NULL){
+        return NULL;
+    }
+
+    AVStream *out_stream = NULL;
+    AVCodecParameters *in_codecpar = in_stream->codecpar;
+
+    if (in_codecpar->codec_type != AVMEDIA_TYPE_AUDIO &&
+        in_codecpar->codec_type != AVMEDIA_TYPE_VIDEO) {
+        stream_mapping[in_stream->index] = -1;
+        return NULL;
+    }
+
+    stream_mapping[in_stream->index] = output_format_context->nb_streams;
+
+    //set the offset to -1, indicating unknown
+    stream_offset.push_back(-1);
+    last_dts.push_back(-1);
+
+    out_stream = avformat_new_stream(output_format_context, NULL);
+    if (!out_stream) {
+        LERROR("Failed allocating output stream");
+        LERROR("Error occurred: " + std::string(av_err2str(AVERROR_UNKNOWN)));
+        stream_mapping[in_stream->index] = -1;
+        return NULL;
+    }
+    return out_stream;
 }

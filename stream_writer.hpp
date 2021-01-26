@@ -33,8 +33,10 @@ public:
     bool open(void);//open the file for writing, returns true on success
     void close(void);
     bool write(const AVPacket &pkt, const AVStream *in_stream);//write the packet to the file
+    bool write(const AVFrame *frame, const AVStream *in_stream);//write the frame to the file (using encoding)
     void change_path(std::string &new_path);
-    bool add_stream(const AVStream *in_stream);//add in_stream to output
+    bool add_stream(const AVStream *in_stream);//add in_stream to output (copy)
+    bool add_encoded_stream(const AVStream *in_stream, const AVCodecContext *dec_ctx);//add in_stream to output, using encoding
     bool copy_streams(StreamUnwrap &unwrap);//copy all streams from unwrap to output
 private:
     Config &cfg;
@@ -44,8 +46,8 @@ private:
     //StreamUnwrap &unwrap;
     
     AVFormatContext *output_format_context = NULL;
-    std::vector<int> stream_mapping;
-
+    std::map<int,int> stream_mapping;
+    std::map<int, AVCodecContext*> encode_ctx;
     //these offsets are used to shift the time when receiving something
     std::vector<long> stream_offset;
     std::vector<long> last_dts;//used to fix non-increasing DTS
@@ -58,5 +60,6 @@ private:
 
     void free_context(void);//free the context associated with a file
     bool alloc_context(void);
+    AVStream *init_stream(const AVStream *in_stream);//Initilizes output stream
 };
 #endif

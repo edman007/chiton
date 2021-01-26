@@ -25,6 +25,7 @@
 #include <iostream>
 #include <mutex>
 #include <time.h>
+#include "config_build.hpp"
 #include "chiton_ffmpeg.hpp"
 
 enum LOG_LEVEL {

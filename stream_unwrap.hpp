@@ -40,7 +40,7 @@ public:
     bool connect(void);//returns true on success
     bool close(void);//close the connection
 
-    AVCodecContext* get_codec_context(void);
+    AVCodecContext* get_codec_context(AVStream *stream);//return the decode context for a given stream, creating the context if required
     AVFormatContext* get_format_context(void);
     unsigned int get_stream_count(void);
     bool get_next_frame(AVPacket &packet);//writes the next frame out to packet, returns true on success, false on error (end of file)
@@ -52,6 +52,9 @@ public:
     bool is_video(const AVPacket &packet);//return true if packet is video packet
     AVStream *get_stream(const AVPacket &packet);//return a pointer to the stream that packet is part of
     AVStream *get_stream(const int id);//return a pointer to the stream given the stream index
+    AVStream *get_audio_stream(void);//return a pointer to the best audio stream, NULL if none exists
+    AVStream *get_video_stream(void);//return a pointer to the best video stream, NULL if none exists
+
     const struct timeval& get_start_time(void);
     
 private:

@@ -62,19 +62,58 @@ void Camera::run(void){
 
     LINFO("Camera " + std::to_string(id) + " connected...");
     std::string out_filename = fm.get_next_path(file_id, id, stream.get_start_time());
-
     StreamWriter out = StreamWriter(cfg);
     out.change_path(out_filename);
-    out.copy_streams(stream);
+
+    //look at the stream and settings and see what needs encoding and decoding
+    bool encode_video = get_vencode();
+    bool encode_audio = get_aencode();
+
+    //motion detection will eventually set these
+    bool decode_video = encode_video;
+    bool decode_audio = encode_audio;
+
+    LDEBUG("Encode/Decode: " + std::to_string(encode_video)+ std::to_string(encode_audio)+ std::to_string(decode_video)+ std::to_string(decode_audio));
+    if (encode_video){
+        AVStream *vstream = stream.get_video_stream();
+        AVCodecContext *vctx = stream.get_codec_context(vstream);
+        if (out.add_encoded_stream(vstream, vctx)){
+            LINFO("Camera " + std::to_string(id) + " transcoding video stream");
+        } else {
+            LERROR("Camera " + std::to_string(id) + " transcoding video stream failed!");
+        }
+    } else {
+        if (out.add_stream(stream.get_video_stream())){
+            LINFO("Camera " + std::to_string(id) + " copying video stream");
+        } else {
+            LERROR("Camera " + std::to_string(id) + " copying video stream failed!");
+        }
+    }
+
+    if (encode_audio){
+        AVStream *astream = stream.get_audio_stream();
+        AVCodecContext *actx = stream.get_codec_context(astream);
+        if (out.add_encoded_stream(astream, actx)){
+            LINFO("Camera " + std::to_string(id) + " transcoding audio stream");
+        } else {
+            LERROR("Camera " + std::to_string(id) + " transcoding audio stream failed!");
+        }
+    } else {
+        if (out.add_stream(stream.get_audio_stream())){
+            LINFO("Camera " + std::to_string(id) + " copying audio stream");
+        } else {
+            LINFO("Camera " + std::to_string(id) + " copying audio stream failed!");
+        }
+    }
+
     out.open();
     
     AVPacket pkt;
     bool valid_keyframe = false;
 
-    bool decode = true;//should we decode frames?
     //allocate a frame (we only allocate when we want to decode, an unallocated frame means we skip decoding)
     AVFrame *frame = NULL;
-    if (decode){
+    if (decode_video || decode_audio){
         frame = av_frame_alloc();
         if (!frame){
             LWARN("Failed to allocate frame");
@@ -90,29 +129,43 @@ void Camera::run(void){
         last_pts = pkt.pts;
         last_stream_index = pkt.stream_index;
 
+        //we skip processing until we get a video keyframe
+        if (valid_keyframe || (pkt.flags & AV_PKT_FLAG_KEY && stream.is_video(pkt))){
+            valid_keyframe = true;
+        } else {
+            LINFO("Dropping packets before first keyframe");
+            stream.unref_frame(pkt);
+            continue;
+        }
+
         //decode the packets
-        if (frame){
-            if (stream.is_video(pkt)){
-                if (stream.decode_packet(pkt)){
-                    while (stream.get_decoded_frame(pkt.stream_index, frame)){
-                        LWARN("Decoded Video Frame");
-                    }
-                }
-            } else if (stream.is_audio(pkt)){
-                if (stream.decode_packet(pkt)){
-                    while (stream.get_decoded_frame(pkt.stream_index, frame)){
-                        LWARN("Decoded Audio Frame");
+        if (frame && stream.is_video(pkt) && decode_video){
+            if (stream.decode_packet(pkt)){
+                while (stream.get_decoded_frame(pkt.stream_index, frame)){
+                    LWARN("Decoded Video Frame");
+                    if (encode_video){
+                        out.write(frame, stream.get_stream(pkt));
                     }
                 }
             }
+        } else if (frame && stream.is_video(pkt) && decode_video){
+                if (stream.decode_packet(pkt)){
+                    while (stream.get_decoded_frame(pkt.stream_index, frame)){
+                        LWARN("Decoded Audio Frame");
+                        if (encode_audio){
+                            out.write(frame, stream.get_stream(pkt));
+                        }
+                    }
+                }
+                if (!encode_audio){
+                    out.write(pkt, stream.get_stream(pkt));//log it
+                }
+        } else {
+            //this packet is being copied...
+            out.write(pkt, stream.get_stream(pkt));//log it
         }
 
         cut_video(pkt, out);
-        if (valid_keyframe || (pkt.flags & AV_PKT_FLAG_KEY && stream.is_video(pkt))){
-            out.write(pkt, stream.get_stream(pkt));//log it
-            valid_keyframe = true;
-            //LINFO("Got Frame " + std::to_string(id));
-        }
         
         stream.unref_frame(pkt);
     }
@@ -178,6 +231,53 @@ void Camera::cut_video(AVPacket &pkt, StreamWriter &out){
             }
             //save out this position
             last_cut = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);
+        }
+    }
+
+}
+
+bool Camera::get_vencode(void){
+    AVStream *video_stream = stream.get_video_stream();
+    if (video_stream == NULL){
+        LERROR("Camera " + std::to_string(id) + " has no usable video, this will probably not work");
+        return false;
+    }
+
+    const std::string &user_opt = cfg.get_value("encode-format-video");
+    if (user_opt == "h264" || user_opt == "hevc"){
+        return true;//these force encoding
+    } else {
+        if (user_opt != "copy"){
+            LWARN("encode-format-video is '" + user_opt + "' which is not valid, on camera " + std::to_string(id));
+        }
+        if (video_stream->codecpar->codec_id == AV_CODEC_ID_H264 || video_stream->codecpar->codec_id == AV_CODEC_ID_HEVC){
+            return false;
+        } else {
+            LINFO("Transcoding audio because camera provided unsupported format");
+            return true;//there is video, but it's not HLS compatible (MJPEG or something?)
+        }
+    }
+}
+
+bool Camera::get_aencode(void){
+    AVStream *audio_stream = stream.get_audio_stream();
+    if (audio_stream == NULL){
+        LINFO("Camera " + std::to_string(id) + " has no usable audio");
+        return false;
+    }
+
+    const std::string &user_opt = cfg.get_value("encode-format-audio");
+    if (user_opt == "aac" || user_opt == "ac3"){
+        return true;//these force encoding
+    } else {
+        if (user_opt != "copy"){
+            LWARN("encode-format-audio is '" + user_opt + "' which is not valid, on camera " + std::to_string(id));
+        }
+        if (audio_stream->codecpar->codec_id == AV_CODEC_ID_AAC || audio_stream->codecpar->codec_id == AV_CODEC_ID_AC3){
+            return false;
+        } else {
+            LINFO("Transcoding audio because camera provided unsupported format");
+            return true;//there is audio, but it's not HLS compatible
         }
     }
 

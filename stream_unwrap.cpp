@@ -51,7 +51,7 @@ bool StreamUnwrap::close(void){
 }
 
 bool StreamUnwrap::connect(void) {
-    LINFO("Reorder queue was first set at " + cfg.get_value_int("reorder-queue-len"));
+    LINFO("Reorder queue was first set at " + cfg.get_value("reorder-queue-len"));
     const std::string& url = cfg.get_value("video-url");
     if (!url.compare("")){
         LERROR( "Camera was not supplied with a URL" + url);
@@ -98,7 +98,7 @@ bool StreamUnwrap::connect(void) {
 
 #ifdef DEBUG
     //print all the stream info
-    for (int i = 0; i < input_format_context->nb_streams; i++){
+    for (unsigned int i = 0; i < input_format_context->nb_streams; i++){
         LINFO("Stream " + std::to_string(i) + " details, codec " + std::to_string(input_format_context->streams[i]->codecpar->codec_type)+ ":");
         av_dump_format(input_format_context, i, url.c_str(), 0);
     }
@@ -378,4 +378,34 @@ AVStream *StreamUnwrap::get_stream(const AVPacket &packet){
 
 AVStream *StreamUnwrap::get_stream(const int id){
     return input_format_context->streams[id];
+}
+
+AVStream *StreamUnwrap::get_audio_stream(void){
+    int best_stream = av_find_best_stream(input_format_context, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
+    if (best_stream == AVERROR_STREAM_NOT_FOUND || best_stream == AVERROR_DECODER_NOT_FOUND){
+        return NULL;
+    }
+    return get_stream(best_stream);
+}
+
+AVStream *StreamUnwrap::get_video_stream(void){
+    int best_stream = av_find_best_stream(input_format_context, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
+    if (best_stream == AVERROR_STREAM_NOT_FOUND || best_stream == AVERROR_DECODER_NOT_FOUND){
+        return NULL;
+    }
+    return get_stream(best_stream);
+}
+
+AVCodecContext* StreamUnwrap::get_codec_context(AVStream *stream){
+    if (!stream){
+        return NULL;
+    }
+
+    if (decode_ctx.find(stream->index) == decode_ctx.end()){
+        if (!alloc_decode_context(stream->index)){
+            return NULL;
+        }
+    }
+
+    return decode_ctx[stream->index];
 }

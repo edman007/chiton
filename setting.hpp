@@ -83,4 +83,8 @@ const std::vector<Setting> setting_options {
  {"max-sync-offset", "5", "Max Sync Offset", "The maximum drift in camera time tolerated before we resync the clock", SETTING_OPTIONAL_CAMERA},
  {"socket-path", DEFAULT_SOCKET_PATH, "Control Socket Path", "The path for the control socket, required to manage the system from the web interface", SETTING_OPTIONAL_SYSTEM},
  {"broken-time-offset", "3600", "Broken Segment Future Offset", "Number of seconds in the future that will cause segments to be deleted", SETTING_OPTIONAL_SYSTEM},
+ {"encode-format-video", "copy", "Video Encoding codec <copy|h264|hevc>", "The codec to save video with, copy will use the camera compressed video if compatible", SETTING_OPTIONAL_CAMERA},
+ {"encode-format-audio", "copy", "Audio Encoding codec <copy|aac|ac3>", "The codec to save video with, copy will use the camera compressed video if compatible", SETTING_OPTIONAL_CAMERA},
+ {"ffmpeg-encode-audio-opt", "", "FFMPEG audio encode options", "Options for the ffmpeg encoder - audio", SETTING_OPTIONAL_CAMERA},
+ {"ffmpeg-encode-video-opt", "", "FFMPEG video encode options", "Options for the ffmpeg encoder - video", SETTING_OPTIONAL_CAMERA},
 };

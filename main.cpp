@@ -248,7 +248,7 @@ void process_args(Config& arg_cfg, int argc, char **argv){
     //any system wide defaults...these are build-time defaults
     arg_cfg.set_value("cfg-path", SYSCFGPATH);
 
-    char options[] = "c:vdqsp:fP:";//update man/chiton.1 if you touch this!
+    char options[] = "c:vVdqsp:fP:";//update man/chiton.1 if you touch this!
     char opt;
     while ((opt = getopt(argc, argv, options)) != -1){
             switch (opt) {
@@ -257,6 +257,9 @@ void process_args(Config& arg_cfg, int argc, char **argv){
                 break;
             case 'v':
                 arg_cfg.set_value("verbosity", "3");
+                break;
+            case 'V':
+                arg_cfg.set_value("verbosity", "4");
                 break;
             case 'd':
                 arg_cfg.set_value("verbosity", "5");
