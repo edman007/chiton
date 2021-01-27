@@ -155,16 +155,22 @@ bool StreamUnwrap::alloc_decode_context(unsigned int stream){
         avcodec_free_context(&avctx);
         return false;
     }
-    
+
+    //connect vaapi
+    if (global_vaapi_ctx){
+        avctx->hw_device_ctx = av_buffer_ref(global_vaapi_ctx);
+        avctx->get_format = get_vaapi_format;
+    }
+
     /* Open the decoder. */
     global_codec_lock.lock();
-    if ((error = avcodec_open2(avctx, input_codec, NULL)) < 0) {
-        global_codec_lock.unlock();
+    error = avcodec_open2(avctx, input_codec, NULL);
+    global_codec_lock.unlock();
+    if (error < 0) {
         LERROR("Could not open input codec (error '" + std::string(av_err2str(error)) + "')");
         avcodec_free_context(&avctx);
         return false;
     }
-    global_codec_lock.unlock();
     
     /* Save the decoder context for easier access later. */
     decode_ctx[stream] = avctx;

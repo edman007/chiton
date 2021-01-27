@@ -287,6 +287,11 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
         encode_ctx[out_stream->index]->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     }
 
+    //connect vaapi
+    if (global_vaapi_ctx){
+        encode_ctx[out_stream->index]->hw_device_ctx = av_buffer_ref(global_vaapi_ctx);
+    }
+
     global_codec_lock.lock();
     int ret = avcodec_open2(encode_ctx[out_stream->index], encoder, NULL);
     global_codec_lock.unlock();

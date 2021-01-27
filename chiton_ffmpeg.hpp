@@ -66,11 +66,17 @@ inline AVRounding operator|(AVRounding a, AVRounding b)
     return static_cast<AVRounding>(static_cast<int>(a) | static_cast<int>(b));
 }
 
-void load_ffmpeg(void);
+void load_ffmpeg(void);//init ffmpeg
+void load_vaapi(void);//init global vaapi context
+void free_vaapi(void);//free the vaapi context
+enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);//global VAAPI format selector
 
 //for passing image coordinates
 struct rect { int x, y, w, h; };
 
 //used to lock non-thread safe libav* functions
 extern std::mutex global_codec_lock;
+
+//our HW device
+extern AVBufferRef *global_vaapi_ctx;
 #endif

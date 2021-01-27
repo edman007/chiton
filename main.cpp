@@ -106,7 +106,7 @@ void run(Config& args){
     
     //load system config
     load_sys_cfg(cfg);
-
+    load_vaapi();
 
     FileManager fm(db, cfg);
     Export expt(db, cfg, fm);
@@ -179,6 +179,7 @@ void run(Config& args){
         cams.pop_back();
     }
 
+    free_vaapi();
 
 }
 

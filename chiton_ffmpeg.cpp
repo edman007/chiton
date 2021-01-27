@@ -24,6 +24,8 @@
 #include <cstdio>
 
 std::mutex global_codec_lock;
+AVBufferRef *global_vaapi_ctx = NULL;
+
 void ffmpeg_log_callback(void * avcl, int level, const char * fmt, va_list vl){
     //compute the level first...
     enum LOG_LEVEL chiton_level;
@@ -61,4 +63,35 @@ void load_ffmpeg(void){
     av_log_set_level(AV_LOG_WARNING);
 #endif
     av_log_set_callback(ffmpeg_log_callback);
+
+    //init vaapi
+    global_vaapi_ctx = NULL;
+}
+
+void load_vaapi(void){
+    if (global_vaapi_ctx){
+        return;//don't double alloc it
+    }
+
+    //FIXME: these NULLs should be user options
+    int ret = av_hwdevice_ctx_create(&global_vaapi_ctx, AV_HWDEVICE_TYPE_VAAPI, NULL, NULL, 0);
+    if (ret < 0) {
+        global_vaapi_ctx = NULL;
+        return;
+    }
+}
+
+void free_vaapi(void){
+    av_buffer_unref(&global_vaapi_ctx);
+}
+
+//ripped from vaapi_transcode.c ffmpeg demo
+enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts) {
+    const enum AVPixelFormat *p;
+    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++){
+        if (*p == AV_PIX_FMT_VAAPI){
+            return *p;
+        }
+    }
+    return AV_PIX_FMT_NONE;//should this be pix_fmts?
 }
