@@ -262,6 +262,7 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
                 LERROR("Could not alloc video encoding context");
                 return false;
             }
+            encode_ctx[out_stream->index]->height = dec_ctx->height;
             encode_ctx[out_stream->index]->width = dec_ctx->width;
             encode_ctx[out_stream->index]->sample_aspect_ratio = dec_ctx->sample_aspect_ratio;
 
@@ -286,7 +287,9 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
         encode_ctx[out_stream->index]->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     }
 
+    global_codec_lock.lock();
     int ret = avcodec_open2(encode_ctx[out_stream->index], encoder, NULL);
+    global_codec_lock.unlock();
     if (ret < 0) {
         LERROR("Cannot open encoder for stream " + std::to_string(out_stream->index));
         return false;
