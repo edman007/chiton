@@ -197,7 +197,7 @@ $(BREEZE_4X_PNG): $(BREEZE_SVG)
 	$(CONVERT) -background none -density 288 $(word $(call getpos,$@,$(BREEZE_4X_PNG)),$(BREEZE_SVG))  $@
 
 
-external/npm/node_modules:
+external/npm/node_modules $(HLS_FILES) external/npm/node_modules/pinch-zoom-element/dist/pinch-zoom-min.js &:
 	$(MKDIR_P) $(abs_builddir)/external/npm/
 	(cd external/npm/ && npm install --only-prod hls.js 'github:edman007/pinch-zoom#494b4a2a26ab6307e9f70f2f9a3d9a82844f2709' )
 
@@ -207,7 +207,7 @@ $(NPM_LICENSE) external/npm/debian.license.in  &: external/npm/create-license.sh
 	license-checker --relativeLicensePath --csv --customPath license-format.json --out $(abs_builddir)/external/npm/license-meta.csv && \
 	cd $(abs_builddir)/external/npm/ && \
 	$(abs_srcdir)/external/npm/create-license.sh $(abs_srcdir) )
-$(HLS_FILES) external/npm/node_modules/pinch-zoom-element/dist/pinch-zoom-min.js &: | external/npm/node_modules
+
 
 LICENSE.breeze-icons: $(BREEZE_2X_PNG) $(BREEZE_4X_PNG)
 	cp $(top_srcdir)/external/breeze-icons.git/COPYING.LIB LICENSE.breeze-icons
