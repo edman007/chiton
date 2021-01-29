@@ -87,4 +87,7 @@ const std::vector<Setting> setting_options {
  {"encode-format-audio", "copy", "Audio Encoding codec <copy|aac|ac3>", "The codec to save video with, copy will use the camera compressed video if compatible", SETTING_OPTIONAL_CAMERA},
  {"ffmpeg-encode-audio-opt", "", "FFMPEG audio encode options", "Options for the ffmpeg encoder - audio", SETTING_OPTIONAL_CAMERA},
  {"ffmpeg-encode-video-opt", "", "FFMPEG video encode options", "Options for the ffmpeg encoder - video", SETTING_OPTIONAL_CAMERA},
+ {"ffmpeg-decode-audio-opt", "", "FFMPEG audio decode options", "Options for the ffmpeg decoder - audio", SETTING_OPTIONAL_CAMERA},
+ {"ffmpeg-decode-video-opt", "", "FFMPEG video decode options", "Options for the ffmpeg decoder - video", SETTING_OPTIONAL_CAMERA},
+ {"output-extension", ".mp4", "Output Extension <.ts|.mp4>", "HLS Output Format, .ts for mpeg-ts files, .mp4 for fragmented mp4", SETTING_OPTIONAL_CAMERA},
 };

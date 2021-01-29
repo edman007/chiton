@@ -35,6 +35,13 @@ std::atomic<long> FileManager::reserved_bytes(0);
 FileManager::FileManager(Database &db, Config &cfg) : db(db), cfg(cfg) {
     bytes_per_segment = 1024*1024;//1M is our default guess
     min_free_bytes = -1;
+
+    //we correct this if it's wrong now, so we can assume it's always right
+    const std::string &ext = cfg.get_value("output-extension");
+    if (ext != ".ts" && ext != ".mp4"){
+        LWARN("output-extension MUST be .ts or .mp4, using .mp4");
+        cfg.set_value("output-extension", ".mp4");
+    }
 }
 
 std::string FileManager::get_next_path(long int &file_id, int camera, const struct timeval &start_time){
@@ -44,12 +51,14 @@ std::string FileManager::get_next_path(long int &file_id, int camera, const stru
     //make sure dir exists
     std::string path = base + dir;
     mkdir_recursive(path);
-    
-    std::string sql = "INSERT INTO videos (path, starttime, camera) VALUES ('" + db.escape(dir + "/") + "'," + ptime + ", " + std::to_string(camera) + " )";
+    const std::string &ext = cfg.get_value("output-extension");
+
+    std::string sql = "INSERT INTO videos (path, starttime, camera, extension) VALUES ('" + db.escape(dir + "/") + "'," + ptime + ", " + std::to_string(camera) + ",'"
+        + db.escape(ext) + "' )";
     DatabaseResult* res = db.query(sql, NULL, &file_id);
     delete res;
     
-    return path + "/" + std::to_string(file_id) + FILE_EXT;
+    return path + "/" + std::to_string(file_id) + ext;
 }
 
 std::string FileManager::get_export_path(long int export_id, int camera, const struct timeval &start_time){
@@ -67,9 +76,9 @@ std::string FileManager::get_export_path(long int export_id, int camera, const s
     return path + "/" + std::to_string(export_id) + EXPORT_EXT;
 }
 //returns the path for the file referenced as id
-std::string FileManager::get_path(long int id, const std::string &db_path){
+std::string FileManager::get_path(long int id, const std::string &db_path, const std::string &ext){
     std::string path;
-    path = db_path + std::to_string(id) + FILE_EXT;
+    path = db_path + std::to_string(id) + ext;
     return get_output_dir() + path;
 }
 
@@ -104,7 +113,7 @@ void FileManager::clean_disk(void){
 
         //estimate the number of segments, add 10
         long segment_count = target_clear/bytes_per_segment + 10;
-        std::string sql = "SELECT v.id, v.path, c.value, v.starttime FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' "
+        std::string sql = "SELECT v.id, v.path, c.value, v.starttime, v.extension FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' "
             " WHERE v.locked = 0 ORDER BY starttime ASC LIMIT " + std::to_string(segment_count);
 
         segment_count = 0;
@@ -115,7 +124,7 @@ void FileManager::clean_disk(void){
             segment_count++;
             long rm_size = 0;//size of file deleted
             const std::string &id = res->get_field(0);
-            rm_size = rm_segment(res->get_field(2), res->get_field(1), id);
+            rm_size = rm_segment(res->get_field(2), res->get_field(1), id, res->get_field(4));
             if (rm_size > 0){
                 target_clear -= rm_size;
                 actual_segment_bytes += rm_size;
@@ -153,11 +162,11 @@ void FileManager::clean_disk(void){
     cleanup_mtx.unlock();
 }
 
-long FileManager::rm_segment(const std::string &base, const std::string &path, const std::string &id){
+long FileManager::rm_segment(const std::string &base, const std::string &path, const std::string &id, const std::string &ext){
     long filesize = 0;
     std::string target_file = path;
 
-    target_file += id + FILE_EXT;
+    target_file += id + ext;
     filesize = rm_file(target_file, base);
     return filesize;
 }
@@ -174,7 +183,7 @@ void FileManager::delete_broken_segments(void){
     }
     std::string future_time = std::to_string(Util::pack_time(curtime));
 
-    std::string sql = "SELECT v.id, v.path, c.value FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' WHERE "
+    std::string sql = "SELECT v.id, v.path, c.value, v.extension FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' WHERE "
         "v.endtime < v.starttime OR v.starttime > " + future_time;
     DatabaseResult* res = db.query(sql);
     if (res && res->num_rows() > 0){
@@ -182,7 +191,7 @@ void FileManager::delete_broken_segments(void){
     }
     while (res && res->next_row()){
         const std::string &id = res->get_field(0);
-        rm_segment(res->get_field(2), res->get_field(1), id);
+        rm_segment(res->get_field(2), res->get_field(1), id, res->get_field(3));
         //delete it from the database
         sql = "DELETE FROM videos WHERE id = " + id;
         DatabaseResult* del_res = db.query(sql);

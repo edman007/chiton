@@ -47,7 +47,7 @@ public:
     bool get_image_path(std::string &path, std::string &name, const std::string &extension, const struct timeval *start_time = NULL);
 
     //returns the real for the segments referenced as id and path name from the database
-    std::string get_path(long int file_id, const std::string &db_path);
+    std::string get_path(long int file_id, const std::string &db_path, const std::string &ext);
 
     //update metadata about the file
     bool update_file_metadata(long int file_id, struct timeval &end_time);
@@ -81,7 +81,7 @@ private:
     long get_target_free_bytes(void);//return the bytes that must be deleted
     long get_free_bytes(void);//return the free bytes on the disk
     long get_min_free_bytes(void);//return the miniumn free bytes on the disk
-    long rm_segment(const std::string &base, const std::string &path, const std::string &id);//deletes a target segment, returns number of bytes removed
+    long rm_segment(const std::string &base, const std::string &path, const std::string &id, const std::string &ext);//deletes a target segment, returns number of bytes removed
     long rm(const std::string &path);//delete a specific file and parent directories, returns negative if there was an error
     std::string get_date_path(int camera, const struct timeval &start_time);//returns a path in the form of <camera>/<YYYY>/<MM>/<DD>/<HH>
     std::string get_output_dir(void);//returns the output-dir cfg setting, with some fixups/sanity checks ensuring it always ends in a "/"

@@ -96,7 +96,7 @@ void Export::run_job(void){
     update_progress();
 
     //query all segments we need
-    std::string sql = "SELECT id, path, endtime FROM videos WHERE camera = " + std::to_string(camera) + " AND ( "
+    std::string sql = "SELECT id, path, endtime, extension FROM videos WHERE camera = " + std::to_string(camera) + " AND ( "
         "( endtime >= " + std::to_string(starttime) + "  AND endtime <= " + std::to_string(endtime) + "  ) "
         " OR (starttime >= " + std::to_string(starttime) + " AND starttime <= " + std::to_string(endtime) + " )) "
         " ORDER BY starttime ASC ";
@@ -116,7 +116,7 @@ void Export::run_job(void){
     long reserved_bytes = 0;
     bool output_opened = false;
     while (res->next_row()){
-        std::string segment = fm.get_path(res->get_field_long(0), res->get_field(1));
+        std::string segment = fm.get_path(res->get_field_long(0), res->get_field(1), res->get_field(3));
         LDEBUG("Exporting " + segment);
         //we control the input stream by replacing the video-url with the segment
         camera_cfg.set_value("video-url", segment);

@@ -59,7 +59,7 @@ $yesterday = clone $cur_time;
 $yesterday->sub(new DateInterval('P1D'));
 //$yesterday->setTime(0,0);
 //query the most recent video from the DB
-$sql = 'SELECT id, path, starttime, endtime FROM videos WHERE camera = ' . ((int)$_GET['id']).' AND endtime IS NOT NULL AND starttime > ' . $packed_start;
+$sql = 'SELECT id, path, starttime, endtime, extension FROM videos WHERE camera = ' . ((int)$_GET['id']).' AND endtime IS NOT NULL AND starttime > ' . $packed_start;
 if ($start_time->getTimestamp() < $yesterday->getTimestamp()){
     $endtime = new DateTime('@'.($start_time->getTimestamp() + 3600*24));
     $packed_endtime = Datetime_to_dbtime($endtime);
@@ -87,7 +87,7 @@ if ($res){
         if ($len == 0){//we have seen some with a len of zero...is this an ok workaround?
             $len = 0.001;
         }
-        $url = 'vids/' . $row['path'] . $row['id'] . '.ts';
+        $url = 'vids/' . $row['path'] . $row['id'] . $row['extension'];
         $name = "Camera $camera: " . dbtime_to_DateTime($row['starttime'])->format('r');
         echo "#EXTINF:$len,$name\n";
         echo $url . "\n";

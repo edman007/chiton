@@ -47,6 +47,7 @@ bool DatabaseManager::initilize_db(){
         "endtime bigint(20) DEFAULT NULL, "
         "camera int(11) NOT NULL, "
         "`locked` tinyint(1) NOT NULL DEFAULT 0, "
+        "`extension` ENUM('.ts','.mp4') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '.ts', "
         "PRIMARY KEY (id,camera,starttime), "
         "KEY endtime (endtime), "
         "KEY starttime (starttime), "
@@ -259,6 +260,8 @@ bool DatabaseManager::upgrade_from_1_1(void){
         "PRIMARY KEY (`id`), "
         "KEY starttime (starttime) "
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    const std::string video_alter = "ALTER TABLE `videos` ADD `extension` ENUM('.ts','.mp4') "
+        "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '.ts' AFTER `locked`";
     bool ret = true;
     DatabaseResult *res = db.query(images_tbl);
     if (res){
@@ -266,6 +269,17 @@ bool DatabaseManager::upgrade_from_1_1(void){
     } else {
         LFATAL("Could not create images table");
         ret = false;
+    }
+
+    //update the video table
+    if (ret){
+        res = db.query(video_alter);
+        if (res){
+            delete res;
+        } else {
+            LFATAL("Could not alter video table");
+            ret = false;
+        }
     }
 
     if (ret){
