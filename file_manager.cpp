@@ -120,9 +120,8 @@ void FileManager::clean_disk(void){
 
         //estimate the number of segments, add 10
         long segment_count = target_clear/bytes_per_segment + 10;
-        //FIXME: This does not work for our current files, need to ensure that no segment is locked in the file being deleted
-        std::string sql = "SELECT v.id, v.path, c.value, v.starttime, v.extension FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' "
-            " WHERE v.locked = 0 ORDER BY starttime ASC LIMIT " + std::to_string(segment_count);
+        std::string sql = "SELECT v.camera, v.path, c.value, MIN(v.starttime), v.extension, v.name FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' "
+            " GROUP BY v.name, v.camera HAVING MAX(v.locked) = 0  ORDER BY starttime ASC LIMIT " + std::to_string(segment_count);
 
         segment_count = 0;
         long actual_segment_bytes = 0;
@@ -131,14 +130,14 @@ void FileManager::clean_disk(void){
         while (target_clear > 0 && res && res->next_row()){
             segment_count++;
             long rm_size = 0;//size of file deleted
-            const std::string &id = res->get_field(0);
-            rm_size = rm_segment(res->get_field(2), res->get_field(1), id, res->get_field(4));
+            const std::string &name = res->get_field(5);
+            rm_size = rm_segment(res->get_field(2), res->get_field(1), name, res->get_field(4));
             if (rm_size > 0){
                 target_clear -= rm_size;
                 actual_segment_bytes += rm_size;
             }
             //delete it from the database
-            sql = "DELETE FROM videos WHERE id = " + id;
+            sql = "DELETE FROM videos WHERE name = " + res->get_field(5) + " AND camera = " + res->get_field(0);
             DatabaseResult* del_res = db.query(sql);
             delete del_res;
 
