@@ -36,16 +36,24 @@ void ffmpeg_log_callback(void * avcl, int level, const char * fmt, va_list vl){
     } else if (level <= AV_LOG_WARNING){
         chiton_level = CH_LOG_INFO;
     } else if (level <= AV_LOG_INFO){
+        chiton_level = CH_LOG_INFO;
+    } else if (level <= AV_LOG_VERBOSE){
         chiton_level = CH_LOG_DEBUG;
-    //}else if (level <= AV_LOG_VERBOSE){//we do not have a "verbose"
+    /* Uncomment to see these messages, they do really cause too much output */
+    /*
+    } else if (level <= AV_LOG_DEBUG){
+        chiton_level = CH_LOG_DEBUG;
+    } else if (level <= AV_LOG_TRACE){
+        chiton_level = CH_LOG_DEBUG;
+    */
     } else {
-        chiton_level = CH_LOG_DEBUG;
+        return;//higher level stuff is ignored!
     }
 
     //format the message
     char buf[1024];
     int len = std::vsnprintf(buf, sizeof(buf), fmt, vl);
-    if (len > 1){
+    if (len >= 1){
         //strip out the \n...
         if (buf[len - 1] == '\n'){
             buf[len - 1] = '\0';
