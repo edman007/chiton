@@ -190,17 +190,17 @@ void FileManager::delete_broken_segments(void){
     }
     std::string future_time = std::to_string(Util::pack_time(curtime));
 
-    std::string sql = "SELECT v.id, v.path, c.value, v.extension FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' WHERE "
+    std::string sql = "SELECT v.name, v.path, c.value, v.extension, v.camera FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' WHERE "
         "v.endtime < v.starttime OR v.starttime > " + future_time;
     DatabaseResult* res = db.query(sql);
     if (res && res->num_rows() > 0){
         LWARN("Found " + std::to_string(res->num_rows()) + " broken  segments, deleting them");
     }
     while (res && res->next_row()){
-        const std::string &id = res->get_field(0);
-        rm_segment(res->get_field(2), res->get_field(1), id, res->get_field(3));
+        const std::string &name = res->get_field(0);
+        rm_segment(res->get_field(2), res->get_field(1), name, res->get_field(3));
         //delete it from the database
-        sql = "DELETE FROM videos WHERE id = " + id;
+        sql = "DELETE FROM videos WHERE name = " + name + " AND camera = " + res->get_field(4);
         DatabaseResult* del_res = db.query(sql);
         delete del_res;
     }
