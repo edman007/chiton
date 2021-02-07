@@ -59,7 +59,8 @@ $yesterday = clone $cur_time;
 $yesterday->sub(new DateInterval('P1D'));
 //$yesterday->setTime(0,0);
 //query the most recent video from the DB
-$sql = 'SELECT id, path, starttime, endtime, extension FROM videos WHERE camera = ' . ((int)$_GET['id']).' AND endtime IS NOT NULL AND starttime > ' . $packed_start;
+$sql = 'SELECT path, starttime, endtime, extension, name, init_byte, start_byte, end_byte FROM videos '.
+     'WHERE camera = ' . ((int)$_GET['id']).' AND endtime IS NOT NULL AND starttime > ' . $packed_start;
 if ($start_time->getTimestamp() < $yesterday->getTimestamp()){
     $endtime = new DateTime('@'.($start_time->getTimestamp() + 3600*24));
     $packed_endtime = Datetime_to_dbtime($endtime);
@@ -68,28 +69,49 @@ if ($start_time->getTimestamp() < $yesterday->getTimestamp()){
 $sql .= ' ORDER BY starttime ASC';
 $res = $db->query($sql);
 if ($res){
+    $hls_version = 3;
+    $using_mp4 = false;
+    if ($camera_cfg->get_value('output-extension') == '.mp4'){
+        $hls_version = 7;
+        $using_mp4 = true;
+    }
+
     //add the header
     echo "#EXTM3U\n";
-    echo "#EXT-X-VERSION:3\n";
+    echo "#EXT-X-VERSION:$hls_version\n";
     echo '#EXT-X-PROGRAM-DATE-TIME:' . $start_time->format('c') . "\n";
     echo "#EXT-X-PLAYLIST-TYPE:EVENT\n";
     echo "#EXT-X-TARGETDURATION:" . (2*$camera_cfg->get_value('seconds-per-file')). "\n";
-    
+    echo "EXT-X-INDEPENDENT-SEGMENTS\n";
+
     //master playlist requirements
     //EXT-X-STREAM-INF - CODECS and RESOLUTION
     $last_endtime = 0;
+    $last_name = 0;
     while ($row = $res->fetch_assoc()){
-        if ($last_endtime != 0 && $row['starttime'] != $last_endtime){
-            echo "#EXT-X-DISCONTINUITY\n";
+        $url = 'vids/' . $row['path'] . $row['name'] . $row['extension'];
+        if ($row['starttime'] != $last_endtime){
+            if ($last_endtime != 0){
+                echo "#EXT-X-DISCONTINUITY\n";
+            }
+            if ($using_mp4 && $last_name != $row['name'] && $row['extension'] == '.mp4'){
+                //we just try the first one as our init files
+                echo "#EXT-X-MAP:URI=\"$url\",BYTERANGE=\"${row['init_byte']}@0\"\n";
+                $last_name = $row['name'];
+            }
         }
         $last_endtime = $row['endtime'];
         $len = ($row['endtime'] - $row['starttime'])/1000;
         if ($len == 0){//we have seen some with a len of zero...is this an ok workaround?
             $len = 0.001;
         }
-        $url = 'vids/' . $row['path'] . $row['id'] . $row['extension'];
+
         $name = "Camera $camera: " . dbtime_to_DateTime($row['starttime'])->format('r');
         echo "#EXTINF:$len,$name\n";
+        if ($using_mp4 && $row['extension'] == '.mp4'){
+            $seg_len = $row['end_byte'] - $row['start_byte'];
+            echo "#EXT-X-BYTERANGE:{$seg_len}@{$row['start_byte']}\n";
+        }
         echo $url . "\n";
     }
     

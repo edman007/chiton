@@ -172,3 +172,18 @@ void Util::set_low_priority(void){
     }
 #endif
 }
+
+AVDictionary* Util::get_dict_options(const std::string &fmt){
+    AVDictionary *dict = NULL;
+    if (fmt == ""){
+        return NULL;
+    }
+    int error;
+    if ((error = av_dict_parse_string(&dict, fmt.c_str(), "=", ":", 0))){
+        LERROR("Error Parsing ffmpeg options (" + fmt + "): " + std::string(av_err2str(error)));
+        av_dict_free(&dict);
+        return NULL;
+    }
+    return dict;
+
+}

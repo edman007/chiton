@@ -31,19 +31,22 @@ public:
     ~StreamWriter();
     
     bool open(void);//open the file for writing, returns true on success
-    void close(void);
+    long long close(void);//close the file and return the filesize
     bool write(const AVPacket &pkt, const AVStream *in_stream);//write the packet to the file
     bool write(const AVFrame *frame, const AVStream *in_stream);//write the frame to the file (using encoding)
-    void change_path(std::string &new_path);
+    long long change_path(const std::string &new_path = "");//returns file position of the end of the file
     bool add_stream(const AVStream *in_stream);//add in_stream to output (copy)
     bool add_encoded_stream(const AVStream *in_stream, const AVCodecContext *dec_ctx);//add in_stream to output, using encoding
     bool copy_streams(StreamUnwrap &unwrap);//copy all streams from unwrap to output
+    bool is_fragmented(void);//return true if this is a file format that supports fragmenting
+    long long get_init_len(void);//return the init length, -1 if not valid
 private:
     Config &cfg;
     Config *cfg1;
     Config *cfg2;
     std::string path;
-    //StreamUnwrap &unwrap;
+    enum {SEGMENT_MPGTS, SEGMENT_FMP4} segment_mode;
+    long long init_len;
     
     AVFormatContext *output_format_context = NULL;
     std::map<int,int> stream_mapping;
@@ -61,5 +64,6 @@ private:
     void free_context(void);//free the context associated with a file
     bool alloc_context(void);
     AVStream *init_stream(const AVStream *in_stream);//Initilizes output stream
+    long long frag_stream(void);//creates a fragment at the current location and returns the position
 };
 #endif

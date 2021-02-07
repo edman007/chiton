@@ -60,7 +60,6 @@ public:
 private:
     const std::string url;//the URL of the camera we are connecting to
     Config& cfg;
-    AVDictionary *get_options(void);
     void dump_options(AVDictionary* dict);
     bool charge_reorder_queue(void);//loads frames until the reorder queue is full
     void sort_reorder_queue(void);//ensures the last frame is in the correct position in the queue, sorting it if required

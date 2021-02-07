@@ -60,15 +60,15 @@ bool StreamUnwrap::connect(void) {
 
 
     int error;
-    AVDictionary *opts = get_options();
+    AVDictionary *opts = Util::get_dict_options(cfg.get_value("ffmpeg-demux-options"));
 #ifdef DEBUG
-    /* Open the input file to read from it. */
     if (av_dict_count(opts)){
         LWARN("Setting Options:");
         dump_options(opts);
     }
 #endif
 
+    /* Open the input file to read from it. */
     if ((error = avformat_open_input(&input_format_context, url.c_str(), NULL, &opts)) < 0) {
         LERROR( "Could not open camera url '" + url + "' (error '" + std::string(av_err2str(error)) +")");
         input_format_context = NULL;
@@ -193,21 +193,6 @@ bool StreamUnwrap::get_next_frame(AVPacket &packet){
 
 void StreamUnwrap::unref_frame(AVPacket &packet){
     av_packet_unref(&packet);
-}
-
-
-AVDictionary *StreamUnwrap::get_options(void){
-    AVDictionary *dict = NULL;
-    if (cfg.get_value("ffmpeg-demux-options") == ""){
-        return NULL;
-    }
-    int error;
-    if ((error = av_dict_parse_string(&dict, cfg.get_value("ffmpeg-demux-options").c_str(), "=", ":", 0))){
-        LERROR("Error Parsing input ffmpeg options: " + std::string(av_err2str(error)));
-        av_dict_free(&dict);
-        return NULL;
-    }
-    return dict;
 }
 
 void StreamUnwrap::dump_options(AVDictionary* dict){

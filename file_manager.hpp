@@ -34,8 +34,8 @@ class FileManager {
 public:
     FileManager(Database &db, Config &cfg);
 
-    //returns a valid path starting at start_time, writes out it's ID to int &file_id
-    std::string get_next_path(long int &file_id, int camera, const struct timeval &start_time);
+    //returns a valid path starting at start_time, writes out it's ID to int &file_id, if extend_file is true, the previous filename is used
+    std::string get_next_path(long int &file_id, int camera, const struct timeval &start_time, bool extend_file = true);
 
     //returns a path to export a file to, updating the database to include the path
     std::string get_export_path(long int export_id, int camera, const struct timeval &start_time);
@@ -50,7 +50,7 @@ public:
     std::string get_path(long int file_id, const std::string &db_path, const std::string &ext);
 
     //update metadata about the file
-    bool update_file_metadata(long int file_id, struct timeval &end_time);
+    bool update_file_metadata(long int file_id, struct timeval &end_time, long long end_byte, long long start_byte = 0, long long init_len = -1);
 
     void clean_disk(void);//clean up the disk by deleting files
 
@@ -70,6 +70,7 @@ private:
     Config &cfg;
     long bytes_per_segment;//estimate of segment size for our database to optimize our cleanup calls
     long min_free_bytes;//the config setting min-free-space as computed for the output-dir
+    std::string last_filename;
 
     //global variables for cleanup and space reseverations
     static std::mutex cleanup_mtx;//lock when cleanup is in progress, locks just the clean_disk()

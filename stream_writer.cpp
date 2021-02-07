@@ -26,6 +26,12 @@
 
 StreamWriter::StreamWriter(Config& cfg) : cfg(cfg) {
     file_opened = false;
+    init_len = -1;
+    if (cfg.get_value("output-extension") == ".mp4"){
+        segment_mode = SEGMENT_FMP4;
+    } else {
+        segment_mode = SEGMENT_MPGTS;
+    }
 }
 
 bool StreamWriter::open(void){
@@ -37,11 +43,13 @@ bool StreamWriter::open(void){
     AVOutputFormat *ofmt = output_format_context->oformat;
     stream_offset.clear();
     last_dts.clear();
+
     
     av_dump_format(output_format_context, 0, path.c_str(), 1);
-    
+
     if (!(ofmt->flags & AVFMT_NOFILE)) {
         error = avio_open(&output_format_context->pb, path.c_str(), AVIO_FLAG_WRITE);
+
         if (error < 0) {
             LERROR("Could not open output file '" + path + "'");
             LERROR("Error occurred: " + std::string(av_err2str(error)));
@@ -49,12 +57,23 @@ bool StreamWriter::open(void){
         }
     }
 
-    error = avformat_write_header(output_format_context, NULL);
+    //apply the mux options
+    AVDictionary *opts = Util::get_dict_options(cfg.get_value("ffmpeg-mux-options"));
+
+    if (segment_mode == SEGMENT_FMP4){
+        //we need to make mp4s fragmented
+        LWARN("Setting MOV FLAGS");
+        av_dict_set(&opts, "movflags", "+frag_custom+dash+delay_moov+empty_moov", 0);//empty_moov+separate_moof"
+    }
+
+    error = avformat_write_header(output_format_context, &opts);
+    av_dict_free(&opts);
     if (error < 0) {
         LERROR("Error occurred when opening output file");
         LERROR("Error occurred: " + std::string(av_err2str(error)));
         return false;
     }
+    init_len = frag_stream();
     file_opened = true;
     return true;
 
@@ -62,15 +81,13 @@ bool StreamWriter::open(void){
 
 
 StreamWriter::~StreamWriter(){
-    if (file_opened){
-        close();
-    }
     free_context();
 }
 
-void StreamWriter::close(void){
+long long StreamWriter::close(void){
     if (!file_opened){
         LWARN("Attempted to close a output stream that wasn't open");
+        return 0;
     }
     //flush it...
     if (0 > av_interleaved_write_frame(output_format_context, NULL)){
@@ -78,7 +95,9 @@ void StreamWriter::close(void){
     }
 
     av_write_trailer(output_format_context);
+    avio_flush(output_format_context->pb);
     file_opened = false;
+    return avio_tell(output_format_context->pb);
 }
 
 bool StreamWriter::write(const AVPacket &packet, const AVStream *in_stream){
@@ -156,16 +175,25 @@ void StreamWriter::log_packet(const AVFormatContext *fmt_ctx, const AVPacket &pk
     );
 }
 
-void StreamWriter::change_path(std::string &new_path){
-    if (!new_path.empty()){
+long long StreamWriter::change_path(const std::string &new_path /* = "" */){
+    if ((path == new_path || new_path.empty()) && segment_mode == SEGMENT_FMP4){
+        return frag_stream();
+    } else if (!new_path.empty()){
         path = new_path;
+        long long pos = -1;
+        if (file_opened){
+            pos = close();
+        }
+        //instead of closing, we just copy the streams
         free_context();
+        return pos;
     }
+    return -1;
 }
 
 void StreamWriter::free_context(void){
-    if (output_format_context && !(output_format_context->flags & AVFMT_NOFILE)){
-        avio_closep(&output_format_context->pb);
+    if (file_opened){
+        close();
     }
     avformat_free_context(output_format_context);
 
@@ -370,4 +398,27 @@ AVStream *StreamWriter::init_stream(const AVStream *in_stream){
         return NULL;
     }
     return out_stream;
+}
+
+bool StreamWriter::is_fragmented(void){
+    return segment_mode == SEGMENT_FMP4;
+}
+
+long long StreamWriter::frag_stream(void){
+    if (!is_fragmented()){
+        return -1;
+    }
+    LWARN("Flushing");
+    //flush the buffers
+    av_interleaved_write_frame(output_format_context, NULL);
+    av_write_frame(output_format_context, NULL);
+    avio_flush(output_format_context->pb);
+    long long pos = avio_tell(output_format_context->pb);
+    LWARN("Offset is " + std::to_string(pos));
+    return pos;
+
+}
+
+long long StreamWriter::get_init_len(void){
+    return init_len;
 }

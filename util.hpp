@@ -85,6 +85,8 @@ public:
     static bool disable_syslog(void);
 
     static void set_low_priority(void);//reduce the current thread to low priority
+
+    static AVDictionary* get_dict_options(const std::string &fmt);//convert fmt into an AVDict, caller must free
 private:
     static std::mutex lock;//lock for actually printing messages
     static unsigned int log_level;//the output logging level

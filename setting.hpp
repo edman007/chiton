@@ -74,9 +74,11 @@ const std::vector<Setting> setting_options {
  {"camera-id", "", "Camera ID", "Used internally to track what is the active camera", SETTING_READ_ONLY},
  {"output-dir", "", "Output Directory", "The location to store videos", SETTING_REQUIRED_SYSTEM},
  {"ffmpeg-demux-options", "", "FFMPEG demux options", "Options for the ffmpeg demuxer", SETTING_OPTIONAL_CAMERA},
+ {"ffmpeg-mux-options", "", "FFMPEG mux options", "Options for the ffmpeg muxer", SETTING_OPTIONAL_CAMERA},
  {"reorder-queue-len", "0", "Reorder queue length", "How many packets to cache to properly resort frames "
          "(required for some cameras that give us out of order data even on TCP)", SETTING_OPTIONAL_CAMERA},
- {"seconds-per-file", "6", "Seconds per file", "How long a file should be, files are split at the next opprotunity after this, in seconds, Apple recommends 6", SETTING_OPTIONAL_SYSTEM},
+ {"seconds-per-file", "360", "Seconds per file", "How long a file should be, files are split at the next opprotunity after this, in seconds", SETTING_OPTIONAL_SYSTEM},
+ {"seconds-per-segment", "6", "Seconds per segment", "How long a segment should be, files are segmented at the next opprotunity after this, in seconds, Apple recommends 6", SETTING_OPTIONAL_SYSTEM},
  {"min-free-space", "1073741824", "min-free-space", "How many bytes of free space triggers a cleanup, if it contains a %, "
          "it is the target free-percentage of user accessable space", SETTING_OPTIONAL_SYSTEM},
  {"display-name", "", "Camera Name", "The name of the camera used in displays", SETTING_OPTIONAL_CAMERA},

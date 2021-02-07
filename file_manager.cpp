@@ -44,21 +44,28 @@ FileManager::FileManager(Database &db, Config &cfg) : db(db), cfg(cfg) {
     }
 }
 
-std::string FileManager::get_next_path(long int &file_id, int camera, const struct timeval &start_time){
+std::string FileManager::get_next_path(long int &file_id, int camera, const struct timeval &start_time, bool extend_file /* = false */){
     const std::string base = get_output_dir();
     const std::string dir = get_date_path(camera, start_time);
     std::string ptime = std::to_string(Util::pack_time(start_time));
+    std::string name;
+    if (extend_file && !last_filename.empty()){
+        name = last_filename;
+    } else {
+        name = ptime;
+        last_filename = name;
+    }
     //make sure dir exists
     std::string path = base + dir;
     mkdir_recursive(path);
     const std::string &ext = cfg.get_value("output-extension");
 
-    std::string sql = "INSERT INTO videos (path, starttime, camera, extension) VALUES ('" + db.escape(dir + "/") + "'," + ptime + ", " + std::to_string(camera) + ",'"
-        + db.escape(ext) + "' )";
+    std::string sql = "INSERT INTO videos (path, starttime, camera, extension, name) VALUES ('" + db.escape(dir + "/") + "'," + ptime + ", " + std::to_string(camera) + ",'"
+        + db.escape(ext) + "'," + name + " )";
     DatabaseResult* res = db.query(sql, NULL, &file_id);
     delete res;
     
-    return path + "/" + std::to_string(file_id) + ext;
+    return path + "/" + name + ext;
 }
 
 std::string FileManager::get_export_path(long int export_id, int camera, const struct timeval &start_time){
@@ -113,6 +120,7 @@ void FileManager::clean_disk(void){
 
         //estimate the number of segments, add 10
         long segment_count = target_clear/bytes_per_segment + 10;
+        //FIXME: This does not work for our current files, need to ensure that no segment is locked in the file being deleted
         std::string sql = "SELECT v.id, v.path, c.value, v.starttime, v.extension FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' "
             " WHERE v.locked = 0 ORDER BY starttime ASC LIMIT " + std::to_string(segment_count);
 
@@ -285,10 +293,21 @@ void FileManager::rmdir_r(const std::string &path){
     }
 }
 
-bool FileManager::update_file_metadata(long int file_id, struct timeval &end_time){
+bool FileManager::update_file_metadata(long int file_id, struct timeval &end_time, long long end_byte, long long start_byte /*= 0 */, long long init_len /*= -1*/){
     long affected;
     std::string ptime = std::to_string(Util::pack_time(end_time));
-    std::string sql = "UPDATE videos SET endtime = " + ptime + " WHERE id = " + std::to_string(file_id) + " ";    
+    std::string sql = "UPDATE videos SET endtime = " + ptime;
+    if (init_len >= 0){
+        sql += ", init_byte = " + std::to_string(init_len);
+    }
+    if (start_byte >= 0){
+        sql += ", start_byte = " + std::to_string(start_byte);
+    }
+    if (end_byte > 0){
+        sql += ", end_byte = " + std::to_string(end_byte);
+    }
+
+    sql += " WHERE id = " + std::to_string(file_id);
     DatabaseResult* res = db.query(sql, &affected, NULL);
     delete res;
 

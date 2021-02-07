@@ -60,8 +60,11 @@ private:
     std::atomic_bool startup;//used to identify if we are in an extended wait due to startup
     std::thread::id thread_id;//used for tracking our thread
 
-    AVRational last_cut;
-    AVRational seconds_per_file;
+    AVRational last_cut;//last time a segment was cut
+    AVRational last_cut_file;//last time a file was cut
+    long long last_cut_byte;//the bytes of the end of the previous segment (or file)
+    AVRational seconds_per_file;//max seconds per file
+    AVRational seconds_per_segment;//max seconds per segment
 
     long int file_id;//database id of current file we are writing to
     //check if packet is a keyframe and switch the filename as needed

@@ -34,13 +34,21 @@ Camera::Camera(int camera, Database& db) : id(camera), db(db), stream(cfg), fm(d
 
     //variables for cutting files...
     last_cut = av_make_q(0, 1);
+    last_cut_file = av_make_q(0, 1);
+
+    int seconds_per_segment_raw = cfg.get_value_int("seconds-per-segment");
+    if (seconds_per_segment_raw <= 0){
+        LWARN("seconds-per-segment was invalid");
+        seconds_per_segment_raw = DEFAULT_SECONDS_PER_SEGMENT;
+    }
+    seconds_per_segment = av_make_q(seconds_per_segment_raw, 1);
+
     int seconds_per_file_raw = cfg.get_value_int("seconds-per-file");
     if (seconds_per_file_raw <= 0){
         LWARN("seconds-per-file was invalid");
-        seconds_per_file_raw = DEFAULT_SECONDS_PER_FILE;
+        seconds_per_file_raw = 60*seconds_per_segment_raw;
     }
     seconds_per_file = av_make_q(seconds_per_file_raw, 1);
-
 }
 Camera::~Camera(){
     
@@ -173,8 +181,8 @@ void Camera::run(void){
 
     struct timeval end;
     Util::compute_timestamp(stream.get_start_time(), end, last_pts, stream.get_format_context()->streams[last_stream_index]->time_base);
-    out.close();
-    fm.update_file_metadata(file_id, end);
+    long long size = out.close();
+    fm.update_file_metadata(file_id, end, size, last_cut_byte, out.get_init_len());
 
     if (frame){
         av_frame_free(&frame);
@@ -213,21 +221,34 @@ void Camera::cut_video(AVPacket &pkt, StreamWriter &out){
         //calculate the seconds:
         AVRational sec = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);//current time..
         sec = av_sub_q(sec, last_cut);
-        if (av_cmp_q(sec, seconds_per_file) == 1 || sec.num < 0){
+
+        if (av_cmp_q(sec, seconds_per_segment) == 1 || sec.num < 0){
             //cutting the video
             struct timeval start;
             stream.timestamp(pkt, start);
-            out.close();
-            fm.update_file_metadata(file_id, start);
-            if (sec.num < 0){
-                //this will cause a discontinuity which will be picked up and cause it to play correctly
-                start.tv_usec += 1000;
-            }
-            std::string out_filename = fm.get_next_path(file_id, id, start);
-            out.change_path(out_filename);
-            out.copy_streams(stream);
-            if (!out.open()){
-                shutdown = true;
+            AVRational file_seconds = av_sub_q(sec, last_cut_file);
+            if (out.is_fragmented() && sec.num >= 0 && av_cmp_q(file_seconds, seconds_per_file) == -1){
+                //we just fragment the file
+                long long size = out.change_path("");
+                fm.update_file_metadata(file_id, start, size, last_cut_byte, out.get_init_len());
+                last_cut_byte = size;
+                fm.get_next_path(file_id, id, start, true);
+            } else {
+                LWARN("Making New File!");
+                long long size = out.close();
+                fm.update_file_metadata(file_id, start, size, last_cut_byte, out.get_init_len());
+                if (sec.num < 0){
+                    //this will cause a discontinuity which will be picked up and cause it to play correctly
+                    start.tv_usec += 1000;
+                }
+                std::string out_filename = fm.get_next_path(file_id, id, start);
+                out.change_path(out_filename);
+                out.copy_streams(stream);
+                if (!out.open()){
+                    shutdown = true;
+                }
+                last_cut_byte = 0;
+                last_cut_file = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);
             }
             //save out this position
             last_cut = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);
