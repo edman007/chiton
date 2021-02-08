@@ -183,6 +183,17 @@ bool StreamUnwrap::get_next_frame(AVPacket &packet){
     if (reorder_queue.size() > 0){
         av_packet_move_ref(&packet, &reorder_queue.front());
         reorder_queue.pop_front();
+
+        //fixup the duration
+        if (packet.duration == 0 || packet.duration == AV_NOPTS_VALUE){
+            packet.duration = 0;
+            for (const auto &next : reorder_queue){
+                if (next.stream_index == packet.stream_index){
+                    packet.duration = next.pts - packet.pts;
+                    break;
+                }
+            }
+        }
         return true;
     } else {
         return false;

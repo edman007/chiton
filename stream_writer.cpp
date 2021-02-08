@@ -173,6 +173,7 @@ void StreamWriter::log_packet(const AVFormatContext *fmt_ctx, const AVPacket &pk
           " duration_time:" + std::string(av_ts2timestr(pkt.duration, time_base))+
           " stream_index:" + std::to_string(pkt.stream_index)
     );
+    av_pkt_dump_log2(NULL, 30, &pkt, 0, fmt_ctx->streams[pkt.stream_index]);
 }
 
 long long StreamWriter::change_path(const std::string &new_path /* = "" */){
@@ -408,13 +409,12 @@ long long StreamWriter::frag_stream(void){
     if (!is_fragmented()){
         return -1;
     }
-    LWARN("Flushing");
+
     //flush the buffers
     av_interleaved_write_frame(output_format_context, NULL);
     av_write_frame(output_format_context, NULL);
     avio_flush(output_format_context->pb);
     long long pos = avio_tell(output_format_context->pb);
-    LWARN("Offset is " + std::to_string(pos));
     return pos;
 
 }
