@@ -24,6 +24,7 @@
 #include <cstdio>
 
 std::mutex global_codec_lock;
+thread_local std::string last_line;//contains the continuation of any line that doesn't have a \n
 AVBufferRef *global_vaapi_ctx = NULL;
 
 void ffmpeg_log_callback(void * avcl, int level, const char * fmt, va_list vl){
@@ -57,10 +58,13 @@ void ffmpeg_log_callback(void * avcl, int level, const char * fmt, va_list vl){
         //strip out the \n...
         if (buf[len - 1] == '\n'){
             buf[len - 1] = '\0';
+        } else {
+            last_line += buf;
+            return;
         }
         //and write it
-        Util::log_msg(chiton_level, buf);
-
+        Util::log_msg(chiton_level, last_line + buf);
+        last_line.clear();
     }
 }
 
