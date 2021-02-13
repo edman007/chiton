@@ -66,17 +66,41 @@ inline AVRounding operator|(AVRounding a, AVRounding b)
     return static_cast<AVRounding>(static_cast<int>(a) | static_cast<int>(b));
 }
 
-void load_ffmpeg(void);//init ffmpeg
-void load_vaapi(void);//init global vaapi context
-void free_vaapi(void);//free the vaapi context
+/*
+ * Utility/Mangement class for libav* and ffmpeg things
+ */
+class CFFUtil {
+public:
+    CFFUtil(void);
+    ~CFFUtil(void);
+    void load_ffmpeg(void);//init ffmpeg
+    void free_hw(void);//free/close HW encoder/decoders
+    void lock(void);//global ffmpeg lock/unlock
+    void unlock(void);
+
+    //return a ref or null to the context iff it can handle wxh
+    AVBufferRef *get_vaapi_ctx(AVCodecContext* avctx, int w, int h);
+    AVBufferRef *get_vdpau_ctx(AVCodecContext* avctx, int w, int h);
+
+private:
+    void load_vaapi(void);//init global vaapi context
+    void free_vaapi(void);//free the vaapi context
+    void load_vdpau(void);//init global vdpau context
+    void free_vdpau(void);//free the vdpau context
+
+
+    AVBufferRef *vaapi_ctx = NULL;
+    bool vaapi_failed = false;//if we failed to initilize vaapi
+    AVBufferRef *vdpau_ctx = NULL;
+    bool vdpau_failed = false;//if we failed to initilize vdpau
+    std::mutex codec_lock;
+
+};
+
 enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);//global VAAPI format selector
+enum AVPixelFormat get_vdpau_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);//global VDPAU format selector
+extern CFFUtil gcff_util;//global FFmpeg lib mangement class
 
 //for passing image coordinates
 struct rect { int x, y, w, h; };
-
-//used to lock non-thread safe libav* functions
-extern std::mutex global_codec_lock;
-
-//our HW device
-extern AVBufferRef *global_vaapi_ctx;
 #endif

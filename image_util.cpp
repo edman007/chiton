@@ -63,14 +63,14 @@ bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const s
     c->pix_fmt = AV_PIX_FMT_YUVJ420P;
     LINFO("Exporting JPEG " + std::to_string(c->width) + "x" + std::to_string(c->height));
 
-    global_codec_lock.lock();
+    gcff_util.lock();
     if (avcodec_open2(c, codec, NULL) < 0){
-        global_codec_lock.unlock();
+        gcff_util.unlock();
         avcodec_free_context(&c);
         LWARN("Failed to open codec");
         return false;
     }
-    global_codec_lock.unlock();
+    gcff_util.unlock();
 
     AVPacket pkt;
     av_init_packet(&pkt);

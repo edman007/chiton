@@ -279,6 +279,7 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
         }
 
     } else if (dec_ctx->codec_type == AVMEDIA_TYPE_VIDEO){//video
+        LWARN("Adding Video Stream!");
         if (cfg.get_value("encode-format-video") == "hevc"){
             encoder = avcodec_find_encoder(AV_CODEC_ID_HEVC);
         }
@@ -303,11 +304,25 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
             }
 
             encode_ctx[out_stream->index]->time_base = in_stream->time_base;//av_inv_q(dec_ctx->framerate);
+
+            //connect encoder
+            if (!encode_ctx[out_stream->index]->hw_device_ctx &&
+                (cfg.get_value("video-encode-method") == "auto" || cfg.get_value("video-encode-method") == "vaapi")){
+                encode_ctx[out_stream->index]->hw_device_ctx = gcff_util.get_vaapi_ctx(encode_ctx[out_stream->index],
+                                                                                       encode_ctx[out_stream->index]->width, encode_ctx[out_stream->index]->height);
+            }
+            if (!encode_ctx[out_stream->index]->hw_device_ctx &&
+                (cfg.get_value("video-encode-method") == "auto" || cfg.get_value("video-encode-method") == "vdpau")){
+                encode_ctx[out_stream->index]->hw_device_ctx = gcff_util.get_vdpau_ctx(encode_ctx[out_stream->index],
+                                                                                       encode_ctx[out_stream->index]->width, encode_ctx[out_stream->index]->height);
+            }
+            //if both fail we get the SW encoder
         } else {
             LWARN("Could not find video encoder");
             return false;
         }
     } else {
+        LINFO("Unknown stream type");
         return false;//not audio or video, can't encode it
     }
 
@@ -316,14 +331,9 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
         encode_ctx[out_stream->index]->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     }
 
-    //connect vaapi
-    if (global_vaapi_ctx){
-        encode_ctx[out_stream->index]->hw_device_ctx = av_buffer_ref(global_vaapi_ctx);
-    }
-
-    global_codec_lock.lock();
+    gcff_util.lock();
     int ret = avcodec_open2(encode_ctx[out_stream->index], encoder, NULL);
-    global_codec_lock.unlock();
+    gcff_util.unlock();
     if (ret < 0) {
         LERROR("Cannot open encoder for stream " + std::to_string(out_stream->index));
         return false;

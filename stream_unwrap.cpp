@@ -156,16 +156,29 @@ bool StreamUnwrap::alloc_decode_context(unsigned int stream){
         return false;
     }
 
-    //connect vaapi
-    if (global_vaapi_ctx){
-        avctx->hw_device_ctx = av_buffer_ref(global_vaapi_ctx);
-        avctx->get_format = get_vaapi_format;
+    if (avctx->codec_type == AVMEDIA_TYPE_VIDEO){
+        //connect encoder
+        if (!avctx->hw_device_ctx &&
+            (cfg.get_value("video-decode-method") == "auto" || cfg.get_value("video-decode-method") == "vaapi")){
+            avctx->hw_device_ctx  = gcff_util.get_vaapi_ctx(avctx, avctx->width, avctx->height);
+            if (avctx->hw_device_ctx){
+                avctx->get_format = get_vaapi_format;
+            }
+        }
+        if (!avctx->hw_device_ctx &&
+            (cfg.get_value("video-decode-method") == "auto" || cfg.get_value("video-decode-method") == "vdpau")){
+            avctx->hw_device_ctx  = gcff_util.get_vdpau_ctx(avctx, avctx->width, avctx->height);
+            if (avctx->hw_device_ctx){
+                avctx->get_format = get_vdpau_format;
+            }
+        }
+        //if both fail we get the SW encoder
     }
 
     /* Open the decoder. */
-    global_codec_lock.lock();
+    gcff_util.lock();
     error = avcodec_open2(avctx, input_codec, NULL);
-    global_codec_lock.unlock();
+    gcff_util.unlock();
     if (error < 0) {
         LERROR("Could not open input codec (error '" + std::string(av_err2str(error)) + "')");
         avcodec_free_context(&avctx);

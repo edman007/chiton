@@ -97,6 +97,18 @@ PKG_CHECK_MODULES([FFMPEG], [libavformat libavcodec libavutil],
                              [AS_VAR_APPEND([[CPPFLAGS]], [" $FFMPEG_CFLAGS"])
                              AS_VAR_APPEND([[LIBS]], [" $FFMPEG_LIBS "])])
 
+AC_ARG_ENABLE([vaapi],
+  [AS_HELP_STRING([--enable-vaapi], [Enable VA-API, not strictly required to use vaapi])],
+  [],
+  [enable_vaapi=auto])
+AS_IF([test "x$enable_vaapi" != "xno"],
+            [PKG_CHECK_MODULES([VA], [libva],
+             [have_vaapi=1 AS_VAR_APPEND([[CPPFLAGS]], [" $VA_CFLAGS "])
+             AS_VAR_APPEND([[LIBS]], [" $VA_LIBS "])])
+             AC_DEFINE([HAVE_VAAPI], [1], [Have VAAPI])])
+AS_IF([test "x$enable_vaapi" == "xyes" && test "x$have_vaapi" != "x1"], [AC_MSG_ERROR([Could not find vaapi])])
+
+
 AC_ARG_WITH([apacheconfigdir],
   [AS_HELP_STRING([--with-apacheconfigdir=DIR], [Directory to install apache config])],
   [apacheconfdir=$withval],

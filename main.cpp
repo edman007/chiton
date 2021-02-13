@@ -106,7 +106,6 @@ void run(Config& args){
     
     //load system config
     load_sys_cfg(cfg);
-    load_vaapi();
 
     FileManager fm(db, cfg);
     Export expt(db, cfg, fm);
@@ -179,7 +178,7 @@ void run(Config& args){
         cams.pop_back();
     }
 
-    free_vaapi();
+    gcff_util.free_hw();
 
 }
 
@@ -312,7 +311,7 @@ int main (int argc, char **argv){
     LWARN("Starting Chiton...");
     LWARN(std::string("\tVersion ") + GIT_VER);
     LINFO(std::string("\tBuilt ") + BUILD_DATE);
-    load_ffmpeg();
+    gcff_util.load_ffmpeg();
     //load the signal handlers
     std::signal(SIGINT, shutdown_signal);
     std::signal(SIGHUP, reload_signal);
