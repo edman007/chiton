@@ -19,7 +19,7 @@
  *
  **************************************************************************
  */
-#include <main.hpp>
+#include "main.hpp"
 #include "util.hpp"
 #include "chiton_config.hpp"
 #include "mariadb.hpp"

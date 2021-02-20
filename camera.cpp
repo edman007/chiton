@@ -65,7 +65,7 @@ void Camera::run(void){
         startup = false;
         return;
     }
-    watchdog = true;;
+    watchdog = true;
     startup = false;
 
     LINFO("Camera " + std::to_string(id) + " connected...");
@@ -83,18 +83,23 @@ void Camera::run(void){
 
     LDEBUG("Encode/Decode: " + std::to_string(encode_video)+ std::to_string(encode_audio)+ std::to_string(decode_video)+ std::to_string(decode_audio));
     if (encode_video){
+        LDEBUG("Charging Decoder");
+        stream.charge_video_decoder();
+        watchdog = true;
         AVStream *vstream = stream.get_video_stream();
         AVCodecContext *vctx = stream.get_codec_context(vstream);
         if (out.add_encoded_stream(vstream, vctx)){
             LINFO("Camera " + std::to_string(id) + " transcoding video stream");
         } else {
             LERROR("Camera " + std::to_string(id) + " transcoding video stream failed!");
+            return;
         }
     } else {
         if (out.add_stream(stream.get_video_stream())){
             LINFO("Camera " + std::to_string(id) + " copying video stream");
         } else {
             LERROR("Camera " + std::to_string(id) + " copying video stream failed!");
+            return;
         }
     }
 
@@ -105,6 +110,7 @@ void Camera::run(void){
             LINFO("Camera " + std::to_string(id) + " transcoding audio stream");
         } else {
             LERROR("Camera " + std::to_string(id) + " transcoding audio stream failed!");
+            return;
         }
     } else {
         if (out.add_stream(stream.get_audio_stream())){
@@ -150,27 +156,42 @@ void Camera::run(void){
         if (frame && stream.is_video(pkt) && decode_video){
             if (stream.decode_packet(pkt)){
                 while (stream.get_decoded_frame(pkt.stream_index, frame)){
-                    LWARN("Decoded Video Frame");
+                    LDEBUG("Decoded Video Frame");
                     if (encode_video){
-                        out.write(frame, stream.get_stream(pkt));
+                        if (!out.write(frame, stream.get_stream(pkt))){
+                            stream.unref_frame(pkt);
+                            LERROR("Error Encoding Video!");
+                            break;//error encoding
+                        }
                     }
                 }
             }
         } else if (frame && stream.is_video(pkt) && decode_video){
                 if (stream.decode_packet(pkt)){
                     while (stream.get_decoded_frame(pkt.stream_index, frame)){
-                        LWARN("Decoded Audio Frame");
+                        LDEBUG("Decoded Audio Frame");
                         if (encode_audio){
-                            out.write(frame, stream.get_stream(pkt));
+                            if (!out.write(frame, stream.get_stream(pkt))){
+                                stream.unref_frame(pkt);
+                                LERROR("Error Encoding Audio!");
+                                break;//error encoding
+                            }
                         }
                     }
                 }
                 if (!encode_audio){
-                    out.write(pkt, stream.get_stream(pkt));//log it
+                    if (!out.write(pkt, stream.get_stream(pkt))){//log it
+                        stream.unref_frame(pkt);
+                        break;
+                    }
                 }
         } else {
             //this packet is being copied...
-            out.write(pkt, stream.get_stream(pkt));//log it
+            if (!out.write(pkt, stream.get_stream(pkt))){//log it
+                stream.unref_frame(pkt);
+                LERROR("Error writing packet!");
+                break;
+            }
         }
 
         cut_video(pkt, out);

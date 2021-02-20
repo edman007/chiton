@@ -27,6 +27,7 @@
 #include <list>
 #include <vector>
 #include <map>
+#include <deque>
 
 class StreamUnwrap {
     /*
@@ -54,6 +55,7 @@ public:
     AVStream *get_stream(const int id);//return a pointer to the stream given the stream index
     AVStream *get_audio_stream(void);//return a pointer to the best audio stream, NULL if none exists
     AVStream *get_video_stream(void);//return a pointer to the best video stream, NULL if none exists
+    bool charge_video_decoder(void);//starts the decoder by decoding the first packet
 
     const struct timeval& get_start_time(void);
     
@@ -65,7 +67,8 @@ private:
     void sort_reorder_queue(void);//ensures the last frame is in the correct position in the queue, sorting it if required
     bool read_frame(void);//read the next frame (internally used)
     bool alloc_decode_context(unsigned int stream);//alloc the codec context, returns true if the context exists or was allocated
-    
+    bool get_next_packet(AVPacket& packet);//return the next packet, without looking at the previous packets used for encoder charging
+    bool get_decoded_frame_int(int stream, AVFrame *frame);//get the next decoded frame, without looking at the decoded video buffer
     AVFormatContext *input_format_context;
     std::map<int,AVCodecContext*> decode_ctx;//decode context for each stream
 
@@ -74,6 +77,10 @@ private:
 
     struct timeval connect_time;
     int max_sync_offset;
+
+    //to support early decoding, we can decode into these
+    std::deque<AVPacket> decoded_packets;
+    std::deque<AVFrame*> decoded_video_frames;
 };
 
 #endif

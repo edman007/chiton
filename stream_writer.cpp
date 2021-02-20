@@ -284,7 +284,13 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
             encoder = avcodec_find_encoder(AV_CODEC_ID_HEVC);
         }
         if (!encoder) {//default or above option(s) failed
-            encoder = avcodec_find_encoder(AV_CODEC_ID_H264);
+            if ((cfg.get_value("video-encode-method") == "auto" || cfg.get_value("video-encode-method") == "vaapi") &&
+                gcff_util.have_vaapi(dec_ctx)){
+                encoder = avcodec_find_encoder_by_name("h264_vaapi");
+            }
+            if (!encoder){
+                encoder = avcodec_find_encoder(AV_CODEC_ID_H264);
+            }
         }
         if (encoder){
             encode_ctx[out_stream->index] = avcodec_alloc_context3(encoder);
@@ -297,24 +303,25 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
             encode_ctx[out_stream->index]->sample_aspect_ratio = dec_ctx->sample_aspect_ratio;
 
             //take first pixel format
-            if (encoder->pix_fmts) {
-                encode_ctx[out_stream->index]->pix_fmt = encoder->pix_fmts[0];
-            } else {
-                encode_ctx[out_stream->index]->pix_fmt = dec_ctx->pix_fmt;
-            }
-
+            encode_ctx[out_stream->index]->pix_fmt = dec_ctx->pix_fmt;
             encode_ctx[out_stream->index]->time_base = in_stream->time_base;//av_inv_q(dec_ctx->framerate);
 
             //connect encoder
             if (!encode_ctx[out_stream->index]->hw_device_ctx &&
                 (cfg.get_value("video-encode-method") == "auto" || cfg.get_value("video-encode-method") == "vaapi")){
-                encode_ctx[out_stream->index]->hw_device_ctx = gcff_util.get_vaapi_ctx(encode_ctx[out_stream->index],
-                                                                                       encode_ctx[out_stream->index]->width, encode_ctx[out_stream->index]->height);
+                encode_ctx[out_stream->index]->hw_device_ctx = gcff_util.get_vaapi_ctx(encode_ctx[out_stream->index]);
+                if (encode_ctx[out_stream->index]->hw_device_ctx){
+                    encode_ctx[out_stream->index]->pix_fmt = AV_PIX_FMT_VAAPI;
+                    if (dec_ctx->hw_frames_ctx){//this requires a decoded frame
+                        encode_ctx[out_stream->index]->hw_frames_ctx = av_buffer_ref(dec_ctx->hw_frames_ctx);
+                    } else {
+                        LWARN("Didnt find frame ctx");
+                    }
+                }
             }
             if (!encode_ctx[out_stream->index]->hw_device_ctx &&
                 (cfg.get_value("video-encode-method") == "auto" || cfg.get_value("video-encode-method") == "vdpau")){
-                encode_ctx[out_stream->index]->hw_device_ctx = gcff_util.get_vdpau_ctx(encode_ctx[out_stream->index],
-                                                                                       encode_ctx[out_stream->index]->width, encode_ctx[out_stream->index]->height);
+                encode_ctx[out_stream->index]->hw_device_ctx = gcff_util.get_vdpau_ctx(encode_ctx[out_stream->index]);
             }
             //if both fail we get the SW encoder
         } else {
@@ -368,6 +375,7 @@ bool StreamWriter::write(const AVFrame *frame, const AVStream *in_stream){
         enc_pkt.stream_index = in_stream->index;//revert stream index because write will adjust this
 
         bool write_ret = write(enc_pkt, in_stream);
+        av_packet_unref(&enc_pkt);
         if (!write_ret){
             return false;
         }

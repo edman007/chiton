@@ -79,9 +79,11 @@ public:
     void unlock(void);
 
     //return a ref or null to the context iff it can handle wxh
-    AVBufferRef *get_vaapi_ctx(AVCodecContext* avctx, int w, int h);
-    AVBufferRef *get_vdpau_ctx(AVCodecContext* avctx, int w, int h);
+    AVBufferRef *get_vaapi_ctx(const AVCodecContext* avctx);
+    AVBufferRef *get_vdpau_ctx(const AVCodecContext* avctx);
 
+    bool have_vaapi(const AVCodecContext* avctx);//returns true if VAAPI should work
+    bool have_vdpau(const AVCodecContext* avctx);//returns true if VDPAU should work
 private:
     void load_vaapi(void);//init global vaapi context
     void free_vaapi(void);//free the vaapi context

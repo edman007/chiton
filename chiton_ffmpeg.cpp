@@ -169,7 +169,10 @@ void CFFUtil::load_ffmpeg(void){
 }
 
 void CFFUtil::load_vaapi(void){
-    lock();
+    if (vaapi_ctx || vaapi_failed){
+        return;//quick check, return if not required
+    }
+    lock();//lock and re-check (for races)
     if (vaapi_ctx || vaapi_failed){
         unlock();
         return;//don't double alloc it
@@ -206,7 +209,10 @@ enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx, const enum AVPixelForma
 
 
 void CFFUtil::load_vdpau(void){
-    lock();
+    if (vdpau_ctx || vdpau_failed){
+        return;//quick check
+    }
+    lock();//recheck holding the lock
     if (vdpau_ctx || vdpau_failed){
         unlock();
         return;//don't double alloc it
@@ -241,7 +247,7 @@ enum AVPixelFormat get_vdpau_format(AVCodecContext *ctx, const enum AVPixelForma
     return AV_PIX_FMT_NONE;//should this be pix_fmts?
 }
 
-AVBufferRef *CFFUtil::get_vaapi_ctx(AVCodecContext* avctx, int w, int h){
+bool CFFUtil::have_vaapi(const AVCodecContext* avctx){
     load_vaapi();
     if (!vaapi_ctx){
         return NULL;
@@ -301,13 +307,17 @@ AVBufferRef *CFFUtil::get_vaapi_ctx(AVCodecContext* avctx, int w, int h){
         return NULL;
     }
     //check if this is supported
-    if (c->min_width  <= w || c->max_width  >= w ||
-        c->min_height <= h || c->max_height >= h){
+    if (c->min_width  <= avctx->width || c->max_width  >= avctx->width ||
+        c->min_height <= avctx->width || c->max_height >= avctx->width){
         //we assume the pixel formats are ok for us
         found = true;
     }
     av_hwframe_constraints_free(&c);
-    if (found){
+    return found;
+}
+
+AVBufferRef *CFFUtil::get_vaapi_ctx(const AVCodecContext* avctx){
+    if (have_vaapi(avctx)){
         return av_buffer_ref(vaapi_ctx);
     } else {
         //not supported
@@ -315,7 +325,7 @@ AVBufferRef *CFFUtil::get_vaapi_ctx(AVCodecContext* avctx, int w, int h){
     }
 }
 
-AVBufferRef *CFFUtil::get_vdpau_ctx(AVCodecContext* avctx, int w, int h){
+bool CFFUtil::have_vdpau(const AVCodecContext* avctx){
     load_vdpau();
     if (!vdpau_ctx){
         return NULL;
@@ -323,14 +333,18 @@ AVBufferRef *CFFUtil::get_vdpau_ctx(AVCodecContext* avctx, int w, int h){
     bool found = false;
     AVHWFramesConstraints* c = av_hwdevice_get_hwframe_constraints(vdpau_ctx, NULL);
     //check if this is supported
-    if (c->min_width  <= w || c->max_width  >= w ||
-        c->min_height <= h || c->max_height >= h){
+    if (c->min_width  <= avctx->width || c->max_width  >= avctx->width ||
+        c->min_height <= avctx->height || c->max_height >= avctx->height){
         //we assume the pixel formats are ok for us
         found = true;
     }
 
     av_hwframe_constraints_free(&c);
-    if (found){
+    return found;
+}
+
+AVBufferRef *CFFUtil::get_vdpau_ctx(const AVCodecContext* avctx){
+    if (have_vdpau(avctx)){
         return av_buffer_ref(vdpau_ctx);
     } else {
         //not supported

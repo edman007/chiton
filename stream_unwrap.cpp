@@ -160,14 +160,14 @@ bool StreamUnwrap::alloc_decode_context(unsigned int stream){
         //connect encoder
         if (!avctx->hw_device_ctx &&
             (cfg.get_value("video-decode-method") == "auto" || cfg.get_value("video-decode-method") == "vaapi")){
-            avctx->hw_device_ctx  = gcff_util.get_vaapi_ctx(avctx, avctx->width, avctx->height);
+            avctx->hw_device_ctx  = gcff_util.get_vaapi_ctx(avctx);
             if (avctx->hw_device_ctx){
                 avctx->get_format = get_vaapi_format;
             }
         }
         if (!avctx->hw_device_ctx &&
             (cfg.get_value("video-decode-method") == "auto" || cfg.get_value("video-decode-method") == "vdpau")){
-            avctx->hw_device_ctx  = gcff_util.get_vdpau_ctx(avctx, avctx->width, avctx->height);
+            avctx->hw_device_ctx  = gcff_util.get_vdpau_ctx(avctx);
             if (avctx->hw_device_ctx){
                 avctx->get_format = get_vdpau_format;
             }
@@ -192,6 +192,16 @@ bool StreamUnwrap::alloc_decode_context(unsigned int stream){
 }
 
 bool StreamUnwrap::get_next_frame(AVPacket &packet){
+    if (!decoded_packets.empty()){
+        av_packet_move_ref(&packet, &decoded_packets.front());
+        decoded_packets.pop_front();
+        return true;
+    }
+    return get_next_packet(packet);
+
+}
+
+bool StreamUnwrap::get_next_packet(AVPacket &packet){
     read_frame();
     if (reorder_queue.size() > 0){
         av_packet_move_ref(&packet, &reorder_queue.front());
@@ -212,9 +222,7 @@ bool StreamUnwrap::get_next_frame(AVPacket &packet){
         return false;
     }
     
-
 }
-
 void StreamUnwrap::unref_frame(AVPacket &packet){
     av_packet_unref(&packet);
 }
@@ -358,6 +366,16 @@ bool StreamUnwrap::decode_packet(AVPacket &packet){
 }
 
 bool StreamUnwrap::get_decoded_frame(int stream, AVFrame *frame){
+    if (!decoded_video_frames.empty() && input_format_context->streams[stream]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){
+        av_frame_move_ref(frame, decoded_video_frames.front());
+        av_frame_free(&decoded_video_frames.front());
+        decoded_video_frames.pop_front();
+        return true;
+    }
+    return get_decoded_frame_int(stream, frame);
+}
+
+bool StreamUnwrap::get_decoded_frame_int(int stream, AVFrame *frame){
     if (decode_ctx.find(stream) == decode_ctx.end()){
         LWARN("Tried to decode a frame without a decoder!");
         return false;
@@ -423,4 +441,32 @@ AVCodecContext* StreamUnwrap::get_codec_context(AVStream *stream){
     }
 
     return decode_ctx[stream->index];
+}
+
+bool StreamUnwrap::charge_video_decoder(void){
+    decoded_packets.emplace_back();
+    if (!get_next_packet(decoded_packets.back())){
+        decoded_packets.pop_back();
+        return false;
+    }
+    AVPacket &pkt = decoded_packets.back();
+    if (decoded_video_frames.empty() && is_video(pkt)){
+
+        if (decode_packet(pkt)){
+            bool ret;
+            do {
+                AVFrame* next_frame = av_frame_alloc();
+                ret = get_decoded_frame_int(pkt.stream_index, next_frame);
+                if (ret){
+                    decoded_video_frames.push_back(next_frame);
+                    next_frame = NULL;
+                } else {
+                    av_frame_free(&next_frame);
+                }
+            } while (ret);
+        } else {
+            return false;
+        }
+    }
+    return true;
 }
