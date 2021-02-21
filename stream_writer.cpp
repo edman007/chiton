@@ -117,6 +117,11 @@ bool StreamWriter::write(const AVPacket &packet, const AVStream *in_stream){
     if (!file_opened){
         return false;
     }
+
+    if (keyframe_cbk && in_stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && packet.flags & AV_PKT_FLAG_KEY){
+        keyframe_cbk(packet, *this);
+    }
+
     if (av_packet_ref(&out_pkt, &packet)){
         LERROR("Could not allocate new output packet for writing");
         return false;
@@ -169,9 +174,6 @@ bool StreamWriter::write(const AVPacket &packet, const AVStream *in_stream){
         return false;
     }
 
-    if (keyframe_cbk && out_stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && packet.flags & AV_PKT_FLAG_KEY){
-        keyframe_cbk(packet, *this);
-    }
     av_packet_unref(&out_pkt);
     return true;
 }
