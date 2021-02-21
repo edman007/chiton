@@ -34,6 +34,7 @@ public:
     long long close(void);//close the file and return the filesize
     bool write(const AVPacket &pkt, const AVStream *in_stream);//write the packet to the file
     bool write(const AVFrame *frame, const AVStream *in_stream);//write the frame to the file (using encoding)
+    //set the path of the file to write to, if the stream was opened, it remains opened (and a new file is created), if it was closed then it is not opened
     long long change_path(const std::string &new_path = "");//returns file position of the end of the file
     bool add_stream(const AVStream *in_stream);//add in_stream to output (copy)
     bool add_encoded_stream(const AVStream *in_stream, const AVCodecContext *dec_ctx);//add in_stream to output, using encoding
@@ -62,7 +63,7 @@ private:
     bool file_opened;
     
     void log_packet(const AVFormatContext *fmt_ctx, const AVPacket &pkt, const std::string &tag);
-
+    bool open_path(void);//open the path and write the header
     void free_context(void);//free the context associated with a file
     bool alloc_context(void);
     AVStream *init_stream(const AVStream *in_stream);//Initilizes output stream

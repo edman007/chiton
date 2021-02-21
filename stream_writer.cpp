@@ -35,19 +35,28 @@ StreamWriter::StreamWriter(Config& cfg) : cfg(cfg) {
 }
 
 bool StreamWriter::open(void){
-    int error;
     if (file_opened){
         return true;//already opened
     }
     
-    AVOutputFormat *ofmt = output_format_context->oformat;
     stream_offset.clear();
     last_dts.clear();
 
-    
+    return open_path();
+}
+
+bool StreamWriter::open_path(void){
+    int error;
+
+    AVOutputFormat *ofmt = output_format_context->oformat;
     av_dump_format(output_format_context, 0, path.c_str(), 1);
 
     if (!(ofmt->flags & AVFMT_NOFILE)) {
+        if (output_format_context->pb != NULL){
+            LERROR("Attempted to open file that's already open");
+            return false;
+        }
+
         error = avio_open(&output_format_context->pb, path.c_str(), AVIO_FLAG_WRITE);
 
         if (error < 0) {
@@ -79,7 +88,6 @@ bool StreamWriter::open(void){
 
 }
 
-
 StreamWriter::~StreamWriter(){
     free_context();
 }
@@ -96,8 +104,10 @@ long long StreamWriter::close(void){
 
     av_write_trailer(output_format_context);
     avio_flush(output_format_context->pb);
+    long long pos = avio_tell(output_format_context->pb);
+    avio_closep(&output_format_context->pb);
     file_opened = false;
-    return avio_tell(output_format_context->pb);
+    return pos;
 }
 
 bool StreamWriter::write(const AVPacket &packet, const AVStream *in_stream){
@@ -159,7 +169,7 @@ bool StreamWriter::write(const AVPacket &packet, const AVStream *in_stream){
         return false;
     }
 
-    if (keyframe_cbk && out_stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){
+    if (keyframe_cbk && out_stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && packet.flags & AV_PKT_FLAG_KEY){
         keyframe_cbk(packet, *this);
     }
     av_packet_unref(&out_pkt);
@@ -183,13 +193,16 @@ long long StreamWriter::change_path(const std::string &new_path /* = "" */){
     if ((path == new_path || new_path.empty()) && segment_mode == SEGMENT_FMP4){
         return frag_stream();
     } else if (!new_path.empty()){
-        path = new_path;
         long long pos = -1;
-        if (file_opened){
+        if (file_opened){//we close and reopen only if already open, otherwise the caller must open() after adding streams
             pos = close();
+            avpriv_io_move(path.c_str(), new_path.c_str());
+            path = new_path;
+            open_path();
+        } else {
+            path = new_path;
+
         }
-        //instead of closing, we just copy the streams
-        free_context();
         return pos;
     }
     return -1;

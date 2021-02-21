@@ -35,7 +35,7 @@ public:
     FileManager(Database &db, Config &cfg);
 
     //returns a valid path starting at start_time, writes out it's ID to int &file_id, if extend_file is true, the previous filename is used
-    std::string get_next_path(long int &file_id, int camera, const struct timeval &start_time, bool extend_file = true);
+    std::string get_next_path(long int &file_id, int camera, const struct timeval &start_time, bool extend_file = false);
 
     //returns a path to export a file to, updating the database to include the path
     std::string get_export_path(long int export_id, int camera, const struct timeval &start_time);

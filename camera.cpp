@@ -238,14 +238,14 @@ std::thread::id Camera::get_thread_id(void){
 void Camera::cut_video(const AVPacket &pkt, StreamWriter &out){
     if (pkt.flags & AV_PKT_FLAG_KEY && stream.is_video(pkt)){
         //calculate the seconds:
-        AVRational sec = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);//current time..
-        sec = av_sub_q(sec, last_cut);
+        AVRational sec_raw = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);//current time..
+        AVRational sec = av_sub_q(sec_raw, last_cut);
 
         if (av_cmp_q(sec, seconds_per_segment) == 1 || sec.num < 0){
             //cutting the video
             struct timeval start;
             stream.timestamp(pkt, start);
-            AVRational file_seconds = av_sub_q(sec, last_cut_file);
+            AVRational file_seconds = av_sub_q(sec_raw, last_cut_file);
             if (out.is_fragmented() && sec.num >= 0 && av_cmp_q(file_seconds, seconds_per_file) == -1){
                 //we just fragment the file
                 long long size = out.change_path("");
@@ -253,19 +253,17 @@ void Camera::cut_video(const AVPacket &pkt, StreamWriter &out){
                 last_cut_byte = size;
                 fm.get_next_path(file_id, id, start, true);
             } else {
-                LWARN("Making New File!");
-                long long size = out.close();
-                fm.update_file_metadata(file_id, start, size, last_cut_byte, out.get_init_len());
+                //copy the previous metadata
+                auto old_id = file_id;
+                auto old_init_len = out.get_init_len();
+                auto end = start;
                 if (sec.num < 0){
                     //this will cause a discontinuity which will be picked up and cause it to play correctly
                     start.tv_usec += 1000;
                 }
                 std::string out_filename = fm.get_next_path(file_id, id, start);
-                out.change_path(out_filename);
-                out.copy_streams(stream);
-                if (!out.open()){
-                    shutdown = true;
-                }
+                long long size = out.change_path(out_filename);;//apply new filename, and get length of old file
+                fm.update_file_metadata(old_id, end, size, last_cut_byte, old_init_len);
                 last_cut_byte = 0;
                 last_cut_file = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);
             }
@@ -273,7 +271,6 @@ void Camera::cut_video(const AVPacket &pkt, StreamWriter &out){
             last_cut = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);
         }
     }
-
 }
 
 bool Camera::get_vencode(void){
