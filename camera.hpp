@@ -68,7 +68,7 @@ private:
 
     long int file_id;//database id of current file we are writing to
     //check if packet is a keyframe and switch the filename as needed
-    void cut_video(AVPacket &pkt, StreamWriter &out);
+    void cut_video(const AVPacket &pkt, StreamWriter &out);
     bool get_vencode(void);//get if video needs to be encoded
     bool get_aencode(void);//get if audio needs to be encoded
 };

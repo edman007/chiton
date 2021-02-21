@@ -138,19 +138,19 @@ bool StreamWriter::write(const AVPacket &packet, const AVStream *in_stream){
     */
     
     //guarentee that they have an increasing DTS
-    if (out_pkt.dts < last_dts[stream_mapping[out_pkt.stream_index]]){
+    if (out_pkt.dts < last_dts[out_pkt.stream_index]){
         LWARN("Shifting frame timestamp due to out of order issue in camera " + cfg.get_value("camera-id") +", old dts was: " + std::to_string(out_pkt.dts));
-        last_dts[stream_mapping[out_pkt.stream_index]]++;
+        last_dts[out_pkt.stream_index]++;
         long pts_delay = out_pkt.pts - out_pkt.dts;
-        out_pkt.dts = last_dts[stream_mapping[out_pkt.stream_index]];
+        out_pkt.dts = last_dts[out_pkt.stream_index];
         out_pkt.pts = out_pkt.dts + pts_delay;
-    } else if (out_pkt.dts == last_dts[stream_mapping[out_pkt.stream_index]]) {
+    } else if (out_pkt.dts == last_dts[out_pkt.stream_index]) {
         LWARN("Received duplicate frame from camera " + cfg.get_value("camera-id") +" at dts: " + std::to_string(out_pkt.dts) + ". Dropping Frame");
         av_packet_unref(&out_pkt);
         return true;
     }
 
-    last_dts[stream_mapping[out_pkt.stream_index]] = out_pkt.dts;
+    last_dts[out_pkt.stream_index] = out_pkt.dts;
     //log_packet(output_format_context, out_pkt, "out: "+path);
 
     int ret = av_interleaved_write_frame(output_format_context, &out_pkt);
@@ -159,6 +159,9 @@ bool StreamWriter::write(const AVPacket &packet, const AVStream *in_stream){
         return false;
     }
 
+    if (keyframe_cbk && out_stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){
+        keyframe_cbk(packet, *this);
+    }
     av_packet_unref(&out_pkt);
     return true;
 }
@@ -439,4 +442,8 @@ long long StreamWriter::frag_stream(void){
 
 long long StreamWriter::get_init_len(void){
     return init_len;
+}
+
+void StreamWriter::set_keyframe_callback(std::function<void(const AVPacket &pkt, StreamWriter &out)> cbk){
+    keyframe_cbk = cbk;
 }

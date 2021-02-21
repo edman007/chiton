@@ -23,7 +23,7 @@
  */
 #include "chiton_config.hpp"
 #include "stream_unwrap.hpp"
-
+#include <functional>
 class StreamWriter {
 public:
     StreamWriter(Config &cfg, std::string path);
@@ -40,6 +40,7 @@ public:
     bool copy_streams(StreamUnwrap &unwrap);//copy all streams from unwrap to output
     bool is_fragmented(void);//return true if this is a file format that supports fragmenting
     long long get_init_len(void);//return the init length, -1 if not valid
+    void set_keyframe_callback(std::function<void(const AVPacket &pkt, StreamWriter &out)> cbk);//set a callback when writing video keyframes
 private:
     Config &cfg;
     Config *cfg1;
@@ -54,6 +55,7 @@ private:
     //these offsets are used to shift the time when receiving something
     std::vector<long> stream_offset;
     std::vector<long> last_dts;//used to fix non-increasing DTS
+    std::function<void(const AVPacket &pkt, StreamWriter &out)> keyframe_cbk;//we call this on all video keyframe packets
 
     //used to track if we were successful in getting a file opened (and skip writing anything if not successful)
     //true means the file is opened

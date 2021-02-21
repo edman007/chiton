@@ -72,7 +72,7 @@ void Camera::run(void){
     std::string out_filename = fm.get_next_path(file_id, id, stream.get_start_time());
     StreamWriter out = StreamWriter(cfg);
     out.change_path(out_filename);
-
+    out.set_keyframe_callback(std::bind(&Camera::cut_video, this, std::placeholders::_1, std::placeholders::_2));
     //look at the stream and settings and see what needs encoding and decoding
     bool encode_video = get_vencode();
     bool encode_audio = get_aencode();
@@ -193,8 +193,6 @@ void Camera::run(void){
                 break;
             }
         }
-
-        cut_video(pkt, out);
         
         stream.unref_frame(pkt);
     }
@@ -237,7 +235,7 @@ std::thread::id Camera::get_thread_id(void){
     return thread_id;
 }
 
-void Camera::cut_video(AVPacket &pkt, StreamWriter &out){
+void Camera::cut_video(const AVPacket &pkt, StreamWriter &out){
     if (pkt.flags & AV_PKT_FLAG_KEY && stream.is_video(pkt)){
         //calculate the seconds:
         AVRational sec = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);//current time..
