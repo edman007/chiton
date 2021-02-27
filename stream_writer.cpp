@@ -198,7 +198,6 @@ long long StreamWriter::change_path(const std::string &new_path /* = "" */){
         long long pos = -1;
         if (file_opened){//we close and reopen only if already open, otherwise the caller must open() after adding streams
             pos = close();
-            avpriv_io_move(path.c_str(), new_path.c_str());
             path = new_path;
             open_path();
         } else {
