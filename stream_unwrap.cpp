@@ -32,6 +32,7 @@ StreamUnwrap::StreamUnwrap(Config& cfg) : cfg(cfg) {
 
 StreamUnwrap::~StreamUnwrap(){
     close();
+
     for (auto &ctx : decode_ctx){
         avcodec_free_context(&ctx.second);
     }
@@ -44,7 +45,14 @@ bool StreamUnwrap::close(void){
     }
     reorder_queue.clear();
     reorder_len = 0;
-    
+
+    for (auto &pkt : decoded_packets){
+        av_packet_unref(&pkt);
+    }
+    for (auto &frame : decoded_video_frames){
+        av_frame_free(&frame);
+    }
+
     avformat_close_input(&input_format_context);
     input_format_context = NULL;
     return true;
@@ -172,7 +180,7 @@ bool StreamUnwrap::alloc_decode_context(unsigned int stream){
                 avctx->get_format = get_vdpau_format;
             }
         }
-        //if both fail we get the SW encoder
+        //if both fail we get the SW decoder
     }
 
     /* Open the decoder. */
