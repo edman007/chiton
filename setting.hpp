@@ -92,7 +92,7 @@ const std::vector<Setting> setting_options {
  {"ffmpeg-decode-audio-opt", "", "FFMPEG audio decode options", "Options for the ffmpeg decoder - audio", SETTING_OPTIONAL_CAMERA},
  {"ffmpeg-decode-video-opt", "", "FFMPEG video decode options", "Options for the ffmpeg decoder - video", SETTING_OPTIONAL_CAMERA},
  {"output-extension", ".mp4", "Output Extension <.ts|.mp4>", "HLS Output Format, .ts for mpeg-ts files, .mp4 for fragmented mp4", SETTING_OPTIONAL_CAMERA},
- {"video-encode-method", "auto", "Video Encode method <auto|sw|vaapi|vdpau>", "Method to use for encoding, vaapi and vdpau are supported HW decoders,"
+ {"video-encode-method", "auto", "Video Encode method <auto|sw|vaapi>", "Method to use for encoding, vaapi is the supported HW encoder,"
   " auto tries both HW decoders before defaulting to SW, SW is a fallback", SETTING_OPTIONAL_CAMERA},
  {"video-decode-method", "auto", "Video Decode method <auto|sw|vaapi|vdpau>", "Method to use for decoding, vaapi and vdpau are supported HW decoders,"
   " auto tries both HW decoders before defaulting to SW, SW is a fallback", SETTING_OPTIONAL_CAMERA},

@@ -337,11 +337,7 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
                     }
                 }
             }
-            if (!encode_ctx[out_stream->index]->hw_device_ctx &&
-                (cfg.get_value("video-encode-method") == "auto" || cfg.get_value("video-encode-method") == "vdpau")){
-                encode_ctx[out_stream->index]->hw_device_ctx = gcff_util.get_vdpau_ctx(encode_ctx[out_stream->index]);
-            }
-            //if both fail we get the SW encoder
+            //if it fails we get the SW encoder
         } else {
             LWARN("Could not find video encoder");
             return false;
