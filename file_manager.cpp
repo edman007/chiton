@@ -46,14 +46,16 @@ FileManager::FileManager(Database &db, Config &cfg) : db(db), cfg(cfg) {
 
 std::string FileManager::get_next_path(long int &file_id, int camera, const struct timeval &start_time, bool extend_file /* = false */){
     const std::string base = get_output_dir();
-    const std::string dir = get_date_path(camera, start_time);
+    std::string dir = get_date_path(camera, start_time);
     std::string ptime = std::to_string(Util::pack_time(start_time));
     std::string name;
     if (extend_file && !last_filename.empty()){
         name = last_filename;
+        dir = last_dir;
     } else {
         name = ptime;
         last_filename = name;
+        last_dir = dir;
     }
     //make sure dir exists
     std::string path = base + dir;

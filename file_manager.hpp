@@ -70,7 +70,8 @@ private:
     Config &cfg;
     long bytes_per_segment;//estimate of segment size for our database to optimize our cleanup calls
     long min_free_bytes;//the config setting min-free-space as computed for the output-dir
-    std::string last_filename;
+    std::string last_filename;//when extending files, holds the current filename
+    std::string last_dir;//when extending files, holds the current directory
 
     //global variables for cleanup and space reseverations
     static std::mutex cleanup_mtx;//lock when cleanup is in progress, locks just the clean_disk()
