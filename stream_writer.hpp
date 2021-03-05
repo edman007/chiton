@@ -48,7 +48,6 @@ private:
     Config *cfg2;
     std::string path;
     enum {SEGMENT_MPGTS, SEGMENT_FMP4} segment_mode;
-    long long init_len;
     
     AVFormatContext *output_format_context = NULL;
     std::map<int,int> stream_mapping;
@@ -61,12 +60,19 @@ private:
     //used to track if we were successful in getting a file opened (and skip writing anything if not successful)
     //true means the file is opened
     bool file_opened;
-    
+
+    //buffers used for FMP4 mode to split the file
+    uint8_t *init_seg;
+    long long init_len;
+    AVIOContext *output_file;
+
     void log_packet(const AVFormatContext *fmt_ctx, const AVPacket &pkt, const std::string &tag);
     bool open_path(void);//open the path and write the header
     void free_context(void);//free the context associated with a file
     bool alloc_context(void);
     AVStream *init_stream(const AVStream *in_stream);//Initilizes output stream
     long long frag_stream(void);//creates a fragment at the current location and returns the position
+    long long write_buf(bool reopen);//write the buffer to the file, return bytes written on success, negative on error, if reopen is true then a new buffer is also allocated
+    long long write_init(void);//write the init segment to the buffer
 };
 #endif

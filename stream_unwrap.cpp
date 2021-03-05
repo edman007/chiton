@@ -225,6 +225,7 @@ bool StreamUnwrap::get_next_packet(AVPacket &packet){
                 }
             }
         }
+
         return true;
     } else {
         return false;

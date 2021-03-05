@@ -26,7 +26,9 @@
 
 StreamWriter::StreamWriter(Config& cfg) : cfg(cfg) {
     file_opened = false;
+    init_seg = NULL;
     init_len = -1;
+    output_file = NULL;
     if (cfg.get_value("output-extension") == ".mp4"){
         segment_mode = SEGMENT_FMP4;
     } else {
@@ -52,18 +54,32 @@ bool StreamWriter::open_path(void){
     av_dump_format(output_format_context, 0, path.c_str(), 1);
 
     if (!(ofmt->flags & AVFMT_NOFILE)) {
-        if (output_format_context->pb != NULL){
+        if (output_file != NULL){
             LERROR("Attempted to open file that's already open");
             return false;
         }
 
-        error = avio_open(&output_format_context->pb, path.c_str(), AVIO_FLAG_WRITE);
+        error = avio_open(&output_file, path.c_str(), AVIO_FLAG_WRITE);
 
         if (error < 0) {
             LERROR("Could not open output file '" + path + "'");
             LERROR("Error occurred: " + std::string(av_err2str(error)));
             return false;
         }
+
+        if (output_format_context->pb != NULL){
+            LERROR("Attempted to open buffer that's already open");
+            return false;
+        }
+
+        error = avio_open_dyn_buf(&output_format_context->pb);
+
+        if (error < 0) {
+            LERROR("Could not open buffer");
+            LERROR("Error occurred: " + std::string(av_err2str(error)));
+            return false;
+        }
+
     }
 
     //apply the mux options
@@ -71,18 +87,22 @@ bool StreamWriter::open_path(void){
 
     if (segment_mode == SEGMENT_FMP4){
         //we need to make mp4s fragmented
-        LWARN("Setting MOV FLAGS");
-        av_dict_set(&opts, "movflags", "+frag_custom+dash+delay_moov+empty_moov", 0);//empty_moov+separate_moof"
+        av_dict_set(&opts, "movflags", "+frag_custom+delay_moov+dash+skip_sidx+skip_trailer", 0);//empty_moov+separate_moof++dash"
     }
 
-    error = avformat_write_header(output_format_context, &opts);
-    av_dict_free(&opts);
-    if (error < 0) {
-        LERROR("Error occurred when opening output file");
-        LERROR("Error occurred: " + std::string(av_err2str(error)));
-        return false;
+    if (segment_mode == SEGMENT_FMP4 && init_len >= 0){
+        write_init();
+    } else {
+        error = avformat_write_header(output_format_context, &opts);
+        av_dict_free(&opts);
+        if (error < 0) {
+            LERROR("Error occurred when opening output file");
+            LERROR("Error occurred: " + std::string(av_err2str(error)));
+            return false;
+        }
+
+        init_len = frag_stream();
     }
-    init_len = frag_stream();
     file_opened = true;
     return true;
 
@@ -102,10 +122,13 @@ long long StreamWriter::close(void){
         LERROR("Error flushing muxing output for camera " + cfg.get_value("camera-id"));
     }
 
-    av_write_trailer(output_format_context);
+    if (segment_mode != SEGMENT_FMP4){
+        av_write_trailer(output_format_context);
+    }
     avio_flush(output_format_context->pb);
-    long long pos = avio_tell(output_format_context->pb);
-    avio_closep(&output_format_context->pb);
+    write_buf(false);
+    long long pos = avio_tell(output_file);
+    avio_closep(&output_file);
     file_opened = false;
     return pos;
 }
@@ -213,6 +236,13 @@ void StreamWriter::free_context(void){
     if (file_opened){
         close();
     }
+
+    if (init_seg){
+        init_len = -1;
+        av_free(init_seg);
+        init_seg = NULL;
+    }
+
     avformat_free_context(output_format_context);
 
     output_format_context = NULL;
@@ -221,6 +251,7 @@ void StreamWriter::free_context(void){
     for (auto &encoder :  encode_ctx){
         avcodec_free_context(&encoder.second);
     }
+
 }
 
 bool StreamWriter::alloc_context(void){
@@ -385,8 +416,11 @@ bool StreamWriter::write(const AVFrame *frame, const AVStream *in_stream){
         if (ret){
             break;
         }
-        enc_pkt.stream_index = in_stream->index;//revert stream index because write will adjust this
 
+        enc_pkt.stream_index = in_stream->index;//revert stream index because write will adjust this
+        if (enc_pkt.duration == 0){
+            enc_pkt.duration = frame->pkt_duration;
+        }
         bool write_ret = write(enc_pkt, in_stream);
         av_packet_unref(&enc_pkt);
         if (!write_ret){
@@ -445,7 +479,11 @@ long long StreamWriter::frag_stream(void){
     av_interleaved_write_frame(output_format_context, NULL);
     av_write_frame(output_format_context, NULL);
     avio_flush(output_format_context->pb);
-    long long pos = avio_tell(output_format_context->pb);
+    long long written = write_buf(true);
+    if (written < 0){
+        return -1;
+    }
+    long long pos = avio_tell(output_file);
     return pos;
 
 }
@@ -456,4 +494,45 @@ long long StreamWriter::get_init_len(void){
 
 void StreamWriter::set_keyframe_callback(std::function<void(const AVPacket &pkt, StreamWriter &out)> cbk){
     keyframe_cbk = cbk;
+}
+
+long long StreamWriter::write_buf(bool reopen){
+    if (output_file == NULL || output_format_context == NULL || output_format_context->pb == NULL){
+        LWARN("Attempted to write a buffer to a file when both don't exist");
+        return -1;
+    }
+
+    uint8_t *buf;
+    long long len;
+    len = avio_close_dyn_buf(output_format_context->pb, &buf);
+    avio_write(output_file, buf, len);
+    if (init_seg == NULL){
+        init_seg = buf;
+        init_len = len;
+    } else {
+        av_free(buf);
+    }
+    if (reopen){
+        int error = avio_open_dyn_buf(&output_format_context->pb);
+
+        if (error < 0) {
+            LERROR("Could not open buffer");
+            LERROR("Error occurred: " + std::string(av_err2str(error)));
+            return -2;
+        }
+    } else {
+        output_format_context->pb = NULL;
+    }
+    return len;
+}
+
+long long StreamWriter::write_init(void){
+    if (init_seg == NULL || init_len < 0){
+        return -1;
+    }
+    if (init_len == 0){
+        return 0;
+    }
+    avio_write(output_file, init_seg, init_len);
+    return init_len;
 }
