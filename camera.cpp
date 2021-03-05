@@ -35,6 +35,7 @@ Camera::Camera(int camera, Database& db) : id(camera), db(db), stream(cfg), fm(d
     //variables for cutting files...
     last_cut = av_make_q(0, 1);
     last_cut_file = av_make_q(0, 1);
+    last_cut_byte = 0;
 
     int seconds_per_segment_raw = cfg.get_value_int("seconds-per-segment");
     if (seconds_per_segment_raw <= 0){
@@ -249,6 +250,9 @@ void Camera::cut_video(const AVPacket &pkt, StreamWriter &out){
             if (out.is_fragmented() && sec.num >= 0 && av_cmp_q(file_seconds, seconds_per_file) == -1){
                 //we just fragment the file
                 long long size = out.change_path("");
+                if (last_cut_byte == 0 && out.get_init_len() > 0){
+                    last_cut_byte = out.get_init_len();
+                }
                 fm.update_file_metadata(file_id, start, size, last_cut_byte, out.get_init_len());
                 last_cut_byte = size;
                 fm.get_next_path(file_id, id, start, true);
