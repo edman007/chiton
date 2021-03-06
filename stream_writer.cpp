@@ -121,7 +121,7 @@ long long StreamWriter::close(void){
     if (0 > av_interleaved_write_frame(output_format_context, NULL)){
         LERROR("Error flushing muxing output for camera " + cfg.get_value("camera-id"));
     }
-
+    av_write_frame(output_format_context, NULL);
     if (segment_mode != SEGMENT_FMP4){
         av_write_trailer(output_format_context);
     }
