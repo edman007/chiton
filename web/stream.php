@@ -81,8 +81,7 @@ if ($res){
     echo "#EXT-X-VERSION:$hls_version\n";
     echo '#EXT-X-PROGRAM-DATE-TIME:' . $start_time->format('c') . "\n";
     echo "#EXT-X-PLAYLIST-TYPE:EVENT\n";
-    echo "#EXT-X-TARGETDURATION:" . (2*$camera_cfg->get_value('seconds-per-file')). "\n";
-    echo "EXT-X-INDEPENDENT-SEGMENTS\n";
+    echo "#EXT-X-TARGETDURATION:" . (2*$camera_cfg->get_value('seconds-per-segment')). "\n";
 
     //master playlist requirements
     //EXT-X-STREAM-INF - CODECS and RESOLUTION
