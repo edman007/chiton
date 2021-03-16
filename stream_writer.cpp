@@ -51,7 +51,6 @@ bool StreamWriter::open_path(void){
     int error;
 
     AVOutputFormat *ofmt = output_format_context->oformat;
-    av_dump_format(output_format_context, 0, path.c_str(), 1);
 
     if (!(ofmt->flags & AVFMT_NOFILE)) {
         if (output_file != NULL){
@@ -87,7 +86,8 @@ bool StreamWriter::open_path(void){
 
     if (segment_mode == SEGMENT_FMP4){
         //we need to make mp4s fragmented
-        av_dict_set(&opts, "movflags", "+frag_custom+delay_moov+dash+skip_sidx+skip_trailer", 0);//empty_moov+separate_moof++dash"
+        //empty_moov+separate_moof++dash++separate_moof+omit_tfhd_offset+default_base_moof"
+        av_dict_set(&opts, "movflags", "+frag_custom+delay_moov+dash+skip_sidx+skip_trailer+empty_moov", 0);
     }
 
     if (segment_mode == SEGMENT_FMP4 && init_len >= 0){
@@ -103,6 +103,8 @@ bool StreamWriter::open_path(void){
 
         init_len = frag_stream();
     }
+    av_dump_format(output_format_context, 0, path.c_str(), 1);
+
     file_opened = true;
     return true;
 
@@ -279,7 +281,7 @@ bool StreamWriter::add_stream(const AVStream *in_stream){
         LERROR("Error occurred: " + std::string(av_err2str(error)));
         return false;
     }
-    out_stream->codecpar->codec_tag = 0;
+
     return true;
 }
 
