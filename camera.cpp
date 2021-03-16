@@ -167,7 +167,15 @@ void Camera::run(void){
                     }
                 }
             }
-        } else if (frame && stream.is_video(pkt) && decode_video){
+            if (!encode_video){
+                    if (!out.write(pkt, stream.get_stream(pkt))){//log it
+                        stream.unref_frame(pkt);
+                        break;
+                        LERROR("Error writing copied video packet");
+                    }
+                }
+
+        } else if (frame && stream.is_audio(pkt) && decode_audio){
                 if (stream.decode_packet(pkt)){
                     while (stream.get_decoded_frame(pkt.stream_index, frame)){
                         LDEBUG("Decoded Audio Frame");
@@ -183,6 +191,7 @@ void Camera::run(void){
                 if (!encode_audio){
                     if (!out.write(pkt, stream.get_stream(pkt))){//log it
                         stream.unref_frame(pkt);
+                        LERROR("Error writing copied audio packet");
                         break;
                     }
                 }
@@ -242,12 +251,13 @@ void Camera::cut_video(const AVPacket &pkt, StreamWriter &out){
         AVRational sec_raw = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);//current time..
         AVRational sec = av_sub_q(sec_raw, last_cut);
 
-        if (av_cmp_q(sec, seconds_per_segment) == 1 || sec.num < 0){
+        if (av_cmp_q(sec, seconds_per_segment) == 1 || (sec.num < 0 && last_cut.num > 0)){
             //cutting the video
             struct timeval start;
             stream.timestamp(pkt, start);
             AVRational file_seconds = av_sub_q(sec_raw, last_cut_file);
             if (out.is_fragmented() && sec.num >= 0 && av_cmp_q(file_seconds, seconds_per_file) == -1){
+                LDEBUG("Fragging Segment");
                 //we just fragment the file
                 long long size = out.change_path("");
                 if (last_cut_byte == 0 && out.get_init_len() > 0){
@@ -257,6 +267,7 @@ void Camera::cut_video(const AVPacket &pkt, StreamWriter &out){
                 last_cut_byte = size;
                 fm.get_next_path(file_id, id, start, true);
             } else {
+                LDEBUG("Cutting File");
                 //copy the previous metadata
                 auto old_id = file_id;
                 auto old_init_len = out.get_init_len();
