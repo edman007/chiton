@@ -82,6 +82,7 @@ if ($res){
     echo '#EXT-X-PROGRAM-DATE-TIME:' . $start_time->format('c') . "\n";
     echo "#EXT-X-PLAYLIST-TYPE:EVENT\n";
     echo "#EXT-X-TARGETDURATION:" . (2*$camera_cfg->get_value('seconds-per-segment')). "\n";
+    echo "#EXT-X-INDEPENDENT-SEGMENTS\n";
 
     //master playlist requirements
     //EXT-X-STREAM-INF - CODECS and RESOLUTION
@@ -96,10 +97,8 @@ if ($res){
             if ($using_mp4 && $last_name != $row['name'] && $row['extension'] == '.mp4'){
                 //we just try the first one as our init files
                 echo "#EXT-X-MAP:URI=\"$url\",BYTERANGE=\"${row['init_byte']}@0\"\n";
-                $last_name = $row['name'];
             }
         }
-        $last_endtime = $row['endtime'];
         $len = ($row['endtime'] - $row['starttime'])/1000;
         if ($len == 0){//we have seen some with a len of zero...is this an ok workaround?
             $len = 0.001;
@@ -109,9 +108,17 @@ if ($res){
         echo "#EXTINF:$len,$name\n";
         if ($using_mp4 && $row['extension'] == '.mp4'){
             $seg_len = $row['end_byte'] - $row['start_byte'];
-            echo "#EXT-X-BYTERANGE:{$seg_len}@{$row['start_byte']}\n";
+            echo "#EXT-X-BYTERANGE:{$seg_len}";
+            if ($last_name != $row['name'] || 1){
+                echo "@{$row['start_byte']}\n";
+            } else {
+                echo "\n";
+            }
         }
         echo $url . "\n";
+        $last_endtime = $row['endtime'];
+        $last_name = $row['name'];
+
     }
     
     if (!empty($endtime)){ 
