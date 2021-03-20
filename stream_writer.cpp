@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2021 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -416,13 +416,14 @@ bool StreamWriter::write(const AVFrame *frame, const AVStream *in_stream){
     while (1) {
         ret = avcodec_receive_packet(encode_ctx[stream_mapping[in_stream->index]], &enc_pkt);
         if (ret){
+            if (ret == AVERROR(EAGAIN)){
+                break;
+            }
+            LWARN("Error Receiving Packet");
             break;
         }
 
         enc_pkt.stream_index = in_stream->index;//revert stream index because write will adjust this
-        if (enc_pkt.duration == 0){
-            enc_pkt.duration = frame->pkt_duration;
-        }
         bool write_ret = write(enc_pkt, in_stream);
         av_packet_unref(&enc_pkt);
         if (!write_ret){
