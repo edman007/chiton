@@ -457,7 +457,7 @@ AVStream *StreamWriter::init_stream(const AVStream *in_stream){
 
     //set the offset to -1, indicating unknown
     stream_offset.push_back(-1);
-    last_dts.push_back(-1);
+    last_dts.push_back(LONG_MIN);
 
     out_stream = avformat_new_stream(output_format_context, NULL);
     if (!out_stream) {
