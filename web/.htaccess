@@ -1,5 +1,3 @@
-<Files *.ts>
-Header set Access-Control-Allow-Origin "*"
-Header set Access-Control-Expose-Headers Content-Length
-Header set Access-Control-Allow-Headers Range
-</Files>
+Header set Access-Control-Allow-Origin *
+Header set Access-Control-Allow-Methods: "GET"
+Header set Access-Control-Allow-Headers "Content-Type, Content-Length, Range"

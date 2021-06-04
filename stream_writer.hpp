@@ -17,13 +17,24 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2021 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
 #include "chiton_config.hpp"
 #include "stream_unwrap.hpp"
 #include <functional>
+
+class PacketInterleavingBuf {
+public:
+    AVPacket* in;//the origional packet, in source timebase
+    AVPacket* out;//the packet to be written, in destination timebase
+    bool video_keyframe;
+    long dts0;//DTS in stream 0 timebase
+    PacketInterleavingBuf(const AVPacket &pkt);//clone in & out to pkt
+    ~PacketInterleavingBuf();//free the packets
+};
+
 class StreamWriter {
 public:
     StreamWriter(Config &cfg, std::string path);
@@ -32,7 +43,7 @@ public:
     
     bool open(void);//open the file for writing, returns true on success
     long long close(void);//close the file and return the filesize
-    bool write(const AVPacket &pkt, const AVStream *in_stream);//write the packet to the file
+    bool write(const AVPacket &pkt, const AVStream *in_stream);//write the packet to the file, interleave the packet appropriatly
     bool write(const AVFrame *frame, const AVStream *in_stream);//write the frame to the file (using encoding)
     //set the path of the file to write to, if the stream was opened, it remains opened (and a new file is created), if it was closed then it is not opened
     long long change_path(const std::string &new_path = "");//returns file position of the end of the file
@@ -66,6 +77,10 @@ private:
     long long init_len;
     AVIOContext *output_file;
 
+    //buffers used to force proper interleaving
+    std::list<PacketInterleavingBuf*> interleaving_buf;
+    std::map<int,long> interleaved_dts;
+
     void log_packet(const AVFormatContext *fmt_ctx, const AVPacket &pkt, const std::string &tag);
     bool open_path(void);//open the path and write the header
     void free_context(void);//free the context associated with a file
@@ -74,5 +89,8 @@ private:
     long long frag_stream(void);//creates a fragment at the current location and returns the position
     long long write_buf(bool reopen);//write the buffer to the file, return bytes written on success, negative on error, if reopen is true then a new buffer is also allocated
     long long write_init(void);//write the init segment to the buffer
+    bool write(PacketInterleavingBuf *buf);//write the packet to the file (perform the actual write)
+    void interleave(PacketInterleavingBuf *buf);//add the packet to the interleaving buffer and write buffers that are ready
+    bool write_interleaved(void);//write any buffers that are ready to be written
 };
 #endif

@@ -123,7 +123,10 @@ long long StreamWriter::close(void){
     if (0 > av_interleaved_write_frame(output_format_context, NULL)){
         LERROR("Error flushing muxing output for camera " + cfg.get_value("camera-id"));
     }
-    av_write_frame(output_format_context, NULL);
+    if (0 > av_write_frame(output_format_context, NULL)){
+        LERROR("Error flushing muxing output for camera " + cfg.get_value("camera-id"));
+    }
+
     if (segment_mode != SEGMENT_FMP4){
         av_write_trailer(output_format_context);
     }
@@ -136,70 +139,78 @@ long long StreamWriter::close(void){
 }
 
 bool StreamWriter::write(const AVPacket &packet, const AVStream *in_stream){
-    AVStream *out_stream;
-    AVPacket out_pkt;
-
     if (!file_opened){
         return false;
     }
 
-    if (keyframe_cbk && in_stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && packet.flags & AV_PKT_FLAG_KEY){
-        keyframe_cbk(packet, *this);
+    if (packet.stream_index >= static_cast<int>(stream_mapping.size()) ||
+        stream_mapping[packet.stream_index] < 0) {
+        return true;//we processed the stream we don't care about
     }
 
-    if (av_packet_ref(&out_pkt, &packet)){
+    AVStream *out_stream;
+    PacketInterleavingBuf *pkt_buf = new PacketInterleavingBuf(packet);
+    pkt_buf->video_keyframe = in_stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && packet.flags & AV_PKT_FLAG_KEY;
+
+    if (!pkt_buf->in || !pkt_buf->out){
         LERROR("Could not allocate new output packet for writing");
+        delete pkt_buf;
         return false;
     }
     
-    if (out_pkt.stream_index >= static_cast<int>(stream_mapping.size()) ||
-        stream_mapping[out_pkt.stream_index] < 0) {
-        av_packet_unref(&out_pkt);
-        return true;//we processed the stream we don't care about
-    }
     //log_packet(unwrap.get_format_context(), packet, "in: " + path);
-    out_pkt.stream_index = stream_mapping[out_pkt.stream_index];
-    out_stream = output_format_context->streams[out_pkt.stream_index];
+    pkt_buf->out->stream_index = stream_mapping[pkt_buf->out->stream_index];
+    out_stream = output_format_context->streams[pkt_buf->out->stream_index];
 
     /* copy packet */
-    out_pkt.pts = av_rescale_q_rnd(out_pkt.pts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
-    out_pkt.dts = av_rescale_q_rnd(out_pkt.dts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
-    out_pkt.duration = av_rescale_q(out_pkt.duration, in_stream->time_base, out_stream->time_base);
-    out_pkt.pos = -1;
+    pkt_buf->out->pts = av_rescale_q_rnd(pkt_buf->out->pts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+    pkt_buf->out->dts = av_rescale_q_rnd(pkt_buf->out->dts, in_stream->time_base, out_stream->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+    pkt_buf->out->duration = av_rescale_q(pkt_buf->out->duration, in_stream->time_base, out_stream->time_base);
+    pkt_buf->out->pos = -1;
 
     /* This should actually be used only for exporting video
     //correct for the offset, it is intentional that we base the offset on DTS (always first), and subtract it from DTS and PTS to
     //preserve any difference between them
-    if (stream_offset[stream_mapping[out_pkt.stream_index]] < 0){
-        stream_offset[stream_mapping[out_pkt.stream_index]] = out_pkt.dts;
+    if (stream_offset[stream_mapping[pkt_buf->out->stream_index]] < 0){
+        stream_offset[stream_mapping[pkt_buf->out->stream_index]] = pkt_buf->out->dts;
     }
-    out_pkt.dts -= stream_offset[stream_mapping[out_pkt.stream_index]];
-    out_pkt.pts -= stream_offset[stream_mapping[out_pkt.stream_index]];
+    pkt_buf->out->dts -= stream_offset[stream_mapping[pkt_buf->out->stream_index]];
+    pkt_buf->out->pts -= stream_offset[stream_mapping[pkt_buf->out->stream_index]];
     */
     
     //guarentee that they have an increasing DTS
-    if (out_pkt.dts < last_dts[out_pkt.stream_index]){
-        LWARN("Shifting frame timestamp due to out of order issue in camera " + cfg.get_value("camera-id") +", old dts was: " + std::to_string(out_pkt.dts));
-        last_dts[out_pkt.stream_index]++;
-        long pts_delay = out_pkt.pts - out_pkt.dts;
-        out_pkt.dts = last_dts[out_pkt.stream_index];
-        out_pkt.pts = out_pkt.dts + pts_delay;
-    } else if (out_pkt.dts == last_dts[out_pkt.stream_index]) {
-        LWARN("Received duplicate frame from camera " + cfg.get_value("camera-id") +" at dts: " + std::to_string(out_pkt.dts) + ". Dropping Frame");
-        av_packet_unref(&out_pkt);
+    if (pkt_buf->out->dts < last_dts[pkt_buf->out->stream_index]){
+        LWARN("Shifting frame timestamp due to out of order issue in camera " + cfg.get_value("camera-id") +", old dts was: " + std::to_string(pkt_buf->out->dts));
+        last_dts[pkt_buf->out->stream_index]++;
+        long pts_delay = pkt_buf->out->pts - pkt_buf->out->dts;
+        pkt_buf->out->dts = last_dts[pkt_buf->out->stream_index];
+        pkt_buf->out->pts = pkt_buf->out->dts + pts_delay;
+    } else if (pkt_buf->out->dts == last_dts[pkt_buf->out->stream_index]) {
+        LWARN("Received duplicate frame from camera " + cfg.get_value("camera-id") +" at dts: " + std::to_string(pkt_buf->out->dts) + ". Dropping Frame");
+        delete pkt_buf;
         return true;
     }
 
-    last_dts[out_pkt.stream_index] = out_pkt.dts;
+    last_dts[pkt_buf->out->stream_index] = pkt_buf->out->dts;
     //log_packet(output_format_context, out_pkt, "out: "+path);
 
-    int ret = av_interleaved_write_frame(output_format_context, &out_pkt);
+    interleave(pkt_buf);
+    return write_interleaved();
+}
+
+bool StreamWriter::write(PacketInterleavingBuf *pkt_buf){
+
+    if (keyframe_cbk && pkt_buf->video_keyframe){
+        keyframe_cbk(*(pkt_buf->in), *this);
+    }
+    LWARN("Writing: " + std::to_string(pkt_buf->dts0) + "(" + std::to_string(pkt_buf->out->dts) + ")");
+    int ret = av_interleaved_write_frame(output_format_context, pkt_buf->out);
     if (ret < 0) {
         LERROR("Error muxing packet for camera " + cfg.get_value("camera-id"));
         return false;
     }
 
-    av_packet_unref(&out_pkt);
+    delete pkt_buf;
     return true;
 }
 
@@ -244,6 +255,12 @@ void StreamWriter::free_context(void){
         av_free(init_seg);
         init_seg = NULL;
     }
+
+    //free our interleaving buffers
+    for (auto ibuf : interleaving_buf){
+        delete ibuf;
+    }
+    interleaving_buf.clear();
 
     avformat_free_context(output_format_context);
 
@@ -356,6 +373,11 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
             encode_ctx[out_stream->index]->pix_fmt = dec_ctx->pix_fmt;
             encode_ctx[out_stream->index]->time_base = in_stream->time_base;//av_inv_q(dec_ctx->framerate);
 
+            //set the fourcc
+            if (encode_ctx[out_stream->index]->codec_id ==  AV_CODEC_ID_HEVC){
+                encode_ctx[out_stream->index]->codec_tag = MKTAG('h', 'v', 'c', '1');//should be for hevc only?
+            }
+
             //connect encoder
             if (!encode_ctx[out_stream->index]->hw_device_ctx &&
                 (cfg.get_value("video-encode-method") == "auto" || cfg.get_value("video-encode-method") == "vaapi")){
@@ -466,6 +488,7 @@ AVStream *StreamWriter::init_stream(const AVStream *in_stream){
         stream_mapping[in_stream->index] = -1;
         return NULL;
     }
+
     return out_stream;
 }
 
@@ -538,4 +561,70 @@ long long StreamWriter::write_init(void){
     }
     avio_write(output_file, init_seg, init_len);
     return init_len;
+}
+
+void StreamWriter::interleave(PacketInterleavingBuf *buf){
+    if (buf->out->stream_index == 0){
+        buf->dts0 = buf->out->dts;
+    } else {
+        //convert to the stream 0 timebase
+        buf->dts0 = av_rescale_q_rnd(buf->out->dts,
+                                     output_format_context->streams[buf->out->stream_index]->time_base,
+                                     output_format_context->streams[0]->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+    }
+    interleaved_dts[buf->out->stream_index] = buf->dts0;
+    //find the first buf where dts0 is > than ours, and insert just before that
+    for (auto ibuf = interleaving_buf.begin(); ibuf != interleaving_buf.end(); ibuf++){
+        if ((*ibuf)->dts0 > buf->dts0){
+            interleaving_buf.insert(ibuf, buf);
+            return;
+        }
+    }
+    interleaving_buf.push_back(buf);
+}
+
+bool StreamWriter::write_interleaved(void){
+    unsigned int stream_count = output_format_context->nb_streams;
+
+    //do not continue if we don't all streams
+    if (interleaved_dts.size() != stream_count){
+        if (interleaving_buf.size() > 100){
+            LWARN("Over 100 packets buffered and all streams not seen yet");
+            return false;
+        } else {
+            LDEBUG("Waiting for packet, interleaving_buf has " + std::to_string(interleaving_buf.size()));
+            return true;
+        }
+    }
+
+    //find the earilest DTS across all streams
+    long long last_dts = LLONG_MAX;
+    for (const auto dts : interleaved_dts){
+        if (dts.second < last_dts){
+            last_dts = dts.second;
+        }
+    }
+
+    bool ret = true;
+    for (auto ibuf = interleaving_buf.begin(); ibuf != interleaving_buf.end();){
+        if ((*ibuf)->dts0 <= last_dts){
+            ret &= write(*ibuf);
+            ibuf = interleaving_buf.erase(ibuf);
+        } else {
+            break;
+        }
+    }
+
+    return ret;
+}
+
+PacketInterleavingBuf::PacketInterleavingBuf(const AVPacket &pkt){
+    in = av_packet_clone(&pkt);
+    out = av_packet_clone(&pkt);
+    video_keyframe = false;
+}
+
+PacketInterleavingBuf::~PacketInterleavingBuf(){
+    av_packet_free(&in);
+    av_packet_free(&out);
 }
