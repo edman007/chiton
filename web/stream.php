@@ -57,80 +57,95 @@ $packed_start = DateTime_to_dbtime($start_time);
 
 $yesterday = clone $cur_time;
 $yesterday->sub(new DateInterval('P1D'));
-//$yesterday->setTime(0,0);
-//query the most recent video from the DB
-$sql = 'SELECT path, starttime, endtime, extension, name, init_byte, start_byte, end_byte FROM videos '.
-     'WHERE camera = ' . ((int)$_GET['id']).' AND endtime IS NOT NULL AND starttime > ' . $packed_start;
-if ($start_time->getTimestamp() < $yesterday->getTimestamp()){
-    $endtime = new DateTime('@'.($start_time->getTimestamp() + 3600*24));
-    $packed_endtime = Datetime_to_dbtime($endtime);
-    $sql .= ' AND starttime < '. $packed_endtime;
-}
-$sql .= ' ORDER BY starttime ASC';
-$res = $db->query($sql);
-if ($res){
-    $hls_version = 3;
-    $using_mp4 = false;
-    if ($camera_cfg->get_value('output-extension') == '.mp4'){
-        $hls_version = 7;
-        $using_mp4 = true;
-    }
 
-    //add the header
+
+//Do a master playlist unless a stream is selected
+if (!isset($_GET['stream'])){
     echo "#EXTM3U\n";
-    echo "#EXT-X-VERSION:$hls_version\n";
     echo '#EXT-X-PROGRAM-DATE-TIME:' . $start_time->format('c') . "\n";
-    echo "#EXT-X-PLAYLIST-TYPE:EVENT\n";
-    echo "#EXT-X-TARGETDURATION:" . (2*$camera_cfg->get_value('seconds-per-segment')). "\n";
-    echo "#EXT-X-INDEPENDENT-SEGMENTS\n";
-
-    //master playlist requirements
-    //EXT-X-STREAM-INF - CODECS and RESOLUTION
-    $last_endtime = 0;
-    $last_name = 0;
-    while ($row = $res->fetch_assoc()){
-        $url = 'vids/' . $row['path'] . $row['name'] . $row['extension'];
-        if ($row['starttime'] != $last_endtime){
-            if ($last_endtime != 0){
-                echo "#EXT-X-DISCONTINUITY\n";
-            }
-            if ($using_mp4 && $last_name != $row['name'] && $row['extension'] == '.mp4'){
-                //we just try the first one as our init files
-                echo "#EXT-X-MAP:URI=\"$url\",BYTERANGE=\"${row['init_byte']}@0\"\n";
-            }
-        }
-        $len = ($row['endtime'] - $row['starttime'])/1000;
-        if ($len == 0){//we have seen some with a len of zero...is this an ok workaround?
-            $len = 0.001;
-        }
-
-        $name = "Camera $camera: " . dbtime_to_DateTime($row['starttime'])->format('r');
-        echo "#EXTINF:$len,$name\n";
-        if ($using_mp4 && $row['extension'] == '.mp4'){
-            $seg_len = $row['end_byte'] - $row['start_byte'];
-            echo "#EXT-X-BYTERANGE:{$seg_len}";
-            if ($last_name != $row['name'] || 1){
-                echo "@{$row['start_byte']}\n";
-            } else {
-                echo "\n";
-            }
-        }
-        echo $url . "\n";
-        $last_endtime = $row['endtime'];
-        $last_name = $row['name'];
-
-    }
-    
-    if (!empty($endtime)){ 
-        //this is a complete playlist, add the end of the file
-        echo "#EXT-X-ENDLIST\n";
-    }
+    //MediaSource.isTypeSupported('video/mp4;codecs="avc1.4d0028"')
+    //MediaSource.isTypeSupported('video/mp4;codecs="avc1.42001f"')
+    //MediaSource.isTypeSupported('video/mp4;codecs="avc1.640029"')
+    echo "#EXT-X-STREAM-INF:BANDWIDTH=93000,CODECS=\"avc1.4d0028\",RESOLUTION=640x352,FRAME-RATE=15\n";
+    $start = (int)$_GET['start'];
+    $live = (int)$_GET['live'];
+    echo "stream.php?stream=-1&start=$start&id=$camera&live=$live\n";
 
 } else {
-    //query failed
-    die($sql);
-}
+    //$yesterday->setTime(0,0);
+    //query the most recent video from the DB
+    $sql = 'SELECT path, starttime, endtime, extension, name, init_byte, start_byte, end_byte FROM videos '.
+         'WHERE camera = ' . ((int)$_GET['id']).' AND endtime IS NOT NULL AND starttime > ' . $packed_start;
+    if ($start_time->getTimestamp() < $yesterday->getTimestamp()){
+        $endtime = new DateTime('@'.($start_time->getTimestamp() + 3600*24));
+        $packed_endtime = Datetime_to_dbtime($endtime);
+        $sql .= ' AND starttime < '. $packed_endtime;
+    }
+    $sql .= ' ORDER BY starttime ASC';
+    $res = $db->query($sql);
+    if ($res){
+        $hls_version = 3;
+        $using_mp4 = false;
+        if ($camera_cfg->get_value('output-extension') == '.mp4'){
+            $hls_version = 7;
+            $using_mp4 = true;
+        }
 
+        //add the header
+        echo "#EXTM3U\n";
+        echo "#EXT-X-VERSION:$hls_version\n";
+        echo '#EXT-X-PROGRAM-DATE-TIME:' . $start_time->format('c') . "\n";
+        echo "#EXT-X-PLAYLIST-TYPE:EVENT\n";
+        echo "#EXT-X-TARGETDURATION:" . (2*$camera_cfg->get_value('seconds-per-segment')). "\n";
+        echo "#EXT-X-INDEPENDENT-SEGMENTS\n";
+
+        //master playlist requirements
+        //EXT-X-STREAM-INF - CODECS and RESOLUTION
+        $last_endtime = 0;
+        $last_name = 0;
+        while ($row = $res->fetch_assoc()){
+            $url = 'vids/' . $row['path'] . $row['name'] . $row['extension'];
+            if ($row['starttime'] != $last_endtime){
+                if ($last_endtime != 0){
+                    echo "#EXT-X-DISCONTINUITY\n";
+                }
+                if ($using_mp4 && $last_name != $row['name'] && $row['extension'] == '.mp4'){
+                    //we just try the first one as our init files
+                    echo "#EXT-X-MAP:URI=\"$url\",BYTERANGE=\"${row['init_byte']}@0\"\n";
+                }
+            }
+            $len = ($row['endtime'] - $row['starttime'])/1000;
+            if ($len == 0){//we have seen some with a len of zero...is this an ok workaround?
+                $len = 0.001;
+            }
+
+            $name = "Camera $camera: " . dbtime_to_DateTime($row['starttime'])->format('r');
+            echo "#EXTINF:$len,$name\n";
+            if ($using_mp4 && $row['extension'] == '.mp4'){
+                $seg_len = $row['end_byte'] - $row['start_byte'];
+                echo "#EXT-X-BYTERANGE:{$seg_len}";
+                if ($last_name != $row['name'] || 1){
+                    echo "@{$row['start_byte']}\n";
+                } else {
+                    echo "\n";
+                }
+            }
+            echo $url . "\n";
+            $last_endtime = $row['endtime'];
+            $last_name = $row['name'];
+
+        }
+    
+        if (!empty($endtime)){
+            //this is a complete playlist, add the end of the file
+            echo "#EXT-X-ENDLIST\n";
+        }
+
+    } else {
+        //query failed
+        die($sql);
+    }
+}
 
 header('Accept-Ranges: bytes');
 function range_explode($str){

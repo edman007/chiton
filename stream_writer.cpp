@@ -203,7 +203,7 @@ bool StreamWriter::write(PacketInterleavingBuf *pkt_buf){
     if (keyframe_cbk && pkt_buf->video_keyframe){
         keyframe_cbk(*(pkt_buf->in), *this);
     }
-    LWARN("Writing: " + std::to_string(pkt_buf->dts0) + "(" + std::to_string(pkt_buf->out->dts) + ")");
+    //LWARN("Writing: " + std::to_string(pkt_buf->dts0) + "(" + std::to_string(pkt_buf->out->dts) + ")");
     int ret = av_interleaved_write_frame(output_format_context, pkt_buf->out);
     if (ret < 0) {
         LERROR("Error muxing packet for camera " + cfg.get_value("camera-id"));
@@ -321,6 +321,7 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
     }
 
     AVCodec *encoder = NULL;
+    AVDictionary *opts = NULL;//watch out about return and free
     //Audio
     if (dec_ctx->codec_type == AVMEDIA_TYPE_AUDIO){
         if (cfg.get_value("encode-format-audio") == "ac3"){
@@ -340,6 +341,12 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
             encode_ctx[out_stream->index]->channels = av_get_channel_layout_nb_channels(encode_ctx[out_stream->index]->channel_layout);
             encode_ctx[out_stream->index]->sample_fmt = encoder->sample_fmts[0];
             encode_ctx[out_stream->index]->time_base = (AVRational){1, encode_ctx[out_stream->index]->sample_rate};
+
+            //apply encode audio options
+            AVDictionary *aopts = Util::get_dict_options(cfg.get_value("ffmpeg-encode-audio-opt"));
+            av_dict_copy(&opts, aopts, NULL);
+            av_dict_free(&aopts);
+
         } else {
             LWARN("Could not find audio encoder");
             return false;
@@ -378,6 +385,35 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
                 encode_ctx[out_stream->index]->codec_tag = MKTAG('h', 'v', 'c', '1');//should be for hevc only?
             }
 
+            if (cfg.get_value("video-bitrate") != "auto"){
+                long bitrate = cfg.get_value_long("video-bitrate");
+                if (bitrate > 1){
+                    encode_ctx[out_stream->index]->bit_rate = bitrate;
+                }
+            }
+
+            if (!encode_ctx[out_stream->index]->bit_rate){
+                double framerate = av_q2d(dec_ctx->framerate);
+                if (framerate < 1){
+                    framerate = 30;
+                }
+                double pixel_sec = encode_ctx[out_stream->index]->height * encode_ctx[out_stream->index]->height * framerate;
+                //estimate the bitrate
+                if (encode_ctx[out_stream->index]->codec_id ==  AV_CODEC_ID_HEVC){
+                    encode_ctx[out_stream->index]->bit_rate = pixel_sec / 75;
+                } else {
+                    //h264
+                    encode_ctx[out_stream->index]->bit_rate = pixel_sec / 40;
+                }
+
+            }
+
+            LINFO("Selected video encode bitrate: " + std::to_string(encode_ctx[out_stream->index]->bit_rate/1000) + "kbps");
+            //apply encode video options
+            AVDictionary *vopts = Util::get_dict_options(cfg.get_value("ffmpeg-encode-video-opt"));
+            av_dict_copy(&opts, vopts, NULL);
+            av_dict_free(&vopts);
+
             //connect encoder
             if (!encode_ctx[out_stream->index]->hw_device_ctx &&
                 (cfg.get_value("video-encode-method") == "auto" || cfg.get_value("video-encode-method") == "vaapi")){
@@ -407,8 +443,9 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
     }
 
     gcff_util.lock();
-    int ret = avcodec_open2(encode_ctx[out_stream->index], encoder, NULL);
+    int ret = avcodec_open2(encode_ctx[out_stream->index], encoder, &opts);
     gcff_util.unlock();
+    av_dict_free(&opts);
     if (ret < 0) {
         LERROR("Cannot open encoder for stream " + std::to_string(out_stream->index));
         return false;
@@ -419,6 +456,7 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
         LERROR("Failed to copy encoder parameters to output stream " + std::to_string(out_stream->index));
         return false;
     }
+
 
     out_stream->time_base = encode_ctx[out_stream->index]->time_base;
     return true;

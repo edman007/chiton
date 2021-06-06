@@ -113,7 +113,7 @@ void Camera::run(void){
             LERROR("Camera " + std::to_string(id) + " transcoding audio stream failed!");
             return;
         }
-    } else {
+    } else if(cfg.get_value("encode-format-audio") != "none") {
         if (out.add_stream(stream.get_audio_stream())){
             LINFO("Camera " + std::to_string(id) + " copying audio stream");
         } else {
@@ -312,13 +312,18 @@ bool Camera::get_vencode(void){
 }
 
 bool Camera::get_aencode(void){
+    const std::string &user_opt = cfg.get_value("encode-format-audio");
+    if (user_opt == "none"){
+        LINFO("encode-format-audio is 'none', skipping audio");
+        return false;
+    }
+
     AVStream *audio_stream = stream.get_audio_stream();
     if (audio_stream == NULL){
         LINFO("Camera " + std::to_string(id) + " has no usable audio");
         return false;
     }
 
-    const std::string &user_opt = cfg.get_value("encode-format-audio");
     if (user_opt == "aac" || user_opt == "ac3"){
         return true;//these force encoding
     } else {
