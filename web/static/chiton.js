@@ -24,10 +24,12 @@ function loadHLS(video){
 
         // bind them together
         var cfg = {
-            //"debug": true,
+            "debug": true,
             "enableWorker": true,
             "liveBackBufferLength": 900,
-            "maxFragLookUpTolerance": true,
+            "lowLatencyMode": true,
+            "backBufferLength": 90,
+            /* "maxFragLookUpTolerance": true, */
         };
         var hls = new Hls(cfg);
         hls.attachMedia(video);
