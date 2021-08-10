@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2021 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -26,7 +26,7 @@
 //we increment Major when we break backwards compatibility
 static const int CURRENT_DB_VERSION_MAJOR = 1;
 //we increment minor when we add a backwards compatible version
-static const int CURRENT_DB_VERSION_MINOR = 2;
+static const int CURRENT_DB_VERSION_MINOR = 3;
 static const std::string CURRENT_DB_VERSION = std::to_string(CURRENT_DB_VERSION_MAJOR) + "." + std::to_string(CURRENT_DB_VERSION_MINOR);
 
 DatabaseManager::DatabaseManager(Database &db) : db(db) {
@@ -52,6 +52,11 @@ bool DatabaseManager::initilize_db(){
         "`init_byte` INT NULL DEFAULT NULL, "
         "`start_byte` INT NULL DEFAULT NULL, "
         "`end_byte` INT NULL DEFAULT NULL, "
+        "`codec` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL, "
+        "`av_type` ENUM('audio', 'video', 'audiovideo') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'audiovideo', "
+        "`width` INT NULL DEFAULT NULL, "
+        "`height` INT NULL DEFAULT NULL, "
+        "`framerate` FLOAT NULL DEFAULT NULL`"
         "PRIMARY KEY (id,camera,starttime), "
         "KEY endtime (endtime), "
         "KEY starttime (starttime), "
@@ -206,6 +211,8 @@ bool DatabaseManager::upgrade_database(int major, int minor){
             return upgrade_from_1_0();
         case 1:
             return upgrade_from_1_1();
+        case 2:
+            return upgrade_from_1_2();
         default:
             return false;
         }
@@ -299,6 +306,32 @@ bool DatabaseManager::upgrade_from_1_1(void){
             LFATAL("Could not update video table");
             ret = false;
         }
+    }
+
+    if (ret){
+        return upgrade_from_1_2();
+    } else {
+        return ret;
+    }
+
+}
+
+
+bool DatabaseManager::upgrade_from_1_2(void){
+    const std::string video_alter = "ALTER TABLE `videos` ADD "
+        "`codec` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL AFTER `end_byte`, "
+        "ADD `av_type` ENUM('audio', 'video', 'audiovideo') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'audiovideo' AFTER `codec`"
+        "ADD `width` INT NULL DEFAULT NULL AFTER `av_type`, "
+        "ADD `height` INT NULL DEFAULT NULL AFTER `width`, "
+        "ADD `framerate` FLOAT NULL DEFAULT NULL AFTER `height`";
+
+    bool ret = true;
+    DatabaseResult *res = db.query(video_alter);
+    if (res){
+        delete res;
+    } else {
+        LFATAL("Could not alter video table");
+        ret = false;
     }
 
     if (ret){

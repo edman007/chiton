@@ -50,9 +50,15 @@ public:
     bool add_stream(const AVStream *in_stream);//add in_stream to output (copy)
     bool add_encoded_stream(const AVStream *in_stream, const AVCodecContext *dec_ctx);//add in_stream to output, using encoding
     bool copy_streams(StreamUnwrap &unwrap);//copy all streams from unwrap to output
-    bool is_fragmented(void);//return true if this is a file format that supports fragmenting
-    long long get_init_len(void);//return the init length, -1 if not valid
+    bool is_fragmented(void) const;//return true if this is a file format that supports fragmenting
+    long long get_init_len(void) const;//return the init length, -1 if not valid
     void set_keyframe_callback(std::function<void(const AVPacket &pkt, StreamWriter &out)> cbk);//set a callback when writing video keyframes
+    std::string get_codec_str(void) const;//returns the codec string for the current output
+    bool have_video(void) const ;//true if video is included in output
+    bool have_audio(void) const;//true if audio is included in output
+    int get_width() const;//returns the video width, or -1 if unknown
+    int get_height() const;//returns the video height, or -1 if unknown
+    float get_framerate() const;//returns the video framerate, or 0 if unknown
 private:
     Config &cfg;
     Config *cfg1;
@@ -63,6 +69,13 @@ private:
     AVFormatContext *output_format_context = NULL;
     std::map<int,int> stream_mapping;
     std::map<int, AVCodecContext*> encode_ctx;
+    std::map<int, std::string> codec_str;
+    //metadata that we track to forward to the HLS frontend (needs to go into the DB)
+    bool video_stream_found;
+    bool audio_stream_found;
+    int video_width;//-1 if unknown
+    int video_height;//-1 if unknown
+    float video_framerate;//0 if unknown
     //these offsets are used to shift the time when receiving something
     std::vector<long> stream_offset;
     std::vector<long> last_dts;//used to fix non-increasing DTS
@@ -92,5 +105,9 @@ private:
     bool write(PacketInterleavingBuf *buf);//write the packet to the file (perform the actual write)
     void interleave(PacketInterleavingBuf *buf);//add the packet to the interleaving buffer and write buffers that are ready
     bool write_interleaved(void);//write any buffers that are ready to be written
+    bool gen_codec_str(const int stream, const AVCodecParameters *codec);//generate the HLS codec ID for the stream
+    uint8_t *nal_unit_extract_rbsp(const uint8_t *src, const uint32_t src_len, uint32_t *dst_len);//helper for decoding h264 types
+    bool guess_framerate(const AVStream *stream);//guess the framerate from the stream, true if found framerate
+    bool guess_framerate(const AVCodecContext* codec_ctx);//guess the framerate from the codec context, true if found framerate
 };
 #endif

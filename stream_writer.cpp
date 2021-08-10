@@ -23,6 +23,8 @@
 #include "util.hpp"
 #include "chiton_ffmpeg.hpp"
 #include <assert.h>
+#include <iomanip>
+#include <sstream>
 
 StreamWriter::StreamWriter(Config& cfg) : cfg(cfg) {
     file_opened = false;
@@ -34,6 +36,11 @@ StreamWriter::StreamWriter(Config& cfg) : cfg(cfg) {
     } else {
         segment_mode = SEGMENT_MPGTS;
     }
+    video_stream_found = false;
+    audio_stream_found = false;
+    video_width = -1;
+    video_height = -1;
+    video_framerate = 0;
 }
 
 bool StreamWriter::open(void){
@@ -271,6 +278,12 @@ void StreamWriter::free_context(void){
         avcodec_free_context(&encoder.second);
     }
 
+    codec_str.clear();
+    video_stream_found = false;
+    audio_stream_found = false;
+    video_width = -1;
+    video_height = -1;
+    video_framerate = 0;
 }
 
 bool StreamWriter::alloc_context(void){
@@ -298,7 +311,15 @@ bool StreamWriter::add_stream(const AVStream *in_stream){
         LERROR("Error occurred: " + std::string(av_err2str(error)));
         return false;
     }
+    if (stream_mapping[in_stream->index] != -1){
+        gen_codec_str(stream_mapping[in_stream->index], out_stream->codecpar);
+    }
 
+    //record the framerate for later from the input if the output didn't have it
+    if (in_stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){
+        guess_framerate(in_stream);
+        guess_framerate(out_stream);//does this do anything if we just copied it?
+    }
     return true;
 }
 
@@ -344,7 +365,7 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
 
             //apply encode audio options
             AVDictionary *aopts = Util::get_dict_options(cfg.get_value("ffmpeg-encode-audio-opt"));
-            av_dict_copy(&opts, aopts, NULL);
+            av_dict_copy(&opts, aopts, 0);
             av_dict_free(&aopts);
 
         } else {
@@ -411,7 +432,7 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
             LINFO("Selected video encode bitrate: " + std::to_string(encode_ctx[out_stream->index]->bit_rate/1000) + "kbps");
             //apply encode video options
             AVDictionary *vopts = Util::get_dict_options(cfg.get_value("ffmpeg-encode-video-opt"));
-            av_dict_copy(&opts, vopts, NULL);
+            av_dict_copy(&opts, vopts, 0);
             av_dict_free(&vopts);
 
             //connect encoder
@@ -423,7 +444,7 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
                     if (dec_ctx->hw_frames_ctx){//this requires a decoded frame
                         encode_ctx[out_stream->index]->hw_frames_ctx = av_buffer_ref(dec_ctx->hw_frames_ctx);
                     } else {
-                        LWARN("Didnt find frame ctx");
+                        LWARN("VAAPI encoding currently requires VAAPI decoding");
                     }
                 }
             }
@@ -459,6 +480,15 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
 
 
     out_stream->time_base = encode_ctx[out_stream->index]->time_base;
+
+    //get the profile info:
+    gen_codec_str(out_stream->index, out_stream->codecpar);
+    if (out_stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){
+        guess_framerate(encode_ctx[out_stream->index]);
+        guess_framerate(dec_ctx);
+        guess_framerate(out_stream);
+        guess_framerate(in_stream);
+    }
     return true;
 }
 
@@ -530,7 +560,7 @@ AVStream *StreamWriter::init_stream(const AVStream *in_stream){
     return out_stream;
 }
 
-bool StreamWriter::is_fragmented(void){
+bool StreamWriter::is_fragmented(void) const {
     return segment_mode == SEGMENT_FMP4;
 }
 
@@ -552,7 +582,7 @@ long long StreamWriter::frag_stream(void){
 
 }
 
-long long StreamWriter::get_init_len(void){
+long long StreamWriter::get_init_len(void) const {
     return init_len;
 }
 
@@ -655,6 +685,200 @@ bool StreamWriter::write_interleaved(void){
 
     return ret;
 }
+
+bool StreamWriter::gen_codec_str(const int stream, const AVCodecParameters *codec){
+    if (codec->codec_type == AVMEDIA_TYPE_AUDIO){
+        audio_stream_found = true;
+    } else if (codec->codec_type == AVMEDIA_TYPE_VIDEO){
+        video_stream_found = true;
+        //and copy the metadata
+        video_width = codec->width;
+        video_height = codec->height;
+    }
+
+    //extract the codec ID if available (much of this borrowed from ffmpeg/libavformat/hls.enc write_codec_attr())
+    if (codec->codec_id ==  AV_CODEC_ID_H264){
+        uint8_t *data = codec->extradata;
+        if (data && (data[0] | data[1] | data[2]) == 0 && data[3] == 1 && (data[4] & 0x1F) == 7) {
+            std::stringstream codec_id_builder;
+            codec_id_builder << "avc1.";
+            codec_id_builder << std::setfill('0') << std::setw(2) << std::hex << (unsigned int)data[5];
+            codec_id_builder << std::setfill('0') << std::setw(2) << std::hex << (unsigned int)data[6];
+            codec_id_builder << std::setfill('0') << std::setw(2) << std::hex << (unsigned int)data[7];
+            codec_str[stream] = codec_id_builder.str();
+        } else {
+            LWARN("Unknown h264 codec ID from encoder, going to make an uneducated guess");
+            codec_str[stream] = "avc1.640029";//just a random guess..should probably guess something closer...
+        }
+    } else if (encode_ctx[stream]->codec_id ==  AV_CODEC_ID_HEVC){
+        uint8_t *data = codec->extradata;
+        int profile = FF_PROFILE_UNKNOWN;
+        int level = FF_LEVEL_UNKNOWN;
+
+        if (codec->profile != FF_PROFILE_UNKNOWN){
+            profile = codec->profile;
+        }
+        if (codec->level != FF_LEVEL_UNKNOWN){
+            level = codec->level;
+        }
+
+        /* check the boundary of data which from current position is small than extradata_size */
+        while (data && (data - codec->extradata + 19) < codec->extradata_size) {
+            /* get HEVC SPS NAL and seek to profile_tier_level */
+            if (!(data[0] | data[1] | data[2]) && data[3] == 1 && ((data[4] & 0x7E) == 0x42)) {
+                uint8_t *rbsp_buf;
+                int remain_size = 0;
+                uint32_t rbsp_size = 0;
+                /* skip start code + nalu header */
+                data += 6;
+                /* process by reference General NAL unit syntax */
+                remain_size = codec->extradata_size - (data - codec->extradata);
+                rbsp_buf = nal_unit_extract_rbsp(data, remain_size, &rbsp_size);
+                if (!rbsp_buf){
+                    break;
+                }
+                if (rbsp_size < 13) {
+                    delete rbsp_buf;
+                    break;
+                }
+                /* skip sps_video_parameter_set_id   u(4),
+                 *      sps_max_sub_layers_minus1    u(3),
+                 *  and sps_temporal_id_nesting_flag u(1) */
+                profile = rbsp_buf[1] & 0x1f;
+                /* skip 8 + 8 + 32 + 4 + 43 + 1 bit */
+                level = rbsp_buf[12];
+                delete rbsp_buf;
+                break;
+            }
+            data++;
+        }
+        if (codec->codec_tag == MKTAG('h','v','c','1') &&
+            profile != FF_PROFILE_UNKNOWN &&
+            level != FF_LEVEL_UNKNOWN) {
+            codec_str[stream] = std::string(av_fourcc2str(codec->codec_tag)) + "." + std::to_string(profile) + ".4L" + std::to_string(level) + ".B01";
+        } else {
+            LWARN("Unknown h265 codec, making an uneducated guess");
+            codec_str[stream] = "hvc1.2.4.L150.B0";//just a random guess
+        }
+    } else if (codec->codec_id == AV_CODEC_ID_MP2) {
+        codec_str[stream] = "mp4a.40.33";
+    } else if (codec->codec_id == AV_CODEC_ID_MP3) {
+        codec_str[stream] = "mp4a.40.34";
+    } else if (codec->codec_id == AV_CODEC_ID_AAC) {
+        /* TODO : For HE-AAC, HE-AACv2, the last digit needs to be set to 5 and 29 respectively */
+        codec_str[stream] = "mp4a.40.2";
+    } else if (codec->codec_id == AV_CODEC_ID_AC3) {
+        codec_str[stream] = "ac-3";
+    } else if (codec->codec_id == AV_CODEC_ID_EAC3) {
+        codec_str[stream] = "ec-3";
+    } else {
+        LWARN("Unknown codec for stream " + std::to_string(stream));
+        return false;
+    }
+    if (codec_str.find(stream) != codec_str.end()){
+        LINFO("Codec for stream " + std::to_string(stream) + " - " + codec_str[stream]);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+std::string StreamWriter::get_codec_str(void) const {
+    std::stringstream ss;
+    bool first = true;
+    for (const auto str : codec_str){
+        if (!first){
+            ss << ",";
+            first = false;
+        }
+        ss << str.second;
+    }
+    return ss.str();
+}
+
+bool StreamWriter::have_video(void) const {
+    return video_stream_found;
+}
+
+bool StreamWriter::have_audio(void) const {
+    return audio_stream_found;
+}
+
+int StreamWriter::get_height(void) const {
+    return video_height;
+}
+
+int StreamWriter::get_width(void) const {
+    return video_width;
+}
+
+float StreamWriter::get_framerate(void) const {
+    return video_framerate;
+}
+
+//borrowed from ffmpeg/libavformat/avc.c
+uint8_t *StreamWriter::nal_unit_extract_rbsp(const uint8_t *src, const uint32_t src_len, uint32_t *dst_len){
+     uint8_t *dst;
+     uint32_t i, len;
+
+     dst = new uint8_t[src_len + AV_INPUT_BUFFER_PADDING_SIZE];
+     if (!dst){
+         return NULL;
+     }
+
+     i = len = 0;
+     while (i + 2 < src_len){
+         if (!src[i] && !src[i + 1] && src[i + 2] == 3) {
+             dst[len++] = src[i++];
+             dst[len++] = src[i++];
+             i++; // remove emulation_prevention_three_byte
+         } else {
+             dst[len++] = src[i++];
+         }
+     }
+
+     while (i < src_len){
+         dst[len++] = src[i++];
+     }
+
+     memset(dst + len, 0, AV_INPUT_BUFFER_PADDING_SIZE);
+
+     *dst_len = len;
+     return dst;
+}
+
+bool StreamWriter::guess_framerate(const AVStream *stream){
+    if (std::isfinite(video_framerate) && video_framerate >= 0){
+        return true;//already valid
+    }
+
+    video_framerate = av_q2d(stream->avg_frame_rate);
+    if (!std::isfinite(video_framerate) || video_framerate < 0){
+        video_framerate = av_q2d(stream->r_frame_rate);
+    }
+    if (!std::isfinite(video_framerate) || video_framerate < 0){
+        video_framerate = 0;
+        return false;
+    } else {
+        return true;
+    }
+}
+
+bool StreamWriter::guess_framerate(const AVCodecContext* codec_ctx){
+    if (std::isfinite(video_framerate) && video_framerate >= 0){
+        return true;//already valid
+    }
+
+    video_framerate = av_q2d(codec_ctx->framerate);
+    if (!std::isfinite(video_framerate) || video_framerate < 0){
+        video_framerate = 0;
+        return false;
+    } else {
+        return true;
+    }
+
+}
+
 
 PacketInterleavingBuf::PacketInterleavingBuf(const AVPacket &pkt){
     in = av_packet_clone(&pkt);

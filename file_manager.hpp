@@ -17,7 +17,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2021 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -29,6 +29,7 @@
 #include <atomic>
 #include <iostream>
 #include <fstream>
+#include "stream_writer.hpp"
 
 class FileManager {
 public:
@@ -50,7 +51,7 @@ public:
     std::string get_path(long int file_id, const std::string &db_path, const std::string &ext);
 
     //update metadata about the file
-    bool update_file_metadata(long int file_id, struct timeval &end_time, long long end_byte, long long start_byte = 0, long long init_len = -1);
+    bool update_file_metadata(long int file_id, struct timeval &end_time, long long end_byte, const StreamWriter &out_file, long long start_byte = 0, long long init_len = -1);
 
     void clean_disk(void);//clean up the disk by deleting files
 

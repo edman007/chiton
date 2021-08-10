@@ -17,7 +17,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2021 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -48,6 +48,7 @@ private:
 
     bool upgrade_from_1_0(void);//upgrade from 1_0 to latest
     bool upgrade_from_1_1(void);//upgrade from 1_1 to latest
+    bool upgrade_from_1_2(void);//upgrade from 1_1 to latest
 };
 
 #endif

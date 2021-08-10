@@ -294,10 +294,14 @@ void FileManager::rmdir_r(const std::string &path){
     }
 }
 
-bool FileManager::update_file_metadata(long int file_id, struct timeval &end_time, long long end_byte, long long start_byte /*= 0 */, long long init_len /*= -1*/){
+bool FileManager::update_file_metadata(long int file_id, struct timeval &end_time, long long end_byte, const StreamWriter &out_file,
+                                       long long start_byte /*= 0 */, long long init_len /*= -1*/){
     long affected;
     std::string ptime = std::to_string(Util::pack_time(end_time));
     std::string sql = "UPDATE videos SET endtime = " + ptime;
+    if (init_len == -1){
+        init_len = out_file.get_init_len();
+    }
     if (init_len >= 0){
         sql += ", init_byte = " + std::to_string(init_len);
     }
@@ -306,6 +310,30 @@ bool FileManager::update_file_metadata(long int file_id, struct timeval &end_tim
     }
     if (end_byte > 0){
         sql += ", end_byte = " + std::to_string(end_byte);
+    }
+
+    if (out_file.get_codec_str() != ""){
+        sql += ", codec = '" + db.escape(out_file.get_codec_str()) + "'";
+    }
+
+    if (out_file.have_video() && out_file.have_audio()){
+        sql += ", av_type = 'audiovideo'";
+    } else if (out_file.have_video()) {
+        sql += ", av_type = 'video'";
+    } else if (out_file.have_audio()){
+        sql += ", av_type = 'audio'";
+    }
+
+    if (out_file.get_width() > 0){
+        sql += ", width = " + std::to_string(out_file.get_width());
+    }
+
+    if (out_file.get_height() > 0){
+        sql += ", height = " + std::to_string(out_file.get_height());
+    }
+
+    if (out_file.get_framerate() > 0){
+        sql += ", framerate = " + std::to_string(out_file.get_framerate());
     }
 
     sql += " WHERE id = " + std::to_string(file_id);

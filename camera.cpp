@@ -211,7 +211,7 @@ void Camera::run(void){
     struct timeval end;
     Util::compute_timestamp(stream.get_start_time(), end, last_pts, stream.get_format_context()->streams[last_stream_index]->time_base);
     long long size = out.close();
-    fm.update_file_metadata(file_id, end, size, last_cut_byte, out.get_init_len());
+    fm.update_file_metadata(file_id, end, size, out, last_cut_byte);
 
     if (frame){
         av_frame_free(&frame);
@@ -263,7 +263,7 @@ void Camera::cut_video(const AVPacket &pkt, StreamWriter &out){
                 if (last_cut_byte == 0 && out.get_init_len() > 0){
                     last_cut_byte = out.get_init_len();
                 }
-                fm.update_file_metadata(file_id, start, size, last_cut_byte, out.get_init_len());
+                fm.update_file_metadata(file_id, start, size, out, last_cut_byte);
                 last_cut_byte = size;
                 fm.get_next_path(file_id, id, start, true);
             } else {
@@ -278,7 +278,7 @@ void Camera::cut_video(const AVPacket &pkt, StreamWriter &out){
                 }
                 std::string out_filename = fm.get_next_path(file_id, id, start);
                 long long size = out.change_path(out_filename);;//apply new filename, and get length of old file
-                fm.update_file_metadata(old_id, end, size, last_cut_byte, old_init_len);
+                fm.update_file_metadata(old_id, end, size, out, last_cut_byte, old_init_len);
                 last_cut_byte = 0;
                 last_cut_file = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);
             }

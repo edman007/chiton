@@ -60,6 +60,17 @@ av_always_inline char* av_ts2str(int64_t ts){
 #endif
 
 
+#ifdef av_fourcc2str
+#undef av_fourcc2str
+av_always_inline char* av_fourcc2str(uint32_t fourcc){
+    thread_local static char str[AV_FOURCC_MAX_STRING_SIZE];
+    memset(str, 0, sizeof(str));
+    return av_fourcc_make_string(str, fourcc);
+}
+#endif
+
+
+
 //make AVRounding valid in bitwise operations
 inline AVRounding operator|(AVRounding a, AVRounding b)
 {
