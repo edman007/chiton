@@ -319,6 +319,7 @@ bool StreamWriter::add_stream(const AVStream *in_stream){
     if (in_stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO){
         guess_framerate(in_stream);
         guess_framerate(out_stream);//does this do anything if we just copied it?
+        LINFO("Framerate guessed is: " + std::to_string(video_framerate));
     }
     return true;
 }
@@ -429,6 +430,10 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
 
             }
 
+            //set min/max bitrate to +/- 10%
+            encode_ctx[out_stream->index]->rc_max_rate = encode_ctx[out_stream->index]->bit_rate + (encode_ctx[out_stream->index]->bit_rate/10);
+            encode_ctx[out_stream->index]->rc_min_rate = encode_ctx[out_stream->index]->bit_rate - (encode_ctx[out_stream->index]->bit_rate/10);
+
             LINFO("Selected video encode bitrate: " + std::to_string(encode_ctx[out_stream->index]->bit_rate/1000) + "kbps");
             //apply encode video options
             AVDictionary *vopts = Util::get_dict_options(cfg.get_value("ffmpeg-encode-video-opt"));
@@ -488,6 +493,7 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
         guess_framerate(dec_ctx);
         guess_framerate(out_stream);
         guess_framerate(in_stream);
+        LINFO("Framerate guessed is: " + std::to_string(video_framerate));
     }
     return true;
 }
@@ -848,7 +854,7 @@ uint8_t *StreamWriter::nal_unit_extract_rbsp(const uint8_t *src, const uint32_t 
 }
 
 bool StreamWriter::guess_framerate(const AVStream *stream){
-    if (std::isfinite(video_framerate) && video_framerate >= 0){
+    if (std::isfinite(video_framerate) && video_framerate > 0){
         return true;//already valid
     }
 
@@ -865,7 +871,7 @@ bool StreamWriter::guess_framerate(const AVStream *stream){
 }
 
 bool StreamWriter::guess_framerate(const AVCodecContext* codec_ctx){
-    if (std::isfinite(video_framerate) && video_framerate >= 0){
+    if (std::isfinite(video_framerate) && video_framerate > 0){
         return true;//already valid
     }
 
