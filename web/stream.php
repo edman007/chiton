@@ -16,7 +16,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2021 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -63,12 +63,56 @@ $yesterday->sub(new DateInterval('P1D'));
 if (!isset($_GET['stream'])){
     echo "#EXTM3U\n";
     echo '#EXT-X-PROGRAM-DATE-TIME:' . $start_time->format('c') . "\n";
-    //MediaSource.isTypeSupported('video/mp4;codecs="avc1.4d0028"')
-    //MediaSource.isTypeSupported('video/mp4;codecs="avc1.42001f"')
-    //MediaSource.isTypeSupported('video/mp4;codecs="avc1.640029"')
-    echo "#EXT-X-STREAM-INF:BANDWIDTH=93000,CODECS=\"avc1.4d0028\",RESOLUTION=640x352,FRAME-RATE=15\n";
+    //query the most recent 10 segments
+    $sql = 'SELECT starttime, endtime, start_byte, end_byte, width, height, framerate, codec, av_type FROM videos '.
+        'WHERE camera = ' . ((int)$_GET['id']).' AND endtime IS NOT NULL AND starttime > ' . $packed_start .
+        ' ORDER BY starttime DESC LIMIT 10';
+
+    $resolution = NULL;
+    $type = NULL;
+    $framerate = NULL;
+    $time_checked = 0;//to compute bandwidth, in miliseconds
+    $bytes_checked = 0;
+    $codecs = "";
+    $res = $db->query($sql);
+    if ($res){
+        while ($row = $res->fetch_assoc()){
+            if ($row['end_byte'] > 0){
+                $time_checked += $row['endtime'] - $row['starttime'];//miliseconds
+                $bytes_checked += $row['end_byte'] - $row['start_byte'];
+            }
+            if (!empty($row['codec'])){
+                $codecs = $row['codec'];
+            }
+            if (!empty($row['width']) && !empty($row['height'])){
+                $resolution = $row['width'] . 'x' . $row['height'];
+            }
+            if (!empty($row['framerate'])){
+                $framerate = $row['framerate'];
+            }
+        }
+    }
+
+    $bandwidth = 128000;//default bandwidth is 128kbps
+    if ($time_checked > 0 && $bytes_checked > 0){
+        $bandwidth = (int)((8000 * $bytes_checked) / $time_checked);
+    }
+    echo "#EXT-X-STREAM-INF:BANDWIDTH=$bandwidth";//
+    if (!empty($codecs)){
+        echo ",CODECS=\"$codecs\"";
+    }
+
+    if (!empty($resolution)){
+        echo ",RESOLUTION=\"$resolution\"";
+    }
+
+    if (!empty($framerate)){
+        echo ",FRAME-RATE=\"$framerate\"";
+    }
+
+    echo "\n";
     $start = (int)$_GET['start'];
-    $live = (int)$_GET['live'];
+    $live = empty($_GET['live']) ? 0 : (int)$_GET['live'];
     echo "stream.php?stream=-1&start=$start&id=$camera&live=$live\n";
 
 } else {
