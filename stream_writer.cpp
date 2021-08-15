@@ -398,6 +398,17 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
             encode_ctx[out_stream->index]->width = dec_ctx->width;
             encode_ctx[out_stream->index]->sample_aspect_ratio = dec_ctx->sample_aspect_ratio;
 
+            //pull the framerate through based on some guesses
+            if (dec_ctx->framerate.num != 0 && dec_ctx->framerate.num != 0){
+                encode_ctx[out_stream->index]->framerate = dec_ctx->framerate;
+            } else {
+                if (in_stream->avg_frame_rate.num != 0 && in_stream->avg_frame_rate.den){
+                    encode_ctx[out_stream->index]->framerate = in_stream->avg_frame_rate;
+                } else if (in_stream->r_frame_rate.num != 0 && in_stream->r_frame_rate.den != 0){
+                    encode_ctx[out_stream->index]->framerate = in_stream->r_frame_rate;
+                }
+            }
+
             //take first pixel format
             encode_ctx[out_stream->index]->pix_fmt = dec_ctx->pix_fmt;
             encode_ctx[out_stream->index]->time_base = in_stream->time_base;//av_inv_q(dec_ctx->framerate);
