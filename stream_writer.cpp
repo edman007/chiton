@@ -727,7 +727,7 @@ bool StreamWriter::gen_codec_str(const int stream, const AVCodecParameters *code
             LWARN("Unknown h264 codec ID from encoder, going to make an uneducated guess");
             codec_str[stream] = "avc1.640029";//just a random guess..should probably guess something closer...
         }
-    } else if (encode_ctx[stream]->codec_id ==  AV_CODEC_ID_HEVC){
+    } else if (codec->codec_id ==  AV_CODEC_ID_HEVC){
         uint8_t *data = codec->extradata;
         int profile = FF_PROFILE_UNKNOWN;
         int level = FF_LEVEL_UNKNOWN;
@@ -806,8 +806,8 @@ std::string StreamWriter::get_codec_str(void) const {
     for (const auto str : codec_str){
         if (!first){
             ss << ",";
-            first = false;
         }
+        first = false;
         ss << str.second;
     }
     return ss.str();
