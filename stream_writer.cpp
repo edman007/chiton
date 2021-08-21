@@ -617,6 +617,7 @@ long long StreamWriter::write_buf(bool reopen){
     long long len;
     len = avio_close_dyn_buf(output_format_context->pb, &buf);
     avio_write(output_file, buf, len);
+    avio_flush(output_file);
     if (init_seg == NULL){
         init_seg = buf;
         init_len = len;
