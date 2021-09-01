@@ -445,6 +445,8 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
             encode_ctx[out_stream->index]->rc_max_rate = encode_ctx[out_stream->index]->bit_rate + (encode_ctx[out_stream->index]->bit_rate/10);
             encode_ctx[out_stream->index]->rc_min_rate = encode_ctx[out_stream->index]->bit_rate - (encode_ctx[out_stream->index]->bit_rate/10);
 
+            encode_ctx[out_stream->index]->max_b_frames = 16;
+
             LINFO("Selected video encode bitrate: " + std::to_string(encode_ctx[out_stream->index]->bit_rate/1000) + "kbps");
             //apply encode video options
             AVDictionary *vopts = Util::get_dict_options(cfg.get_value("ffmpeg-encode-video-opt"));
