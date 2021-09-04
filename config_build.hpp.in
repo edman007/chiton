@@ -42,6 +42,9 @@
 /* Have VAAPI */
 #undef HAVE_VAAPI
 
+/* Have VDPAU */
+#undef HAVE_VDPAU
+
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
 

@@ -22,7 +22,7 @@
  *
  **************************************************************************
  */
-#include "chiton_ffmpeg.hpp"
+
 #include "util.hpp"
 #include <cstdio>
 #ifdef HAVE_VAAPI
@@ -330,6 +330,33 @@ bool CFFUtil::have_vdpau(const AVCodecContext* avctx){
     if (!vdpau_ctx){
         return NULL;
     }
+
+#ifdef HAVE_VDPAU
+    //Check if VDPAU supports this codec
+    AVVDPAUDeviceContext* hwctx = reinterpret_cast<AVVDPAUDeviceContext*>((reinterpret_cast<AVHWDeviceContext*>(vdpau_ctx->data))->hwctx);
+    uint32_t width, height;
+    VdpBool supported;
+    VdpDecoderProfile vdpau_profile;
+    //get  profile
+    int ret = get_vdpau_profile(avctx, &vdpau_profile);
+    if (ret){
+        //something didn't work, don't use VDPAU
+        return NULL;
+    }
+    VdpDecoderQueryCapabilities *vdpau_query_caps;
+    VdpStatus status = vdpau_query_caps(hwctx->device, vdpau_profile, &supported, NULL, NULL, &width, &height);
+    if (status != VDP_STATUS_OK){
+        return NULL;
+    }
+
+    if (supported != VDP_TRUE){
+        return NULL;
+    }
+
+    if (avctx->width > width || avctx->height > height){
+        return NULL;
+    }
+#endif
     bool found = false;
     AVHWFramesConstraints* c = av_hwdevice_get_hwframe_constraints(vdpau_ctx, NULL);
     //check if this is supported
@@ -374,3 +401,51 @@ void CFFUtil::free_hw(void){
     free_vdpau();
     free_vaapi();
 }
+
+#ifdef HAVE_VDPAU
+//borrowed from FFMPeg's vdpau.c, deprecated so we'll do it ourselves
+int CFFUtil::get_vdpau_profile(const AVCodecContext *avctx, VdpDecoderProfile *profile){
+#define PROFILE(prof)                           \
+    do {                                        \
+        *profile = VDP_DECODER_PROFILE_##prof;  \
+        return 0;                               \
+    } while (0)
+
+    switch (avctx->codec_id) {
+    case AV_CODEC_ID_MPEG1VIDEO:               PROFILE(MPEG1);
+    case AV_CODEC_ID_MPEG2VIDEO:
+        switch (avctx->profile) {
+        case FF_PROFILE_MPEG2_MAIN:            PROFILE(MPEG2_MAIN);
+        case FF_PROFILE_MPEG2_SIMPLE:          PROFILE(MPEG2_SIMPLE);
+        default:                               return AVERROR(EINVAL);
+        }
+    case AV_CODEC_ID_H263:                     PROFILE(MPEG4_PART2_ASP);
+    case AV_CODEC_ID_MPEG4:
+        switch (avctx->profile) {
+        case FF_PROFILE_MPEG4_SIMPLE:          PROFILE(MPEG4_PART2_SP);
+        case FF_PROFILE_MPEG4_ADVANCED_SIMPLE: PROFILE(MPEG4_PART2_ASP);
+        default:                               return AVERROR(EINVAL);
+        }
+    case AV_CODEC_ID_H264:
+        switch (avctx->profile & ~FF_PROFILE_H264_INTRA) {
+        case FF_PROFILE_H264_BASELINE:         PROFILE(H264_BASELINE);
+        case FF_PROFILE_H264_CONSTRAINED_BASELINE:
+        case FF_PROFILE_H264_MAIN:             PROFILE(H264_MAIN);
+        case FF_PROFILE_H264_HIGH:             PROFILE(H264_HIGH);
+#ifdef VDP_DECODER_PROFILE_H264_EXTENDED
+        case FF_PROFILE_H264_EXTENDED:         PROFILE(H264_EXTENDED);
+#endif
+        default:                               return AVERROR(EINVAL);
+        }
+    case AV_CODEC_ID_WMV3:
+    case AV_CODEC_ID_VC1:
+        switch (avctx->profile) {
+        case FF_PROFILE_VC1_SIMPLE:            PROFILE(VC1_SIMPLE);
+        case FF_PROFILE_VC1_MAIN:              PROFILE(VC1_MAIN);
+        case FF_PROFILE_VC1_ADVANCED:          PROFILE(VC1_ADVANCED);
+        default:                               return AVERROR(EINVAL);
+        }
+    }
+    return AVERROR(EINVAL);
+}
+#endif

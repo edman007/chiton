@@ -31,6 +31,11 @@ extern "C" {
 };
 #include <mutex>
 
+#ifdef HAVE_VDPAU
+#include <vdpau/vdpau.h>
+#include <libavutil/hwcontext_vdpau.h>
+#endif
+
 //fix FFMPEG and c++1x issues
 #ifdef av_err2str
 #undef av_err2str
@@ -100,7 +105,9 @@ private:
     void free_vaapi(void);//free the vaapi context
     void load_vdpau(void);//init global vdpau context
     void free_vdpau(void);//free the vdpau context
-
+#ifdef HAVE_VDPAU
+    int  get_vdpau_profile(const AVCodecContext *avctx, VdpDecoderProfile *profile);//get the VDPAU Profile
+#endif
 
     AVBufferRef *vaapi_ctx = NULL;
     bool vaapi_failed = false;//if we failed to initilize vaapi

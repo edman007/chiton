@@ -108,6 +108,17 @@ AS_IF([test "x$enable_vaapi" != "xno"],
              AC_DEFINE([HAVE_VAAPI], [1], [Have VAAPI])])
 AS_IF([test "x$enable_vaapi" == "xyes" && test "x$have_vaapi" != "x1"], [AC_MSG_ERROR([Could not find vaapi])])
 
+AC_ARG_ENABLE([vdpau],
+  [AS_HELP_STRING([--enable-vdpau], [Enable VA-API, not strictly required to use vdpau])],
+  [],
+  [enable_vdpau=auto])
+AS_IF([test "x$enable_vdpau" != "xno"],
+            [PKG_CHECK_MODULES([VA], [vdpau],
+             [have_vdpau=1 AS_VAR_APPEND([[CPPFLAGS]], [" $VA_CFLAGS "])
+             AS_VAR_APPEND([[LIBS]], [" $VA_LIBS "])])
+             AC_DEFINE([HAVE_VDPAU], [1], [Have VDPAU])])
+AS_IF([test "x$enable_vdpau" == "xyes" && test "x$have_vdpau" != "x1"], [AC_MSG_ERROR([Could not find vdpau])])
+
 
 AC_ARG_WITH([apacheconfigdir],
   [AS_HELP_STRING([--with-apacheconfigdir=DIR], [Directory to install apache config])],
