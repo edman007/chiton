@@ -42,7 +42,7 @@ bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const s
 
     AVFrame *cropped_frame = apply_rect(frame, src);
 
-    AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_MJPEG);
+    const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_MJPEG);
     if (!codec) {
         LWARN("Cannot find MJPEG encoder!");
         return false;

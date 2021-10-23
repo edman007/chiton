@@ -28,6 +28,9 @@ extern "C" {
 #include <libavformat/avio.h>
 #include <libavutil/timestamp.h>
 #include <libavutil/avutil.h>
+#include <libavutil/opt.h>
+#include <libavutil/channel_layout.h>
+#include <libavutil/imgutils.h>
 };
 #include <mutex>
 
@@ -95,18 +98,18 @@ public:
     void unlock(void);
 
     //return a ref or null to the context iff it can handle wxh
-    AVBufferRef *get_vaapi_ctx(const AVCodecContext* avctx);
-    AVBufferRef *get_vdpau_ctx(const AVCodecContext* avctx);
+    AVBufferRef *get_vaapi_ctx(AVCodecID codec_id, int codec_profile, int width, int height);
+    AVBufferRef *get_vdpau_ctx(AVCodecID codec_id, int codec_profile, int width, int height);
 
-    bool have_vaapi(const AVCodecContext* avctx);//returns true if VAAPI should work
-    bool have_vdpau(const AVCodecContext* avctx);//returns true if VDPAU should work
+    bool have_vaapi(AVCodecID codec_id, int codec_profile, int width, int height);//returns true if VAAPI should work
+    bool have_vdpau(AVCodecID codec_id, int codec_profile, int width, int height);//returns true if VDPAU should work
 private:
     void load_vaapi(void);//init global vaapi context
     void free_vaapi(void);//free the vaapi context
     void load_vdpau(void);//init global vdpau context
     void free_vdpau(void);//free the vdpau context
 #ifdef HAVE_VDPAU
-    int  get_vdpau_profile(const AVCodecContext *avctx, VdpDecoderProfile *profile);//get the VDPAU Profile
+    int  get_vdpau_profile(const AVCodecID codec_id, const int codec_profile, VdpDecoderProfile *profile);//get the VDPAU Profile
 #endif
 
     AVBufferRef *vaapi_ctx = NULL;
@@ -119,6 +122,8 @@ private:
 
 enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);//global VAAPI format selector
 enum AVPixelFormat get_vdpau_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);//global VDPAU format selector
+enum AVPixelFormat get_sw_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);//global SW format selector that prefers VAAPI compatible formats
+bool sw_format_is_hw_compatable(const enum AVPixelFormat pix_fmt);//return true if the format is HW compatable
 extern CFFUtil gcff_util;//global FFmpeg lib mangement class
 
 //for passing image coordinates

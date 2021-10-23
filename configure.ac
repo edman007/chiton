@@ -93,7 +93,7 @@ PKG_CHECK_MODULES([MARIADB], [mariadb],
 
 
 ##ffmpeg
-PKG_CHECK_MODULES([FFMPEG], [libavformat libavcodec libavutil],
+PKG_CHECK_MODULES([FFMPEG], [libavformat libavcodec libavutil libavfilter],
                              [AS_VAR_APPEND([[CPPFLAGS]], [" $FFMPEG_CFLAGS"])
                              AS_VAR_APPEND([[LIBS]], [" $FFMPEG_LIBS "])])
 
@@ -113,9 +113,9 @@ AC_ARG_ENABLE([vdpau],
   [],
   [enable_vdpau=auto])
 AS_IF([test "x$enable_vdpau" != "xno"],
-            [PKG_CHECK_MODULES([VA], [vdpau],
-             [have_vdpau=1 AS_VAR_APPEND([[CPPFLAGS]], [" $VA_CFLAGS "])
-             AS_VAR_APPEND([[LIBS]], [" $VA_LIBS "])])
+            [PKG_CHECK_MODULES([VDPAU], [vdpau],
+             [have_vdpau=1 AS_VAR_APPEND([[CPPFLAGS]], [" $VDPAU_CFLAGS "])
+             AS_VAR_APPEND([[LIBS]], [" $VDPAU_LIBS "])])
              AC_DEFINE([HAVE_VDPAU], [1], [Have VDPAU])])
 AS_IF([test "x$enable_vdpau" == "xyes" && test "x$have_vdpau" != "x1"], [AC_MSG_ERROR([Could not find vdpau])])
 

@@ -131,7 +131,7 @@ unsigned int StreamUnwrap::get_stream_count(void){
 
 bool StreamUnwrap::alloc_decode_context(unsigned int stream){
     AVCodecContext *avctx;
-    AVCodec *input_codec;
+    const AVCodec *input_codec;
     int error;
     if (decode_ctx.find(stream) != decode_ctx.end()){
         LDEBUG("Not generating decode context, it already exists");
@@ -165,22 +165,28 @@ bool StreamUnwrap::alloc_decode_context(unsigned int stream){
     }
 
     if (avctx->codec_type == AVMEDIA_TYPE_VIDEO){
-        //connect encoder
+        //connect decoder
         if (!avctx->hw_device_ctx &&
             (cfg.get_value("video-decode-method") == "auto" || cfg.get_value("video-decode-method") == "vaapi")){
-            avctx->hw_device_ctx  = gcff_util.get_vaapi_ctx(avctx);
+            avctx->hw_device_ctx  = gcff_util.get_vaapi_ctx(avctx->codec_id, avctx->profile, avctx->height, avctx->width);
             if (avctx->hw_device_ctx){
                 avctx->get_format = get_vaapi_format;
+                LINFO("Using VA-API for decoding");
             }
         }
         if (!avctx->hw_device_ctx &&
             (cfg.get_value("video-decode-method") == "auto" || cfg.get_value("video-decode-method") == "vdpau")){
-            avctx->hw_device_ctx  = gcff_util.get_vdpau_ctx(avctx);
+            avctx->hw_device_ctx  = gcff_util.get_vdpau_ctx(avctx->codec_id, avctx->profile, avctx->height, avctx->width);
             if (avctx->hw_device_ctx){
                 avctx->get_format = get_vdpau_format;
+                LINFO("Using VDPAU for decoding");
             }
         }
         //if both fail we get the SW decoder
+        if (!avctx->hw_device_ctx){
+            avctx->get_format = get_sw_format;//do any format, but prefer VAAPI compatible formats
+            LINFO("Using SW Decoding");
+        }
     }
 
     /* Open the decoder. */
@@ -228,6 +234,7 @@ bool StreamUnwrap::get_next_packet(AVPacket &packet){
 
         return true;
     } else {
+        LWARN("Reorder Queue is 0");
         return false;
     }
     
@@ -311,6 +318,7 @@ bool StreamUnwrap::read_frame(void){
     reorder_queue.emplace_back();
     if (av_read_frame(input_format_context, &reorder_queue.back())){
         reorder_queue.pop_back();
+        LWARN("av_read_frame() failed");
         return false;
     }
     //fixup this data...maybe limit it to the first one?
@@ -383,6 +391,17 @@ bool StreamUnwrap::get_decoded_frame(int stream, AVFrame *frame){
     }
     return get_decoded_frame_int(stream, frame);
 }
+
+bool StreamUnwrap::peek_decoded_vframe(AVFrame *frame){
+    if (!decoded_video_frames.empty()){
+        av_frame_ref(frame, decoded_video_frames.front());
+        return true;
+    }
+    LWARN("No Frame to peek");
+    return false;
+}
+
+
 
 bool StreamUnwrap::get_decoded_frame_int(int stream, AVFrame *frame){
     if (decode_ctx.find(stream) == decode_ctx.end()){
@@ -468,12 +487,14 @@ bool StreamUnwrap::charge_video_decoder(void){
                 ret = get_decoded_frame_int(pkt.stream_index, next_frame);
                 if (ret){
                     decoded_video_frames.push_back(next_frame);
+                    LDEBUG("Decoded frame");
                     next_frame = NULL;
                 } else {
                     av_frame_free(&next_frame);
                 }
             } while (ret);
         } else {
+            LWARN("Failed to decode video during charge");
             return false;
         }
     }

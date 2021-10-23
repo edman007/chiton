@@ -35,9 +35,9 @@ chiton_SOURCES = main.cpp config.cpp config_parser.cpp database.cpp mariadb.cpp 
 	stream_unwrap.hpp util.hpp chiton_config.hpp config_parser.hpp \
 	database_result.hpp main.hpp mariadb_result.hpp stream_writer.hpp \
 	database_manager.hpp database_manager.cpp setting.hpp remote.hpp remote.cpp \
-	export.hpp export.cpp image_util.hpp image_util.cpp
+	export.hpp export.cpp image_util.hpp image_util.cpp filter.hpp filter.cpp
 
-#these are actually to make it possible to serve the website ouf of the source for development
+#these are actually to make it possible to serve the website out of the source for development
 EXTRA_chiton_DEPENDENCIES=hls pinch-zoom
 sbin_SCRIPTS = chiton-install
 

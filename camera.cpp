@@ -23,6 +23,7 @@
 #include "camera.hpp"
 #include "util.hpp"
 #include "image_util.hpp"
+#include "filter.hpp"
 
 Camera::Camera(int camera, Database& db) : id(camera), db(db), stream(cfg), fm(db, cfg) {
     //load the config
@@ -83,13 +84,49 @@ void Camera::run(void){
     bool decode_audio = encode_audio;
 
     LDEBUG("Encode/Decode: " + std::to_string(encode_video)+ std::to_string(encode_audio)+ std::to_string(decode_video)+ std::to_string(decode_audio));
+
+    //allocate a frame (we only allocate when we want to decode, an unallocated frame means we skip decoding)
+    AVFrame *frame = NULL, *filtered_frame = NULL;
+    if (decode_video || decode_audio){
+        frame = av_frame_alloc();
+        if (!frame){
+            LWARN("Failed to allocate frame");
+            frame = NULL;
+        }
+        filtered_frame = av_frame_alloc();
+        if (!filtered_frame){
+            LWARN("Failed to allocate filtered frame");
+            filtered_frame = NULL;
+        }
+    }
+
+    Filter vfilter(cfg);//video filter, only initilized when encoding
+
+
     if (encode_video){
         LDEBUG("Charging Decoder");
         stream.charge_video_decoder();
         watchdog = true;
         AVStream *vstream = stream.get_video_stream();
+        if (!vstream){
+            LERROR("No Video stream found");
+            return;
+        }
+        //init the filter with the decoded video frame
+        stream.peek_decoded_vframe(frame);
+        AVCodecID codec_id;
+        int codec_profile;
+        AVPixelFormat pix_fmt;
+        out.get_video_format(frame, pix_fmt, codec_id, codec_profile);
+        vfilter.set_target_fmt(pix_fmt, codec_id, codec_profile);
+        vfilter.set_source_time_base(vstream->time_base);
+        vfilter.send_frame(frame);
+        av_frame_unref(frame);
+        vfilter.peek_frame(filtered_frame);
         AVCodecContext *vctx = stream.get_codec_context(vstream);
-        if (out.add_encoded_stream(vstream, vctx)){
+        bool encoded_ret = out.add_encoded_stream(vstream, vctx, filtered_frame);
+        av_frame_unref(filtered_frame);
+        if (encoded_ret){
             LINFO("Camera " + std::to_string(id) + " transcoding video stream");
         } else {
             LERROR("Camera " + std::to_string(id) + " transcoding video stream failed!");
@@ -126,23 +163,17 @@ void Camera::run(void){
     AVPacket pkt;
     bool valid_keyframe = false;
 
-    //allocate a frame (we only allocate when we want to decode, an unallocated frame means we skip decoding)
-    AVFrame *frame = NULL;
-    if (decode_video || decode_audio){
-        frame = av_frame_alloc();
-        if (!frame){
-            LWARN("Failed to allocate frame");
-            frame = NULL;
-        }
-    }
-
     //used for calculating shutdown time for the last segment
     long last_pts = 0;
     long last_stream_index = 0;
-    while (!shutdown && stream.get_next_frame(pkt)){
+    bool failed = false;
+    int frame_cnt = 0;
+    ImageUtil img(db, cfg);
+    while (!shutdown && !failed && stream.get_next_frame(pkt)){
         watchdog = true;
         last_pts = pkt.pts;
         last_stream_index = pkt.stream_index;
+        frame_cnt++;
 
         //we skip processing until we get a video keyframe
         if (valid_keyframe || (pkt.flags & AV_PKT_FLAG_KEY && stream.is_video(pkt))){
@@ -156,34 +187,47 @@ void Camera::run(void){
         //decode the packets
         if (frame && stream.is_video(pkt) && decode_video){
             if (stream.decode_packet(pkt)){
-                while (stream.get_decoded_frame(pkt.stream_index, frame)){
+                while (!failed && stream.get_decoded_frame(pkt.stream_index, frame)){
                     LDEBUG("Decoded Video Frame");
                     if (encode_video){
-                        if (!out.write(frame, stream.get_stream(pkt))){
+                        //Filter the frame before encoding
+                        if (vfilter.send_frame(frame)){
+                            while (!failed && vfilter.get_frame(filtered_frame)){
+                                if (frame_cnt % 100 == 0){//debug stuff
+                                    std::string debug_frame_name = "debug_frame";
+                                    img.write_frame_jpg(filtered_frame, debug_frame_name);
+                                    LINFO("Wrote " + debug_frame_name);
+                                }
+
+                                if (!out.write(filtered_frame, stream.get_stream(pkt))){
+                                    LERROR("Error Encoding Video!");
+                                    failed = true;//error encoding
+                                }
+                                av_frame_unref(filtered_frame);
+                            }
+                        } else {
+                            LERROR("Failed to send frame to video filter");
                             stream.unref_frame(pkt);
-                            LERROR("Error Encoding Video!");
-                            break;//error encoding
+                            failed = true;
                         }
                     }
                 }
             }
             if (!encode_video){
-                    if (!out.write(pkt, stream.get_stream(pkt))){//log it
-                        stream.unref_frame(pkt);
-                        break;
-                        LERROR("Error writing copied video packet");
-                    }
+                if (!out.write(pkt, stream.get_stream(pkt))){//log it
+                    LERROR("Error writing copied video packet");
+                    failed = true;
                 }
-
+            }
         } else if (frame && stream.is_audio(pkt) && decode_audio){
                 if (stream.decode_packet(pkt)){
-                    while (stream.get_decoded_frame(pkt.stream_index, frame)){
+                    while (!failed && stream.get_decoded_frame(pkt.stream_index, frame)){
                         LDEBUG("Decoded Audio Frame");
                         if (encode_audio){
                             if (!out.write(frame, stream.get_stream(pkt))){
                                 stream.unref_frame(pkt);
                                 LERROR("Error Encoding Audio!");
-                                break;//error encoding
+                                failed = true;
                             }
                         }
                     }
@@ -192,15 +236,14 @@ void Camera::run(void){
                     if (!out.write(pkt, stream.get_stream(pkt))){//log it
                         stream.unref_frame(pkt);
                         LERROR("Error writing copied audio packet");
-                        break;
+                        failed = true;
                     }
                 }
         } else {
             //this packet is being copied...
             if (!out.write(pkt, stream.get_stream(pkt))){//log it
-                stream.unref_frame(pkt);
                 LERROR("Error writing packet!");
-                break;
+                failed = true;
             }
         }
         

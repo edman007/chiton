@@ -57,7 +57,7 @@ bool StreamWriter::open(void){
 bool StreamWriter::open_path(void){
     int error;
 
-    AVOutputFormat *ofmt = output_format_context->oformat;
+    const AVOutputFormat *ofmt = output_format_context->oformat;
 
     if (!(ofmt->flags & AVFMT_NOFILE)) {
         if (output_file != NULL){
@@ -333,6 +333,10 @@ bool StreamWriter::copy_streams(StreamUnwrap &unwrap){
 }
 
 bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecContext *dec_ctx){
+    return add_encoded_stream(in_stream, dec_ctx, NULL);
+}
+
+bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecContext *dec_ctx, const AVFrame *frame){
     if (dec_ctx == NULL){
         return false;
     }
@@ -342,7 +346,7 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
         return false;
     }
 
-    AVCodec *encoder = NULL;
+    const AVCodec *encoder = NULL;
     AVDictionary *opts = NULL;//watch out about return and free
     //Audio
     if (dec_ctx->codec_type == AVMEDIA_TYPE_AUDIO){
@@ -376,18 +380,7 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
 
     } else if (dec_ctx->codec_type == AVMEDIA_TYPE_VIDEO){//video
         LWARN("Adding Video Stream!");
-        if (cfg.get_value("encode-format-video") == "hevc"){
-            encoder = avcodec_find_encoder(AV_CODEC_ID_HEVC);
-        }
-        if (!encoder) {//default or above option(s) failed
-            if ((cfg.get_value("video-encode-method") == "auto" || cfg.get_value("video-encode-method") == "vaapi") &&
-                gcff_util.have_vaapi(dec_ctx)){
-                encoder = avcodec_find_encoder_by_name("h264_vaapi");
-            }
-            if (!encoder){
-                encoder = avcodec_find_encoder(AV_CODEC_ID_H264);
-            }
-        }
+        encoder = get_vencoder(dec_ctx->width, dec_ctx->height);
         if (encoder){
             encode_ctx[out_stream->index] = avcodec_alloc_context3(encoder);
             if (!encode_ctx[out_stream->index]){
@@ -409,8 +402,12 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
                 }
             }
 
-            //take first pixel format
-            encode_ctx[out_stream->index]->pix_fmt = dec_ctx->pix_fmt;
+            //pick a pixel format
+            if (frame){
+                encode_ctx[out_stream->index]->pix_fmt = static_cast<AVPixelFormat>(frame->format);
+            } else {
+                encode_ctx[out_stream->index]->pix_fmt = dec_ctx->pix_fmt;
+            }
             encode_ctx[out_stream->index]->time_base = in_stream->time_base;//av_inv_q(dec_ctx->framerate);
 
             //set the fourcc
@@ -453,16 +450,21 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
             av_dict_copy(&opts, vopts, 0);
             av_dict_free(&vopts);
 
-            //connect encoder
+            //connect encoder, try VA-API
             if (!encode_ctx[out_stream->index]->hw_device_ctx &&
                 (cfg.get_value("video-encode-method") == "auto" || cfg.get_value("video-encode-method") == "vaapi")){
-                encode_ctx[out_stream->index]->hw_device_ctx = gcff_util.get_vaapi_ctx(encode_ctx[out_stream->index]);
+                encode_ctx[out_stream->index]->hw_device_ctx = gcff_util.get_vaapi_ctx(encode_ctx[out_stream->index]->codec_id, encode_ctx[out_stream->index]->profile,
+                                                                                       encode_ctx[out_stream->index]->width, encode_ctx[out_stream->index]->height);
                 if (encode_ctx[out_stream->index]->hw_device_ctx){
                     encode_ctx[out_stream->index]->pix_fmt = AV_PIX_FMT_VAAPI;
-                    if (dec_ctx->hw_frames_ctx){//this requires a decoded frame
+                    LWARN("Frame pix_fmt is " + std::to_string(frame->format));
+                    if (frame && frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx){
+                        encode_ctx[out_stream->index]->hw_frames_ctx = av_buffer_ref(frame->hw_frames_ctx);
+                    } else if (dec_ctx->pix_fmt == AV_PIX_FMT_VAAPI && dec_ctx->hw_frames_ctx){//this requires a decoded frame
                         encode_ctx[out_stream->index]->hw_frames_ctx = av_buffer_ref(dec_ctx->hw_frames_ctx);
                     } else {
-                        LWARN("VAAPI encoding currently requires VAAPI decoding");
+                        //source is some unknown source, so we get a new va-api context
+                        LWARN("Wrong pixel format provided for initilization");
                     }
                 }
             }
@@ -806,7 +808,7 @@ bool StreamWriter::gen_codec_str(const int stream, const AVCodecParameters *code
 std::string StreamWriter::get_codec_str(void) const {
     std::stringstream ss;
     bool first = true;
-    for (const auto str : codec_str){
+    for (const auto &str : codec_str){
         if (!first){
             ss << ",";
         }
@@ -899,6 +901,51 @@ bool StreamWriter::guess_framerate(const AVCodecContext* codec_ctx){
 
 }
 
+bool StreamWriter::get_video_format(const AVFrame *frame, AVPixelFormat &pix_fmt, AVCodecID &codec_id, int &codec_profile) const {
+    const AVCodec *vencoder = get_vencoder(frame->width, frame->height, codec_id, codec_profile);
+    if (!vencoder || !vencoder->pix_fmts){
+        pix_fmt = AV_PIX_FMT_NONE;
+        return false;
+    }
+    //FIXME: This is overly restrictive, our API should return all pix_fmts
+    pix_fmt = vencoder->pix_fmts[0];
+    return true;
+}
+
+const AVCodec* StreamWriter::get_vencoder(int width, int height, AVCodecID &codec_id, int &codec_profile) const {
+    const AVCodec *encoder = NULL;
+    if (cfg.get_value("encode-format-video") == "hevc"){
+        codec_id = AV_CODEC_ID_HEVC;
+        codec_profile = FF_PROFILE_HEVC_MAIN;
+
+        if ((cfg.get_value("video-encode-method") == "auto" || cfg.get_value("video-encode-method") == "vaapi") &&
+            gcff_util.have_vaapi(codec_id, codec_profile, width, height)){
+            encoder = avcodec_find_encoder_by_name("hevc_vaapi");
+        }
+        if (!encoder){
+            encoder = avcodec_find_encoder(AV_CODEC_ID_HEVC);
+        }
+    }
+    if (!encoder) {//default or above option(s) failed
+        codec_id = AV_CODEC_ID_H264;
+        codec_profile = FF_PROFILE_H264_MAIN;
+
+        if ((cfg.get_value("video-encode-method") == "auto" || cfg.get_value("video-encode-method") == "vaapi") &&
+            gcff_util.have_vaapi(AV_CODEC_ID_H264, FF_PROFILE_H264_MAIN, width, height)){
+            encoder = avcodec_find_encoder_by_name("h264_vaapi");
+        }
+        if (!encoder){
+            encoder = avcodec_find_encoder(AV_CODEC_ID_H264);
+        }
+    }
+    return encoder;
+}
+
+const AVCodec* StreamWriter::get_vencoder(int width, int height) const {
+    AVCodecID codec_id;
+    int codec_profile;
+    return get_vencoder(width, height, codec_id, codec_profile);
+}
 
 PacketInterleavingBuf::PacketInterleavingBuf(const AVPacket &pkt){
     in = av_packet_clone(&pkt);

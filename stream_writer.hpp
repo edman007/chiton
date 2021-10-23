@@ -25,6 +25,7 @@
 #include "stream_unwrap.hpp"
 #include <functional>
 
+
 class PacketInterleavingBuf {
 public:
     AVPacket* in;//the origional packet, in source timebase
@@ -48,7 +49,9 @@ public:
     //set the path of the file to write to, if the stream was opened, it remains opened (and a new file is created), if it was closed then it is not opened
     long long change_path(const std::string &new_path = "");//returns file position of the end of the file
     bool add_stream(const AVStream *in_stream);//add in_stream to output (copy)
-    bool add_encoded_stream(const AVStream *in_stream, const AVCodecContext *dec_ctx);//add in_stream to output, using encoding
+
+    bool add_encoded_stream(const AVStream *in_stream, const AVCodecContext *dec_ctx, const AVFrame *frame);//add in_stream to output, specify frame to pass a HW context
+    bool add_encoded_stream(const AVStream *in_stream, const AVCodecContext *dec_ctx);//add in_stream to output
     bool copy_streams(StreamUnwrap &unwrap);//copy all streams from unwrap to output
     bool is_fragmented(void) const;//return true if this is a file format that supports fragmenting
     long long get_init_len(void) const;//return the init length, -1 if not valid
@@ -59,6 +62,8 @@ public:
     int get_width() const;//returns the video width, or -1 if unknown
     int get_height() const;//returns the video height, or -1 if unknown
     float get_framerate() const;//returns the video framerate, or 0 if unknown
+    //return true if we found our encoding parameters, writes out pixel format expected by the encoder, and codec_id and profile as we use
+    bool get_video_format(const AVFrame *frame, AVPixelFormat &pix_fmt, AVCodecID &codec_id, int &codec_profile) const;
 private:
     Config &cfg;
     Config *cfg1;
@@ -109,5 +114,7 @@ private:
     uint8_t *nal_unit_extract_rbsp(const uint8_t *src, const uint32_t src_len, uint32_t *dst_len);//helper for decoding h264 types
     bool guess_framerate(const AVStream *stream);//guess the framerate from the stream, true if found framerate
     bool guess_framerate(const AVCodecContext* codec_ctx);//guess the framerate from the codec context, true if found framerate
+    const AVCodec* get_vencoder(int width, int height, AVCodecID &codec_id, int &codec_profile) const;//return the encoder, or null if we can't encode this, write out the codec id/profile
+    const AVCodec* get_vencoder(int width, int height) const;//return the encoder, or null if we can't encode this
 };
 #endif

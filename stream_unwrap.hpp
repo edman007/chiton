@@ -47,6 +47,7 @@ public:
     bool get_next_frame(AVPacket &packet);//writes the next frame out to packet, returns true on success, false on error (end of file)
     bool decode_packet(AVPacket &packet);//reads packet and decodes it
     bool get_decoded_frame(int stream, AVFrame *frame);//gets the next decoded frame
+    bool peek_decoded_vframe(AVFrame *frame);//gets the next previously decoded video frame without popping it off the stack
     void unref_frame(AVPacket &packet);//free resources from frame
     void timestamp(const AVPacket &packet, struct timeval &time);//write the actual timestamp of packet to time
     bool is_audio(const AVPacket &packet);//return true if packet is audio packet

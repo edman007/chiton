@@ -247,7 +247,68 @@ enum AVPixelFormat get_vdpau_format(AVCodecContext *ctx, const enum AVPixelForma
     return AV_PIX_FMT_NONE;//should this be pix_fmts?
 }
 
-bool CFFUtil::have_vaapi(const AVCodecContext* avctx){
+//Modified list, based on ffmpeg's hwcontext_vaapi.c
+static const AVPixelFormat vaapi_format_map[] = {
+    AV_PIX_FMT_NV12,
+    AV_PIX_FMT_YUV420P,
+    AV_PIX_FMT_YUV422P,
+    AV_PIX_FMT_UYVY422,
+    AV_PIX_FMT_YUYV422,
+#ifdef VA_FOURCC_Y210
+    AV_PIX_FMT_Y210,
+#endif
+    AV_PIX_FMT_YUV411P,
+    AV_PIX_FMT_YUV440P,
+    AV_PIX_FMT_YUV444P,
+    AV_PIX_FMT_GRAY8,
+#ifdef VA_FOURCC_P010
+    AV_PIX_FMT_P010,
+#endif
+    AV_PIX_FMT_BGRA,
+    AV_PIX_FMT_BGR0,
+    AV_PIX_FMT_RGBA,
+    AV_PIX_FMT_RGB0,
+#ifdef VA_FOURCC_ABGR
+    AV_PIX_FMT_ABGR,
+    AV_PIX_FMT_0BGR,
+#endif
+    AV_PIX_FMT_ARGB,
+    AV_PIX_FMT_0RGB,
+#ifdef VA_FOURCC_X2R10G10B10
+    AV_PIX_FMT_X2RGB10,
+#endif
+    AV_PIX_FMT_NONE
+};
+
+
+//check if we have a VAAPI compatible format to use, use the list from hwcontext_vaapi.c
+enum AVPixelFormat get_sw_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts) {
+    const enum AVPixelFormat *p;
+    AVPixelFormat first = pix_fmts[0];
+#ifdef HAVE_VAAPI
+    for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++){
+        const char *pix_name = av_get_pix_fmt_name(*p);
+        LDEBUG("Checking optional SW format " + std::string(pix_name));
+        if (sw_format_is_hw_compatable(*p)){
+            return *p;
+        }
+    }
+    LDEBUG("No VAAPI compatble pixel formats available for decoder");
+#endif
+    return first;//just whatever...
+}
+
+bool sw_format_is_hw_compatable(const enum AVPixelFormat pix_fmt){
+    const enum AVPixelFormat *v;
+    for (v = vaapi_format_map; *v != AV_PIX_FMT_NONE; v++){
+        if (*v == pix_fmt){
+            return true;
+        }
+    }
+    return false;
+}
+
+bool CFFUtil::have_vaapi(AVCodecID codec_id, int codec_profile, int width, int height){
     load_vaapi();
     if (!vaapi_ctx){
         return NULL;
@@ -259,7 +320,7 @@ bool CFFUtil::have_vaapi(const AVCodecContext* avctx){
     AVVAAPIDeviceContext* hwctx = reinterpret_cast<AVVAAPIDeviceContext*>((reinterpret_cast<AVHWDeviceContext*>(vaapi_ctx->data))->hwctx);
     //query VAAPI profiles for this codec
     const AVCodecDescriptor *codec_desc;
-    codec_desc = avcodec_descriptor_get(avctx->codec_id);
+    codec_desc = avcodec_descriptor_get(codec_id);
     if (!codec_desc) {
         return NULL;
     }
@@ -282,13 +343,16 @@ bool CFFUtil::have_vaapi(const AVCodecContext* avctx){
 
     //search all known codecs to see if there is a matching profile
     for (unsigned int i = 0; i < FF_ARRAY_ELEMS(vaapi_profile_map); i++) {
-        if (avctx->codec_id != vaapi_profile_map[i].codec_id){
+        if (codec_id != vaapi_profile_map[i].codec_id){
             continue;
         }
         for (int j = 0; j < profile_count; j++) {
-            if (vaapi_profile_map[i].va_profile == profile_list[j]) {
+            if (vaapi_profile_map[i].va_profile == profile_list[j] &&
+                vaapi_profile_map[i].codec_profile == codec_profile) {
                 profile = profile_list[j];
-                break;
+                break;//exact found, we are done
+            } else if (vaapi_profile_map[i].va_profile == profile_list[j]){
+                profile = profile_list[j];//in exact found
             }
         }
     }
@@ -307,8 +371,8 @@ bool CFFUtil::have_vaapi(const AVCodecContext* avctx){
         return NULL;
     }
     //check if this is supported
-    if (c->min_width  <= avctx->width || c->max_width  >= avctx->width ||
-        c->min_height <= avctx->width || c->max_height >= avctx->width){
+    if (c->min_width  <= width || c->max_width  >= width ||
+        c->min_height <= height || c->max_height >= height){
         //we assume the pixel formats are ok for us
         found = true;
     }
@@ -316,8 +380,8 @@ bool CFFUtil::have_vaapi(const AVCodecContext* avctx){
     return found;
 }
 
-AVBufferRef *CFFUtil::get_vaapi_ctx(const AVCodecContext* avctx){
-    if (have_vaapi(avctx)){
+AVBufferRef *CFFUtil::get_vaapi_ctx(AVCodecID codec_id, int codec_profile, int width, int height){
+    if (have_vaapi(codec_id, codec_profile, width, height)){
         return av_buffer_ref(vaapi_ctx);
     } else {
         //not supported
@@ -325,7 +389,7 @@ AVBufferRef *CFFUtil::get_vaapi_ctx(const AVCodecContext* avctx){
     }
 }
 
-bool CFFUtil::have_vdpau(const AVCodecContext* avctx){
+bool CFFUtil::have_vdpau(AVCodecID codec_id, int codec_profile, int width, int height){
     load_vdpau();
     if (!vdpau_ctx){
         return NULL;
@@ -334,17 +398,17 @@ bool CFFUtil::have_vdpau(const AVCodecContext* avctx){
 #ifdef HAVE_VDPAU
     //Check if VDPAU supports this codec
     AVVDPAUDeviceContext* hwctx = reinterpret_cast<AVVDPAUDeviceContext*>((reinterpret_cast<AVHWDeviceContext*>(vdpau_ctx->data))->hwctx);
-    uint32_t width, height;
+    uint32_t max_width, max_height;
     VdpBool supported;
     VdpDecoderProfile vdpau_profile;
     //get  profile
-    int ret = get_vdpau_profile(avctx, &vdpau_profile);
+    int ret = get_vdpau_profile(codec_id, codec_profile, &vdpau_profile);
     if (ret){
         //something didn't work, don't use VDPAU
         return NULL;
     }
     VdpDecoderQueryCapabilities *vdpau_query_caps;
-    VdpStatus status = vdpau_query_caps(hwctx->device, vdpau_profile, &supported, NULL, NULL, &width, &height);
+    VdpStatus status = vdpau_query_caps(hwctx->device, vdpau_profile, &supported, NULL, NULL, &max_width, &max_height);
     if (status != VDP_STATUS_OK){
         return NULL;
     }
@@ -353,15 +417,15 @@ bool CFFUtil::have_vdpau(const AVCodecContext* avctx){
         return NULL;
     }
 
-    if (avctx->width > width || avctx->height > height){
+    if (width > max_width || height > max_height){
         return NULL;
     }
 #endif
     bool found = false;
     AVHWFramesConstraints* c = av_hwdevice_get_hwframe_constraints(vdpau_ctx, NULL);
     //check if this is supported
-    if (c->min_width  <= avctx->width || c->max_width  >= avctx->width ||
-        c->min_height <= avctx->height || c->max_height >= avctx->height){
+    if (c->min_width  <= width || c->max_width  >= width ||
+        c->min_height <= height || c->max_height >= height){
         //we assume the pixel formats are ok for us
         found = true;
     }
@@ -370,8 +434,8 @@ bool CFFUtil::have_vdpau(const AVCodecContext* avctx){
     return found;
 }
 
-AVBufferRef *CFFUtil::get_vdpau_ctx(const AVCodecContext* avctx){
-    if (have_vdpau(avctx)){
+AVBufferRef *CFFUtil::get_vdpau_ctx(AVCodecID codec_id, int codec_profile, int width, int height){
+    if (have_vdpau(codec_id, codec_profile, width, height)){
         return av_buffer_ref(vdpau_ctx);
     } else {
         //not supported
@@ -404,30 +468,30 @@ void CFFUtil::free_hw(void){
 
 #ifdef HAVE_VDPAU
 //borrowed from FFMPeg's vdpau.c, deprecated so we'll do it ourselves
-int CFFUtil::get_vdpau_profile(const AVCodecContext *avctx, VdpDecoderProfile *profile){
+int CFFUtil::get_vdpau_profile(const AVCodecID codec_id, const int codec_profile, VdpDecoderProfile *profile){
 #define PROFILE(prof)                           \
     do {                                        \
         *profile = VDP_DECODER_PROFILE_##prof;  \
         return 0;                               \
     } while (0)
 
-    switch (avctx->codec_id) {
+    switch (codec_id) {
     case AV_CODEC_ID_MPEG1VIDEO:               PROFILE(MPEG1);
     case AV_CODEC_ID_MPEG2VIDEO:
-        switch (avctx->profile) {
+        switch (codec_profile) {
         case FF_PROFILE_MPEG2_MAIN:            PROFILE(MPEG2_MAIN);
         case FF_PROFILE_MPEG2_SIMPLE:          PROFILE(MPEG2_SIMPLE);
         default:                               return AVERROR(EINVAL);
         }
     case AV_CODEC_ID_H263:                     PROFILE(MPEG4_PART2_ASP);
     case AV_CODEC_ID_MPEG4:
-        switch (avctx->profile) {
+        switch (codec_profile) {
         case FF_PROFILE_MPEG4_SIMPLE:          PROFILE(MPEG4_PART2_SP);
         case FF_PROFILE_MPEG4_ADVANCED_SIMPLE: PROFILE(MPEG4_PART2_ASP);
         default:                               return AVERROR(EINVAL);
         }
     case AV_CODEC_ID_H264:
-        switch (avctx->profile & ~FF_PROFILE_H264_INTRA) {
+        switch (codec_profile & ~FF_PROFILE_H264_INTRA) {
         case FF_PROFILE_H264_BASELINE:         PROFILE(H264_BASELINE);
         case FF_PROFILE_H264_CONSTRAINED_BASELINE:
         case FF_PROFILE_H264_MAIN:             PROFILE(H264_MAIN);
@@ -439,12 +503,14 @@ int CFFUtil::get_vdpau_profile(const AVCodecContext *avctx, VdpDecoderProfile *p
         }
     case AV_CODEC_ID_WMV3:
     case AV_CODEC_ID_VC1:
-        switch (avctx->profile) {
+        switch (codec_profile) {
         case FF_PROFILE_VC1_SIMPLE:            PROFILE(VC1_SIMPLE);
         case FF_PROFILE_VC1_MAIN:              PROFILE(VC1_MAIN);
         case FF_PROFILE_VC1_ADVANCED:          PROFILE(VC1_ADVANCED);
         default:                               return AVERROR(EINVAL);
         }
+    default:
+        return AVERROR(EINVAL);
     }
     return AVERROR(EINVAL);
 }
