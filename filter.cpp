@@ -236,7 +236,7 @@ bool Filter::init_filter(const AVFrame *frame){
         //hwmap specifically needs
         for (unsigned int i = 0; i < filter_graph->nb_filters; i++){
             AVFilterContext *flt = filter_graph->filters[i];
-            if (strcmp(flt->filter->name, "hwmap") == 0){
+            if (strcmp(flt->filter->name, "hwmap") == 0 || strcmp(flt->filter->name, "hwupload") == 0){
                 if (!frame->hw_frames_ctx && is_hw(target_fmt)) {//source is SW dest is HW
                     flt->hw_device_ctx = gcff_util.get_vaapi_ctx(target_codec, target_profile, frame->width, frame->height);
                 }
@@ -276,13 +276,18 @@ std::string Filter::get_filter_str(const AVFrame *frame) const {
     //test if we will need to start with a format)
     if (is_hw(frame->format) || is_hw(target_fmt)){
         //have a SW format and the SW decoder didn't get it into something compatable, so format into something compatable
-        if (!is_hw(frame->format) && !sw_format_is_hw_compatable(static_cast<enum AVPixelFormat>(frame->format))){
-            //exclude the "deprecated formats", YUV420P
-            filters_txt << "format=pix_fmts=nv12|yuv420p|yuv422p|uyvy422|y210|yuv411p|yuv440p|yuv444p|gray8|p010|bgra|bgr0|rgba|rgb0|abgr|0bgr|argb|0rgb|x2rgb10" << ",";
+        if (!is_hw(frame->format) && !gcff_util.sw_format_is_hw_compatable(static_cast<enum AVPixelFormat>(frame->format))){
+            filters_txt << "format=pix_fmts=" << gcff_util.get_sw_hw_format_list() << ",";
+            //filters_txt << "format=pix_fmts=yuv444p,";
+            //420, 440, 444,
         }
 
         //transfer between HW...HWMap?
-        filters_txt << "hwmap=mode=overwrite";
+        if (!is_hw(frame->format)){
+            filters_txt << "hwupload=";
+        } else {
+            filters_txt << "hwmap=mode=read";
+        }
 
         if (is_hw(target_fmt)){
             if (target_fmt == AV_PIX_FMT_VAAPI){
@@ -291,6 +296,7 @@ std::string Filter::get_filter_str(const AVFrame *frame) const {
                 LWARN("Unknown target HW format");
             }
         }
+        filters_txt << ",format=pix_fmts=" << target_fmt;
     } else {
         //SW conversion
         filters_txt << "format=pix_fmts=" << target_fmt;

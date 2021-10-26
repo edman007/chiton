@@ -193,12 +193,13 @@ void Camera::run(void){
                         //Filter the frame before encoding
                         if (vfilter.send_frame(frame)){
                             while (!failed && vfilter.get_frame(filtered_frame)){
-                                if (frame_cnt % 100 == 0){//debug stuff
+                                /*
+                                if (frame_cnt == 0){//debug stuff
                                     std::string debug_frame_name = "debug_frame";
                                     img.write_frame_jpg(filtered_frame, debug_frame_name);
                                     LINFO("Wrote " + debug_frame_name);
                                 }
-
+                                */
                                 if (!out.write(filtered_frame, stream.get_stream(pkt))){
                                     LERROR("Error Encoding Video!");
                                     failed = true;//error encoding

@@ -25,6 +25,7 @@
 
 #include "util.hpp"
 #include <cstdio>
+#include <sstream>
 #ifdef HAVE_VAAPI
 #include <va/va.h>
 #include <libavutil/hwcontext_vaapi.h>
@@ -289,7 +290,7 @@ enum AVPixelFormat get_sw_format(AVCodecContext *ctx, const enum AVPixelFormat *
     for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++){
         const char *pix_name = av_get_pix_fmt_name(*p);
         LDEBUG("Checking optional SW format " + std::string(pix_name));
-        if (sw_format_is_hw_compatable(*p)){
+        if (gcff_util.sw_format_is_hw_compatable(*p)){
             return *p;
         }
     }
@@ -298,16 +299,50 @@ enum AVPixelFormat get_sw_format(AVCodecContext *ctx, const enum AVPixelFormat *
     return first;//just whatever...
 }
 
-bool sw_format_is_hw_compatable(const enum AVPixelFormat pix_fmt){
+bool CFFUtil::sw_format_is_hw_compatable(const enum AVPixelFormat pix_fmt){
+    load_vaapi();
+    if (!vaapi_ctx){
+        return false;
+    }
+
+    AVHWFramesConstraints* c = av_hwdevice_get_hwframe_constraints(vaapi_ctx, NULL);
+    if (!c){
+        return false;
+    }
+
     const enum AVPixelFormat *v;
-    for (v = vaapi_format_map; *v != AV_PIX_FMT_NONE; v++){
+    for (v = c->valid_sw_formats; *v != AV_PIX_FMT_NONE; v++){
         if (*v == pix_fmt){
+            av_hwframe_constraints_free(&c);
             return true;
         }
     }
+    av_hwframe_constraints_free(&c);
     return false;
 }
 
+std::string CFFUtil::get_sw_hw_format_list(void){
+    load_vaapi();
+    if (!vaapi_ctx){
+        return "";
+    }
+
+    AVHWFramesConstraints* c = av_hwdevice_get_hwframe_constraints(vaapi_ctx, NULL);
+    if (!c){
+        return "";
+    }
+
+    std::stringstream ss;
+    const enum AVPixelFormat *v;
+    for (v = c->valid_sw_formats; *v != AV_PIX_FMT_NONE; v++){
+        if (v != c->valid_sw_formats){
+            ss << "|";
+        }
+        ss << av_get_pix_fmt_name(*v);
+    }
+    av_hwframe_constraints_free(&c);
+    return ss.str();
+}
 bool CFFUtil::have_vaapi(AVCodecID codec_id, int codec_profile, int width, int height){
     load_vaapi();
     if (!vaapi_ctx){
