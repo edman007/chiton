@@ -82,6 +82,8 @@ private:
     //to support early decoding, we can decode into these
     std::deque<AVPacket> decoded_packets;
     std::deque<AVFrame*> decoded_video_frames;
+
+    static enum AVPixelFormat get_frame_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);
 };
 
 #endif

@@ -184,7 +184,8 @@ bool StreamUnwrap::alloc_decode_context(unsigned int stream){
         }
         //if both fail we get the SW decoder
         if (!avctx->hw_device_ctx){
-            avctx->get_format = get_sw_format;//do any format, but prefer VAAPI compatible formats
+            avctx->opaque = this;
+            avctx->get_format = get_frame_format;//do any format, but prefer VAAPI compatible formats
             LINFO("Using SW Decoding");
         }
     }
@@ -499,4 +500,22 @@ bool StreamUnwrap::charge_video_decoder(void){
         }
     }
     return true;
+}
+
+enum AVPixelFormat StreamUnwrap::get_frame_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts){
+    StreamUnwrap* stream = static_cast<StreamUnwrap*>(ctx->opaque);
+    const std::string &cfg_fmt = stream->cfg.get_value("video-hw-pix-fmt");
+    if (cfg_fmt != "auto"){
+        const enum AVPixelFormat target_fmt = av_get_pix_fmt(cfg_fmt.c_str());
+        if (target_fmt != AV_PIX_FMT_NONE){
+            const enum AVPixelFormat *p;
+            for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++){
+                if (target_fmt == *p){
+                    return *p;
+                }
+            }
+        }
+    }
+
+    return get_sw_format(ctx, pix_fmts);
 }

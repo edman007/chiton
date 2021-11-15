@@ -22,6 +22,7 @@
  **************************************************************************
  */
 
+#include "chiton_config.hpp"
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -104,7 +105,7 @@ public:
     bool have_vaapi(AVCodecID codec_id, int codec_profile, int width, int height);//returns true if VAAPI should work
     bool have_vdpau(AVCodecID codec_id, int codec_profile, int width, int height);//returns true if VDPAU should work
     bool sw_format_is_hw_compatable(const enum AVPixelFormat pix_fmt);//return true if the format is HW compatable
-    std::string get_sw_hw_format_list(void);//return the suggested list of formats for use with later HW functions
+    std::string get_sw_hw_format_list(Config &cfg);//return the suggested list of formats for use with later HW functions
 
 private:
     void load_vaapi(void);//init global vaapi context

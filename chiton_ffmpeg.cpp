@@ -288,8 +288,6 @@ enum AVPixelFormat get_sw_format(AVCodecContext *ctx, const enum AVPixelFormat *
     AVPixelFormat first = pix_fmts[0];
 #ifdef HAVE_VAAPI
     for (p = pix_fmts; *p != AV_PIX_FMT_NONE; p++){
-        const char *pix_name = av_get_pix_fmt_name(*p);
-        LDEBUG("Checking optional SW format " + std::string(pix_name));
         if (gcff_util.sw_format_is_hw_compatable(*p)){
             return *p;
         }
@@ -321,12 +319,17 @@ bool CFFUtil::sw_format_is_hw_compatable(const enum AVPixelFormat pix_fmt){
     return false;
 }
 
-std::string CFFUtil::get_sw_hw_format_list(void){
+std::string CFFUtil::get_sw_hw_format_list(Config &cfg){
     load_vaapi();
     if (!vaapi_ctx){
         return "";
     }
-
+    const std::string &cfg_fmt = cfg.get_value("video-hw-pix-fmt");
+    if (cfg_fmt != "auto"){
+        if (av_get_pix_fmt(cfg_fmt.c_str()) != AV_PIX_FMT_NONE){
+            return std::string(cfg_fmt);
+        }
+    }
     AVHWFramesConstraints* c = av_hwdevice_get_hwframe_constraints(vaapi_ctx, NULL);
     if (!c){
         return "";

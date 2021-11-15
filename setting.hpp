@@ -98,4 +98,6 @@ const std::vector<Setting> setting_options {
   " auto tries both HW decoders before defaulting to SW, SW is a fallback", SETTING_OPTIONAL_CAMERA},
  {"video-decode-method", "auto", "Video Decode method <auto|sw|vaapi|vdpau>", "Method to use for decoding, vaapi and vdpau are supported HW decoders,"
   " auto tries both HW decoders before defaulting to SW, SW is a fallback", SETTING_OPTIONAL_CAMERA},
+ {"video-hw-pix-fmt", "auto", "Video pixel format <auto|[fmt]>", "Pixel format to use, auto or any valid ffmpeg format is accepted,"
+  " but not all will work with your HW", SETTING_OPTIONAL_CAMERA},
 };
