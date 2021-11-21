@@ -276,10 +276,9 @@ std::string Filter::get_filter_str(const AVFrame *frame) const {
     //test if we will need to start with a format)
     if (is_hw(frame->format) || is_hw(target_fmt)){
         //have a SW format and the SW decoder didn't get it into something compatable, so format into something compatable
-        if (!is_hw(frame->format) && !gcff_util.sw_format_is_hw_compatable(static_cast<enum AVPixelFormat>(frame->format))){
+        if (!is_hw(frame->format) &&
+            (!gcff_util.sw_format_is_hw_compatable(static_cast<enum AVPixelFormat>(frame->format)) || cfg.get_value("video-hw-pix-fmt") != "auto")){
             filters_txt << "format=pix_fmts=" << gcff_util.get_sw_hw_format_list(cfg) << ",";
-            //filters_txt << "format=pix_fmts=yuv444p,";
-            //420, 440, 444,
         }
 
         //transfer between HW...HWMap?
