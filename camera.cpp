@@ -194,7 +194,7 @@ void Camera::run(void){
                         if (vfilter.send_frame(frame)){
                             while (!failed && vfilter.get_frame(filtered_frame)){
                                 /*
-                                if (frame_cnt == 0){//debug stuff
+                                if (frame_cnt == 10){//debug stuff
                                     std::string debug_frame_name = "debug_frame";
                                     img.write_frame_jpg(filtered_frame, debug_frame_name);
                                     LINFO("Wrote " + debug_frame_name);

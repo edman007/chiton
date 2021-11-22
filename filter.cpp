@@ -289,8 +289,11 @@ std::string Filter::get_filter_str(const AVFrame *frame) const {
         }
 
         //transfer between HW...HWMap?
+        //hwmap is supposed to work in all cases here...but in testing it doesn't actually work, not sure why
         if (!is_hw(frame->format)){
             filters_txt << "hwupload=";
+        } else if (!is_hw(target_fmt)){
+            filters_txt << "hwdownload,format=pix_fmts=" << gcff_util.get_sw_hw_format_list(cfg);//request to download into supported format, then format later
         } else {
             filters_txt << "hwmap=mode=read";
         }

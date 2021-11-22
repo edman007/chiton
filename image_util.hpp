@@ -43,6 +43,7 @@ private:
 
     //Returns a clone of the frame with the new rect applied
     AVFrame* apply_rect(const AVFrame *frame, rect &src);
+    bool format_supported(const AVFrame *frame, const AVCodec *codec);//return true if the source is in a native format
 };
 
 #endif

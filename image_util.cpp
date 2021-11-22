@@ -23,6 +23,7 @@
 #include "image_util.hpp"
 #include "util.hpp"
 #include "file_manager.hpp"
+#include "filter.hpp"
 
 ImageUtil::ImageUtil(Database &db, Config &cfg) : db(db), cfg(cfg) {
 
@@ -40,13 +41,31 @@ bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const s
         return false;
     }
 
-    AVFrame *cropped_frame = apply_rect(frame, src);
-
     const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_MJPEG);
     if (!codec) {
         LWARN("Cannot find MJPEG encoder!");
         return false;
     }
+
+
+    AVFrame *cropped_frame = NULL;
+
+    if (format_supported(frame, codec)){
+        LDEBUG("Format is supported" + std::to_string(frame->format));
+        cropped_frame = apply_rect(frame, src);
+    } else {
+        //run it through a single loop of the filter
+        LDEBUG("Filtering prior to writing");
+        Filter flt(cfg);
+        flt.set_target_fmt(codec->pix_fmts[0], AV_CODEC_ID_MJPEG, FF_PROFILE_MJPEG_HUFFMAN_BASELINE_DCT);
+        flt.set_source_time_base({1, 1});//I don't think it actually matters...
+        flt.send_frame(frame);
+        AVFrame *filtered_frame = av_frame_alloc();
+        flt.get_frame(filtered_frame);
+        cropped_frame = apply_rect(filtered_frame, src);
+        av_frame_free(&filtered_frame);
+    }
+
 
     AVCodecContext* c = avcodec_alloc_context3(codec);
     if (!c) {
@@ -60,7 +79,8 @@ bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const s
     c->width = cropped_frame->width - cropped_frame->crop_left - cropped_frame->crop_right;
     c->height = cropped_frame->height - cropped_frame->crop_top - cropped_frame->crop_bottom;
     c->time_base = (AVRational){1,1};
-    c->pix_fmt = AV_PIX_FMT_YUVJ420P;
+    c->pix_fmt = static_cast<enum AVPixelFormat>(cropped_frame->format);
+    c->sample_aspect_ratio = frame->sample_aspect_ratio;
     LINFO("Exporting JPEG " + std::to_string(c->width) + "x" + std::to_string(c->height));
 
     gcff_util.lock();
@@ -152,4 +172,18 @@ AVFrame* ImageUtil::apply_rect(const AVFrame *frame, rect &src){
     }
 
     return out;
+}
+
+bool ImageUtil::format_supported(const AVFrame *frame, const AVCodec *codec){
+
+    if (!codec->pix_fmts){
+        return true;//is this right? it's actually unknown...but I guess the filter won't help
+    }
+    for (const enum AVPixelFormat *p = codec->pix_fmts; *p != AV_PIX_FMT_NONE; p++){
+        if (*p == static_cast<const enum AVPixelFormat>(frame->format)){
+            return true;
+        }
+    }
+
+    return false;
 }
