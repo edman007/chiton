@@ -904,6 +904,7 @@ bool StreamWriter::guess_framerate(const AVCodecContext* codec_ctx){
 bool StreamWriter::get_video_format(const AVFrame *frame, AVPixelFormat &pix_fmt, AVCodecID &codec_id, int &codec_profile) const {
     const AVCodec *vencoder = get_vencoder(frame->width, frame->height, codec_id, codec_profile);
     if (!vencoder || !vencoder->pix_fmts){
+        LWARN("Video Encoder has no pixel formats?");
         pix_fmt = AV_PIX_FMT_NONE;
         return false;
     }

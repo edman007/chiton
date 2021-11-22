@@ -191,9 +191,17 @@ bool Filter::init_filter(const AVFrame *frame){
 
 
     if (frame->hw_frames_ctx){//copy the input device context if one exists
-        //FIXME: should copy into AVBufferSrcParameters
-        //casting back and forth is annoying
-        buffersrc_ctx->hw_device_ctx = av_buffer_ref(reinterpret_cast<AVBufferRef*>(reinterpret_cast<AVHWFramesContext*>(frame->hw_frames_ctx->data)->device_ctx));
+        AVBufferSrcParameters *bsp = av_buffersrc_parameters_alloc();
+        bsp->hw_frames_ctx = av_buffer_ref(frame->hw_frames_ctx);
+        bsp->format = frame->format;
+        bsp->width = frame->width;
+        bsp->height = frame->height;
+        bsp->sample_aspect_ratio = frame->sample_aspect_ratio;
+        if (av_buffersrc_parameters_set(buffersrc_ctx, bsp)){
+            LWARN("Failed to set filter buffersrc parameters");
+        }
+        av_free(bsp);
+        //buffersrc_ctx->hw_device_ctx = av_buffer_ref(reinterpret_cast<AVHWFramesContext*>(frame->hw_frames_ctx->data)->device_ref);
     } else if (!is_hw(target_fmt)){
         LDEBUG("Performing SW/SW filter");
     }//SW->HW is added after
