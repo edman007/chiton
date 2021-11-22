@@ -201,7 +201,6 @@ bool Filter::init_filter(const AVFrame *frame){
             LWARN("Failed to set filter buffersrc parameters");
         }
         av_free(bsp);
-        //buffersrc_ctx->hw_device_ctx = av_buffer_ref(reinterpret_cast<AVHWFramesContext*>(frame->hw_frames_ctx->data)->device_ref);
     } else if (!is_hw(target_fmt)){
         LDEBUG("Performing SW/SW filter");
     }//SW->HW is added after
