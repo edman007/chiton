@@ -24,6 +24,7 @@
 
 #include "chiton_config.hpp"
 #include "chiton_ffmpeg.hpp"
+#include "io/io_wrapper.hpp"
 #include <list>
 #include <vector>
 #include <map>
@@ -39,6 +40,7 @@ public:
     ~StreamUnwrap();
     
     bool connect(void);//returns true on success
+    bool connect(IOWrapper &io);//returns true on success, uses IOWrapper as the source
     bool close(void);//close the connection
 
     AVCodecContext* get_codec_context(AVStream *stream);//return the decode context for a given stream, creating the context if required

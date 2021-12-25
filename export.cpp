@@ -23,11 +23,14 @@
 #include "util.hpp"
 #include "stream_unwrap.hpp"
 #include "stream_writer.hpp"
+#include "io/cfmp4.hpp"
+#include <memory>
 
 Export::Export(Database &db, Config &cfg, FileManager &fm) : db(db), cfg(cfg), g_fm(fm) {
     force_exit = false;
     export_in_progress = false;
     id = 0;
+    reserved_bytes = 0;
 }
 
 Export::~Export(void){
@@ -96,7 +99,7 @@ void Export::run_job(void){
     update_progress();
 
     //query all segments we need
-    std::string sql = "SELECT id, path, endtime, extension FROM videos WHERE camera = " + std::to_string(camera) + " AND ( "
+    std::string sql = "SELECT id, path, endtime, extension, name, init_byte, start_byte, end_byte, codec FROM videos WHERE camera = " + std::to_string(camera) + " AND ( "
         "( endtime >= " + std::to_string(starttime) + "  AND endtime <= " + std::to_string(endtime) + "  ) "
         " OR (starttime >= " + std::to_string(starttime) + " AND starttime <= " + std::to_string(endtime) + " )) "
         " ORDER BY starttime ASC ";
@@ -112,32 +115,47 @@ void Export::run_job(void){
     out.change_path(path);
 
     long total_time_target = endtime - starttime;
-
-    long reserved_bytes = 0;
+    reserved_bytes = 0;
     bool output_opened = false;
+    std::string prev_ext = "", prev_codec;
     while (res->next_row()){
-        std::string segment = fm.get_path(res->get_field_long(0), res->get_field(1), res->get_field(3));
+        if (prev_ext == "" && prev_codec == ""){
+            prev_ext = res->get_field(3);
+            prev_codec = res->get_field(8);
+        } else if (prev_ext != res->get_field(3) || prev_codec != res->get_field(8)){
+            //FIXME: Split Export
+            export_in_progress = false;
+            return;
+        }
+
+        std::string segment = fm.get_path(res->get_field_long(4), res->get_field(1), res->get_field(3));
         LDEBUG("Exporting " + segment);
         //we control the input stream by replacing the video-url with the segment
         camera_cfg.set_value("video-url", segment);
 
-        //get the filesize of the segment and subtrack from reserved bytes
-        long seg_size = fm.get_filesize(segment);
-        if (seg_size > 0){
-            if (reserved_bytes < seg_size){
-                //reserve more bytes
-                long req_bytes = 50*seg_size;//should be 5min of video
-                fm.reserve_bytes(req_bytes, camera);
-                reserved_bytes += req_bytes;
-            }
-            reserved_bytes -= seg_size;
-        }
+        std::unique_ptr<IOWrapper> io;
 
-        if (!in.connect()){
-            //try the next one...
+        if (res->get_field(3) == ".ts"){
+            //get the filesize of the segment and subtrack from reserved bytes
+            reserve_space(fm, fm.get_filesize(segment));
+            if (!in.connect()){
+                //try the next one...
+                continue;
+            }
+        } else if (res->get_field(3) == ".mp4") {
+            reserve_space(fm, res->get_field_long(7) - res->get_field_long(6));
+            io = std::unique_ptr<CFMP4>(new CFMP4(segment, res->get_field_long(5), res->get_field_long(6), res->get_field_long(7)));
+            camera_cfg.set_value("video-url", io->get_url());
+
+            if (!in.connect(*io.get())){
+                //try the next one...
+                continue;
+            }
+
+        } else {
+            LWARN(res->get_field(3) + " is not supported for export");
             continue;
         }
-
         if (!output_opened){
             if (!out.copy_streams(in)){
                 continue;
@@ -209,4 +227,18 @@ bool Export::rm_export(int export_id){
     }
     lock.unlock();
     return del_count > 0;
+}
+
+void Export::reserve_space(FileManager &fm, long size){
+    if (size <= 0){
+        LINFO("reserve_space called with invalid size");
+        return;
+    }
+    if (reserved_bytes < size){
+        //reserve more bytes
+        long req_bytes = 50*size;//should be 5min of video
+        fm.reserve_bytes(req_bytes, camera);
+        reserved_bytes += req_bytes;
+    }
+    reserved_bytes -= size;
 }

@@ -85,9 +85,9 @@ std::string FileManager::get_export_path(long int export_id, int camera, const s
     return path + "/" + std::to_string(export_id) + EXPORT_EXT;
 }
 //returns the path for the file referenced as id
-std::string FileManager::get_path(long int id, const std::string &db_path, const std::string &ext){
+std::string FileManager::get_path(long int name, const std::string &db_path, const std::string &ext){
     std::string path;
-    path = db_path + std::to_string(id) + ext;
+    path = db_path + std::to_string(name) + ext;
     return get_output_dir() + path;
 }
 

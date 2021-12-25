@@ -48,7 +48,7 @@ public:
     bool get_image_path(std::string &path, std::string &name, const std::string &extension, const struct timeval *start_time = NULL);
 
     //returns the real for the segments referenced as id and path name from the database
-    std::string get_path(long int file_id, const std::string &db_path, const std::string &ext);
+    std::string get_path(long int name, const std::string &db_path, const std::string &ext);
 
     //update metadata about the file
     bool update_file_metadata(long int file_id, struct timeval &end_time, long long end_byte, const StreamWriter &out_file, long long start_byte = 0, long long init_len = -1);

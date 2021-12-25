@@ -52,6 +52,7 @@ private:
     std::string path;
     long progress;
     Config camera_cfg;
+    long reserved_bytes;
 
     std::thread runner;
     std::atomic<bool> export_in_progress;//set to true when the runner is active
@@ -61,6 +62,7 @@ private:
     bool start_job(void);//kicks off a thread to perform the export
     void run_job(void);//main loop for exporting
     bool update_progress();//sets the current progress
+    void reserve_space(FileManager &fm, long size);//reserve size bytes of drive space
 };
 
 #endif

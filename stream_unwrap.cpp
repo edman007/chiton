@@ -58,14 +58,27 @@ bool StreamUnwrap::close(void){
     return true;
 }
 
+bool StreamUnwrap::connect(IOWrapper &io) {
+    if (input_format_context){
+        return false;
+    }
+    input_format_context = avformat_alloc_context();
+    if (!input_format_context){
+        return false;
+    }
+    input_format_context->pb = io.get_pb();
+    cfg.set_value("video-url", io.get_url());
+
+    return connect();
+}
+
 bool StreamUnwrap::connect(void) {
     LINFO("Reorder queue was first set at " + cfg.get_value("reorder-queue-len"));
     const std::string& url = cfg.get_value("video-url");
-    if (!url.compare("")){
+    if (!url.compare("") && !input_format_context){
         LERROR( "Camera was not supplied with a URL" + url);
         return false;
     }
-
 
     int error;
     AVDictionary *opts = Util::get_dict_options(cfg.get_value("ffmpeg-demux-options"));
@@ -77,7 +90,8 @@ bool StreamUnwrap::connect(void) {
 #endif
 
     /* Open the input file to read from it. */
-    if ((error = avformat_open_input(&input_format_context, url.c_str(), NULL, &opts)) < 0) {
+    error = avformat_open_input(&input_format_context, url.c_str(), NULL, &opts);
+    if (error < 0) {
         LERROR( "Could not open camera url '" + url + "' (error '" + std::string(av_err2str(error)) +")");
         input_format_context = NULL;
         av_dict_free(&opts);
@@ -319,7 +333,7 @@ bool StreamUnwrap::read_frame(void){
     reorder_queue.emplace_back();
     if (av_read_frame(input_format_context, &reorder_queue.back())){
         reorder_queue.pop_back();
-        LWARN("av_read_frame() failed");
+        LINFO("av_read_frame() failed or hit EOF");
         return false;
     }
     //fixup this data...maybe limit it to the first one?
