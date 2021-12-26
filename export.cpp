@@ -123,7 +123,12 @@ void Export::run_job(void){
             prev_ext = res->get_field(3);
             prev_codec = res->get_field(8);
         } else if (prev_ext != res->get_field(3) || prev_codec != res->get_field(8)){
-            //FIXME: Split Export
+            if (!split_export(res->get_field_long(0))){
+                LWARN("Error Splitting Export");
+            }
+            out.close();
+            progress = 100;
+            update_progress();
             export_in_progress = false;
             return;
         }
@@ -241,4 +246,19 @@ void Export::reserve_space(FileManager &fm, long size){
         reserved_bytes += req_bytes;
     }
     reserved_bytes -= size;
+}
+
+bool Export::split_export(long seg_id){
+    std::string query = "INSERT INTO exports (camera, path, starttime, endtime) "
+        "SELECT e.camera, e.path, s.starttime + 1, e.endtime "
+        "FROM exports AS e, videos AS s "
+        "WHERE e.id = " + std::to_string(id) + " AND s.id = " + std::to_string(seg_id);
+    long affected;
+    DatabaseResult *res = db.query(query, &affected, NULL);
+    delete res;
+    bool ret = affected != 0;
+    query = "UPDATE exports SET endtime = (SELECT starttime FROM videos WHERE id = " + std::to_string(seg_id) + ") WHERE id = " + std::to_string(id);
+    res = db.query(query, &affected, NULL);
+    delete res;
+    return affected != 0 && ret;
 }

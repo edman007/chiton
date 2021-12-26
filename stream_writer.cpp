@@ -321,6 +321,9 @@ bool StreamWriter::add_stream(const AVStream *in_stream){
         guess_framerate(out_stream);//does this do anything if we just copied it?
         LINFO("Framerate guessed is: " + std::to_string(video_framerate));
     }
+
+    //validate the codec_tag
+    validate_codec_tag(out_stream);
     return true;
 }
 
@@ -957,4 +960,9 @@ PacketInterleavingBuf::PacketInterleavingBuf(const AVPacket &pkt){
 PacketInterleavingBuf::~PacketInterleavingBuf(){
     av_packet_free(&in);
     av_packet_free(&out);
+}
+
+bool StreamWriter::validate_codec_tag(AVStream *stream){
+    stream->codecpar->codec_tag = av_codec_get_tag(output_format_context->oformat->codec_tag, stream->codecpar->codec_id);
+    return !stream->codecpar->codec_tag;
 }

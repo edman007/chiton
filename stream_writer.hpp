@@ -116,5 +116,6 @@ private:
     bool guess_framerate(const AVCodecContext* codec_ctx);//guess the framerate from the codec context, true if found framerate
     const AVCodec* get_vencoder(int width, int height, AVCodecID &codec_id, int &codec_profile) const;//return the encoder, or null if we can't encode this, write out the codec id/profile
     const AVCodec* get_vencoder(int width, int height) const;//return the encoder, or null if we can't encode this
+    bool validate_codec_tag(AVStream *stream);//check and modifiy the codec tag to ensure it is compatible with the output format
 };
 #endif

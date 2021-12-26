@@ -67,7 +67,6 @@ bool StreamUnwrap::connect(IOWrapper &io) {
         return false;
     }
     input_format_context->pb = io.get_pb();
-    cfg.set_value("video-url", io.get_url());
 
     return connect();
 }

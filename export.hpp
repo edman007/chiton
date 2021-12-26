@@ -63,6 +63,7 @@ private:
     void run_job(void);//main loop for exporting
     bool update_progress();//sets the current progress
     void reserve_space(FileManager &fm, long size);//reserve size bytes of drive space
+    bool split_export(long seg_id);//split the export so that a new export is created starting with this segment
 };
 
 #endif
