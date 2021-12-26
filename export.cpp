@@ -166,6 +166,11 @@ void Export::run_job(void){
                 continue;
             }
             output_opened = out.open();
+            if (!output_opened){
+                //failed to open it, we need to bail
+                force_exit = true;//this will cause the job to be retried, assuming the issue was maybe drive space?
+                break;
+            }
         }
 
         AVPacket pkt;
