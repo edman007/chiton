@@ -256,27 +256,37 @@ static const AVPixelFormat vaapi_format_map[] = {
     AV_PIX_FMT_UYVY422,
     AV_PIX_FMT_YUYV422,
 #ifdef VA_FOURCC_Y210
+#ifdef AV_PIX_FMT_Y210
     AV_PIX_FMT_Y210,
+#endif
 #endif
     AV_PIX_FMT_YUV411P,
     AV_PIX_FMT_YUV440P,
     AV_PIX_FMT_YUV444P,
     AV_PIX_FMT_GRAY8,
 #ifdef VA_FOURCC_P010
+#ifdef AV_PIX_FMT_P010
     AV_PIX_FMT_P010,
+#endif
 #endif
     AV_PIX_FMT_BGRA,
     AV_PIX_FMT_BGR0,
     AV_PIX_FMT_RGBA,
     AV_PIX_FMT_RGB0,
 #ifdef VA_FOURCC_ABGR
+#ifdef AV_PIX_FMT_ABGR
     AV_PIX_FMT_ABGR,
+#endif
+#ifdef AV_PIX_FMT_0BGR
     AV_PIX_FMT_0BGR,
+#endif
 #endif
     AV_PIX_FMT_ARGB,
     AV_PIX_FMT_0RGB,
 #ifdef VA_FOURCC_X2R10G10B10
+#ifdef AV_PIX_FMT_X2RGB10
     AV_PIX_FMT_X2RGB10,
+#endif
 #endif
     AV_PIX_FMT_NONE
 };
