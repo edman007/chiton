@@ -46,7 +46,7 @@ noinst_DATA=dist-version
 chiton_CXXFLAGS = $(AM_CXXFLAGS)
 
 #this should be derived from external/npm/package-lock.json
-NPM_LICENSE_LIST=external/npm/LICENSE.eventemitter3 external/npm/LICENSE.pointer-tracker \
+NPM_LICENSE_LIST=external/npm/LICENSE.pointer-tracker \
 	external/npm/LICENSE.hls.js external/npm/LICENSE.pinch-zoom-element
 NPM_LICENSE=external/npm/license-meta.csv $(NPM_LICENSE_LIST)
 EXTERNAL_NO_NPM_LICENSE=LICENSE.breeze-icons LICENSE.smarty

@@ -9,7 +9,7 @@ fi
 rm debian.license.in LICENSE.* || true
 #make this a temp file so we don't have race conditions if it's run twice concurrently
 TMP_TARGET=$(mktemp debian.license.in.XXXXXX )
-while read line; do
+while read line || [ -n "$line" ]; do
     name=$(echo "$line" | cut -d , -f 2 | sed -e 's/^"//' -e 's/"$//')
     version=$(echo "$line" | cut -d , -f 3 | sed -e 's/^"//' -e 's/"$//' )
     licenses=$(echo "$line" | cut -d , -f 4 | sed -e 's/^"//' -e 's/"$//')
