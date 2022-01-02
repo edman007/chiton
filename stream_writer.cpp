@@ -94,7 +94,12 @@ bool StreamWriter::open_path(void){
     if (segment_mode == SEGMENT_FMP4){
         //we need to make mp4s fragmented
         //empty_moov+separate_moof++dash++separate_moof+omit_tfhd_offset+default_base_moof"
+        //skip_sidx requires libavf >  58.24.100
+#if ((LIBAVFORMAT_VERSION_MAJOR >= 59) || (LIBAVFORMAT_VERSION_MAJOR == 58 && LIBAVFORMAT_VERSION_MINOR >= 25))
         av_dict_set(&opts, "movflags", "+frag_custom+delay_moov+dash+skip_sidx+skip_trailer+empty_moov", 0);
+#else
+        av_dict_set(&opts, "movflags", "+frag_custom+delay_moov+dash+global_sidx+skip_trailer+empty_moov", 0);
+#endif
     }
 
     if (segment_mode == SEGMENT_FMP4 && init_len >= 0){
