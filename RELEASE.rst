@@ -9,15 +9,15 @@ This is just maintainer documentation on how to make a release
 8. `make distcheck`
 9.  `./sign-release.sh`
 10. Build the slackware release
-    10a. `cd release; mkdir sb; cd sb; tar -xvf ../chiton-*.slackbuild.tar.xz .; cp ../chiton-*.tar.xz chiton`
+    10a. `cd release; mkdir sb; cd sb; tar -xvf ../chiton-*.slackbuild.tar.xz ; cp ../chiton-*.tar.xz chiton`
     10b. `cd chiton; sudo ./chiton.SlackBuild`
     10c. `cp /tmp/chiton-*.txz ../..`
-    10d. `cd ..; rm -rf sb`
+    10d. `cd ../..; rm -rf sb`
     10e. `gpg2  --default-key  chiton@edman007.com  -b chiton-*.txz`
     10f. `cd ..`
 11. Archive release `mv release/ ../chiton-archive/vX.X.X`
 12. Tag the release `git tag vX.X.X <commit>`
-12. Make updates public `git push`
+12. Make updates public `git push --tags`
 13. Publish!
 
 * Any changes found should be rebased with `git rebase -i` before the actual build
