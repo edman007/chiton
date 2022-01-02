@@ -320,7 +320,7 @@ bool DatabaseManager::upgrade_from_1_1(void){
 bool DatabaseManager::upgrade_from_1_2(void){
     const std::string video_alter = "ALTER TABLE `videos` ADD "
         "`codec` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL AFTER `end_byte`, "
-        "ADD `av_type` ENUM('audio', 'video', 'audiovideo') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'audiovideo' AFTER `codec`"
+        "ADD `av_type` ENUM('audio', 'video', 'audiovideo') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'audiovideo' AFTER `codec`, "
         "ADD `width` INT NULL DEFAULT NULL AFTER `av_type`, "
         "ADD `height` INT NULL DEFAULT NULL AFTER `width`, "
         "ADD `framerate` FLOAT NULL DEFAULT NULL AFTER `height`";
