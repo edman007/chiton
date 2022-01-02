@@ -16,6 +16,7 @@ This is just maintainer documentation on how to make a release
     10e. `gpg2  --default-key  chiton@edman007.com  -b chiton-*.txz`
     10f. `cd ..`
 11. Archive release `mv release/ ../chiton-archive/vX.X.X`
+12. Tag the release `git tag vX.X.X <commit>`
 12. Make updates public `git push`
 13. Publish!
 
