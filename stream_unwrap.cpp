@@ -27,7 +27,6 @@
 StreamUnwrap::StreamUnwrap(Config& cfg) : cfg(cfg) {
     input_format_context = NULL;
     max_sync_offset = cfg.get_value_int("max-sync-offset");
-    LINFO("Unwrap is loaded" + cfg.get_value("camera-id"));
 }
 
 StreamUnwrap::~StreamUnwrap(){

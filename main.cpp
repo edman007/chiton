@@ -149,9 +149,7 @@ void run(Config& args){
                         if (t.get_id() == c->get_thread_id()){
                             t.join();
                             delete c;
-                            LINFO("Old camera is " + std::to_string((unsigned long)c));
                             c = new Camera(id, db);
-                            LINFO("New camera is " + std::to_string((unsigned long)c));
                             t = std::thread(&Camera::run, c);
                             c->set_thread_id(t.get_id());
                             break;
