@@ -100,4 +100,10 @@ const std::vector<Setting> setting_options {
   " auto tries both HW decoders before defaulting to SW, SW is a fallback", SETTING_OPTIONAL_CAMERA},
  {"video-hw-pix-fmt", "auto", "Video pixel format <auto|[fmt]>", "Pixel format to use, auto or any valid ffmpeg format is accepted,"
   " but not all will work with your HW", SETTING_OPTIONAL_CAMERA},
+ {"log-color-fatal", "5", "Color for CLI FATAL error Messages <1..255>", "ANSI color code for use on CLI", SETTING_OPTIONAL_SYSTEM},
+ {"log-color-error", "1", "Color for CLI ERROR error Messages <1..255>", "ANSI color code for use on CLI", SETTING_OPTIONAL_SYSTEM},
+ {"log-color-warn", "3", "Color for CLI WARN error Messages <1..255>", "ANSI color code for use on CLI", SETTING_OPTIONAL_SYSTEM},
+ {"log-color-info", "6", "Color for CLI INFO error Messages <1..255>", "ANSI color code for use on CLI", SETTING_OPTIONAL_SYSTEM},
+ {"log-color-debug", "2", "Color for CLI DEBUG error Messages <1..255>", "ANSI color code for use on CLI", SETTING_OPTIONAL_SYSTEM},
+ {"log-color-enabled", "1", "Enable CLI color <1|0>", "Enable Color Logging", SETTING_OPTIONAL_SYSTEM},
 };

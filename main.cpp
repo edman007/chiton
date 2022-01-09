@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2022 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -106,6 +106,12 @@ void run(Config& args){
     
     //load system config
     load_sys_cfg(cfg);
+    Util::load_colors(cfg);
+    if (cfg.get_value_int("log-color-enabled") || args.get_value_int("log-color-enabled") ){
+        Util::enable_color();
+    } else {
+        Util::disable_color();
+    }
 
     FileManager fm(db, cfg);
     Export expt(db, cfg, fm);
@@ -247,8 +253,9 @@ bool write_pid(const std::string& path){
 void process_args(Config& arg_cfg, int argc, char **argv){
     //any system wide defaults...these are build-time defaults
     arg_cfg.set_value("cfg-path", SYSCFGPATH);
+    arg_cfg.set_value("log-color-enabled", "0");//CLI option is disabled by default, against the default setting
 
-    char options[] = "c:vVdqsp:fP:";//update man/chiton.1 if you touch this!
+    char options[] = "c:vVdqsp:fP:l";//update man/chiton.1 if you touch this!
     char opt;
     while ((opt = getopt(argc, argv, options)) != -1){
             switch (opt) {
@@ -280,7 +287,10 @@ void process_args(Config& arg_cfg, int argc, char **argv){
             case 'P':
                 arg_cfg.set_value("privs-user", optarg);
                 break;
-
+            case 'l':
+                arg_cfg.set_value("log-color-enabled", "1");
+                Util::enable_color();
+                break;
             }
     }
 }
@@ -320,7 +330,7 @@ int main (int argc, char **argv){
         reload_requested = false;
         run(args);
     }
-    Util::disable_syslog();//does nothing if it's not open
-
+    Util::disable_syslog();//does nothing if it's not enabled
+    Util::disable_color();
     return 0;
 }

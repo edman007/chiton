@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2022 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -25,6 +25,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/syscall.h>
+#include <sstream>
 
 std::mutex Util::lock;
 #ifdef DEBUG
@@ -33,6 +34,14 @@ unsigned int Util::log_level = CH_LOG_DEBUG;/* All Messages */
 unsigned int Util::log_level = CH_LOG_INFO;/* WARN and above */
 #endif
 bool Util::use_syslog = false;
+
+//we store the color stuff so we are not accessing the config so often
+//might be premature optimization, but meh
+bool Util::use_color = false;
+
+//color codes are mearly suggestions...the terminal decides them
+int Util::color_map[5] = {5, 1, 3, 6, 2};
+
 
 void Util::log_msg(const LOG_LEVEL lvl, const std::string& msg){
     if (lvl >= log_level){
@@ -62,11 +71,11 @@ void Util::log_msg(const LOG_LEVEL lvl, const std::string& msg){
     } else {
         if (lvl == CH_LOG_ERROR || lvl == CH_LOG_FATAL){
             lock.lock();
-            std::cerr << msg << std::endl;
+            std::cerr << get_color_txt(lvl) << msg << std::endl;
             lock.unlock();
         } else {
             lock.lock();
-            std::cout << msg << std::endl;
+            std::cout << get_color_txt(lvl) << msg << std::endl;
             lock.unlock();
         }
     }
@@ -186,4 +195,51 @@ AVDictionary* Util::get_dict_options(const std::string &fmt){
     }
     return dict;
 
+}
+
+std::string Util::get_color_txt(enum LOG_LEVEL ll){
+    if (!use_color){
+        return "";
+    }
+    int color = color_map[ll];
+    std::stringstream ss;
+    if (color < 8){
+        ss << "\u001b[3" << std::to_string(color) << "m";
+    } else {
+        ss << "\u001b[38;5;" << std::to_string(color) << "m";
+    }
+    return ss.str();
+}
+
+void Util::reset_color(void){
+    lock.lock();
+    std::cout << "\u001b[0m";
+    lock.unlock();
+}
+
+void Util::load_colors(Config &cfg){
+    color_map[0] = cfg.get_value_int("log-color-fatal");
+    color_map[1] = cfg.get_value_int("log-color-error");
+    color_map[2] = cfg.get_value_int("log-color-warn");
+    color_map[3] = cfg.get_value_int("log-color-info");
+    color_map[4] = cfg.get_value_int("log-color-debug");
+    for (auto &c : color_map){
+        if (c < 1 || c > 255){
+            c = 1;
+        }
+    }
+}
+
+
+bool Util::enable_color(void){
+    use_color = true;
+    return use_color;
+}
+
+bool Util::disable_color(void){
+    if (use_color){
+        reset_color();
+        use_color = false;
+    }
+    return !use_color;
 }

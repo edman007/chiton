@@ -17,7 +17,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2022 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -27,7 +27,9 @@
 #include <time.h>
 #include "config_build.hpp"
 #include "chiton_ffmpeg.hpp"
+#include "chiton_config.hpp"
 
+//when editing check the static assert for color_map in util.cpp
 enum LOG_LEVEL {
     CH_LOG_FATAL = 0,
     CH_LOG_ERROR,//1
@@ -84,13 +86,25 @@ public:
     static bool enable_syslog(void);
     static bool disable_syslog(void);
 
+    static bool enable_color(void);
+    static bool disable_color(void);
+
     static void set_low_priority(void);//reduce the current thread to low priority
 
     static AVDictionary* get_dict_options(const std::string &fmt);//convert fmt into an AVDict, caller must free
+
+    static void reset_color(void);//clears the color on the CLI
+    static void load_colors(Config &cfg);//load all color settings
 private:
     static std::mutex lock;//lock for actually printing messages
     static unsigned int log_level;//the output logging level
     static bool use_syslog;
+    static bool use_color;
+
+    static int color_map[5];
+    static_assert(sizeof(color_map)/sizeof(color_map[0]) == (1 + CH_LOG_DEBUG), "Color map must be the same size as enum LOG_LEVEL");
+
+    static std::string get_color_txt(enum LOG_LEVEL ll);//return the string to switch the color on the CLI
 };
 
 #endif
