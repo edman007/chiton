@@ -27,6 +27,8 @@
 #include <sys/syscall.h>
 #include <sstream>
 
+thread_local std::string thread_name = "";
+
 std::mutex Util::lock;
 #ifdef DEBUG
 unsigned int Util::log_level = CH_LOG_DEBUG;/* All Messages */
@@ -47,6 +49,10 @@ void Util::log_msg(const LOG_LEVEL lvl, const std::string& msg){
     if (lvl >= log_level){
         return;//drop any message above our current logging level
     }
+    std::string prefix;
+    if (thread_name.length() > 0){
+        prefix = thread_name + ": ";
+    }
     if (use_syslog){
         int priority = LOG_DEBUG;
         switch (lvl){
@@ -66,16 +72,16 @@ void Util::log_msg(const LOG_LEVEL lvl, const std::string& msg){
             priority = LOG_DEBUG;
             break;
         }
-        syslog(priority, "%s", msg.c_str());
+        syslog(priority, "%s", (prefix + msg).c_str());
 
     } else {
         if (lvl == CH_LOG_ERROR || lvl == CH_LOG_FATAL){
             lock.lock();
-            std::cerr << get_color_txt(lvl) << msg << std::endl;
+            std::cerr << get_color_txt(lvl) << prefix << msg << std::endl;
             lock.unlock();
         } else {
             lock.lock();
-            std::cout << get_color_txt(lvl) << msg << std::endl;
+            std::cout << get_color_txt(lvl) << prefix << msg << std::endl;
             lock.unlock();
         }
     }
@@ -242,4 +248,12 @@ bool Util::disable_color(void){
         use_color = false;
     }
     return !use_color;
+}
+
+void Util::set_thread_name(const std::string name, Config &cfg){
+    int len = cfg.get_value_int("log-name-length");
+    if (len < 0){
+        len = 0;
+    }
+    thread_name = name.substr(0, len);
 }

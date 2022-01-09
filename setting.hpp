@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2022 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -106,4 +106,5 @@ const std::vector<Setting> setting_options {
  {"log-color-info", "6", "Color for CLI INFO error Messages <1..255>", "ANSI color code for use on CLI", SETTING_OPTIONAL_SYSTEM},
  {"log-color-debug", "2", "Color for CLI DEBUG error Messages <1..255>", "ANSI color code for use on CLI", SETTING_OPTIONAL_SYSTEM},
  {"log-color-enabled", "1", "Enable CLI color <1|0>", "Enable Color Logging", SETTING_OPTIONAL_SYSTEM},
+ {"log-name-length", "16", " Logging Camera Name Length", "Maxiumn Length of thread name (typically the camera) to copy into log messages", SETTING_OPTIONAL_SYSTEM},
 };

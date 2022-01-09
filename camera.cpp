@@ -61,6 +61,11 @@ void Camera::load_cfg(void){
 }
     
 void Camera::run(void){
+    if (cfg.get_value("display-name") == ""){
+        Util::set_thread_name("Camera " + std::to_string(id), cfg);
+    } else {
+        Util::set_thread_name(cfg.get_value("display-name"), cfg);
+    }
     LINFO("Camera " + std::to_string(id) + " starting...");
     if (!stream.connect()){
         alive = false;

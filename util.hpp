@@ -95,6 +95,8 @@ public:
 
     static void reset_color(void);//clears the color on the CLI
     static void load_colors(Config &cfg);//load all color settings
+
+    static void set_thread_name(const std::string name, Config &cfg);
 private:
     static std::mutex lock;//lock for actually printing messages
     static unsigned int log_level;//the output logging level
