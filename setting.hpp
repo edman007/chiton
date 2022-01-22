@@ -107,4 +107,6 @@ const std::vector<Setting> setting_options {
  {"log-color-debug", "2", "Color for CLI DEBUG error Messages <1..255>", "ANSI color code for use on CLI", SETTING_OPTIONAL_SYSTEM},
  {"log-color-enabled", "1", "Enable CLI color <1|0>", "Enable Color Logging", SETTING_OPTIONAL_SYSTEM},
  {"log-name-length", "16", " Logging Camera Name Length", "Maxiumn Length of thread name (typically the camera) to copy into log messages", SETTING_OPTIONAL_SYSTEM},
+ {"motion-video-algos", "opencv", "Video Motion Algorithms <none|abc[:xyz...]>", "List of motion algorithms to run against the video, ':' delimited", SETTING_OPTIONAL_CAMERA},
+ {"motion-audio-algos", "none", "Audio Motion Algorithms <none|abc[:xyz...]>", "List of motion algorithms to run against the audio, ':' delimited", SETTING_OPTIONAL_CAMERA},
 };

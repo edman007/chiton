@@ -24,6 +24,7 @@
 #include "util.hpp"
 #include "image_util.hpp"
 #include "filter.hpp"
+#include "motion_controller.hpp"
 
 Camera::Camera(int camera, Database& db) : id(camera), db(db), stream(cfg), fm(db, cfg) {
     //load the config
@@ -78,15 +79,16 @@ void Camera::run(void){
     LINFO("Camera " + std::to_string(id) + " connected...");
     std::string out_filename = fm.get_next_path(file_id, id, stream.get_start_time());
     StreamWriter out = StreamWriter(cfg);
+    MotionController motion(db, cfg);
     out.change_path(out_filename);
     out.set_keyframe_callback(std::bind(&Camera::cut_video, this, std::placeholders::_1, std::placeholders::_2));
     //look at the stream and settings and see what needs encoding and decoding
     bool encode_video = get_vencode();
     bool encode_audio = get_aencode();
 
-    //motion detection will eventually set these
-    bool decode_video = encode_video;
-    bool decode_audio = encode_audio;
+    //determine if motion detection wants to decode
+    bool decode_video = encode_video || motion.decode_video();
+    bool decode_audio = encode_audio || motion.decode_audio();
 
     LDEBUG("Encode/Decode: " + std::to_string(encode_video)+ std::to_string(encode_audio)+ std::to_string(decode_video)+ std::to_string(decode_audio));
 
@@ -174,6 +176,8 @@ void Camera::run(void){
     bool failed = false;
     int frame_cnt = 0;
     ImageUtil img(db, cfg);
+    motion.set_video_stream(stream.get_video_stream());
+    motion.set_audio_stream(stream.get_audio_stream());
     while (!shutdown && !failed && stream.get_next_frame(pkt)){
         watchdog = true;
         last_pts = pkt.pts;
@@ -194,6 +198,7 @@ void Camera::run(void){
             if (stream.decode_packet(pkt)){
                 while (!failed && stream.get_decoded_frame(pkt.stream_index, frame)){
                     LDEBUG("Decoded Video Frame");
+                    motion.process_frame(pkt.stream_index, frame);
                     if (encode_video){
                         //Filter the frame before encoding
                         if (vfilter.send_frame(frame)){
@@ -229,6 +234,7 @@ void Camera::run(void){
                 if (stream.decode_packet(pkt)){
                     while (!failed && stream.get_decoded_frame(pkt.stream_index, frame)){
                         LDEBUG("Decoded Audio Frame");
+                        motion.process_frame(pkt.stream_index, frame);
                         if (encode_audio){
                             if (!out.write(frame, stream.get_stream(pkt))){
                                 stream.unref_frame(pkt);
