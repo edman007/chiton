@@ -19,8 +19,11 @@
  *
  **************************************************************************
  */
+
 #include "motion_opencv.hpp"
+#ifdef HAVE_OPENCV
 #include "util.hpp"
+#include <opencv2/core.hpp>
 
 static const std::string algo_name = "opencv";
 
@@ -48,3 +51,6 @@ const std::string& MotionOpenCV::get_name(void) {
 const std::string& MotionOpenCVAllocator::get_name(void) {
     return algo_name;
 }
+
+//HAVE_OPENCV
+#endif

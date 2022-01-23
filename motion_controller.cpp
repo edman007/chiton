@@ -28,7 +28,9 @@ MotionController::MotionController(Database &db, Config &cfg) : db(db), cfg(cfg)
     video_idx = -1;
     audio_idx = -1;
     //register all known algorithms
+#ifdef HAVE_OPENCV
     register_motion_algo(new MotionOpenCVAllocator());
+#endif
 }
 
 MotionController::~MotionController(){

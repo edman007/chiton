@@ -22,8 +22,9 @@
  **************************************************************************
  */
 
+#include "config_build.hpp"
+#ifdef HAVE_OPENCV
 #include "motion_algo.hpp"
-
 
 class MotionOpenCV : public MotionAlgo {
 public:
@@ -41,4 +42,6 @@ class MotionOpenCVAllocator : public MotionAlgoAllocator {
     MotionAlgo* allocate(Config &cfg, Database &db) {return new MotionOpenCV(cfg, db);};
     const std::string& get_name(void);
 };
+
+#endif
 #endif

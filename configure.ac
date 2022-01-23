@@ -119,6 +119,17 @@ AS_IF([test "x$enable_vdpau" != "xno"],
              AC_DEFINE([HAVE_VDPAU], [1], [Have VDPAU])])
 AS_IF([test "x$enable_vdpau" == "xyes" && test "x$have_vdpau" != "x1"], [AC_MSG_ERROR([Could not find vdpau])])
 
+AC_ARG_ENABLE([opencv],
+  [AS_HELP_STRING([--enable-opencv], [Enable OpenCV and associated components])],
+  [],
+  [enable_opencv=auto])
+AS_IF([test "x$enable_opencv" != "xno"],
+            [PKG_CHECK_MODULES([OPENCV], [opencv4],
+             [have_opencv=1 AS_VAR_APPEND([[CPPFLAGS]], [" $OPENCV_CFLAGS "])
+             AS_VAR_APPEND([[LIBS]], [" $OPENCV_LIBS "])])
+             AC_DEFINE([HAVE_OPENCV], [1], [Have OpenCV])])
+AS_IF([test "x$enable_opencv" == "xyes" && test "x$have_opencv" != "x1"], [AC_MSG_ERROR([Could not find OpenCV])])
+
 
 AC_ARG_WITH([apacheconfigdir],
   [AS_HELP_STRING([--with-apacheconfigdir=DIR], [Directory to install apache config])],
