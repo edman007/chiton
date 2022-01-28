@@ -58,7 +58,7 @@ bool MotionController::process_frame(int index, const AVFrame *frame){
     return ret;
 }
 
-bool MotionController::set_video_stream(const AVStream *stream){
+bool MotionController::set_video_stream(const AVStream *stream, const AVCodecContext *codec){
     if (!stream){
         return false;//there is no video stream
     }
@@ -74,7 +74,7 @@ bool MotionController::set_video_stream(const AVStream *stream){
     for (auto &name : algo_list){
         auto ma = find_algo(name);
         if (ma != NULL){
-            ret &= ma->set_video_stream(stream);
+            ret &= ma->set_video_stream(stream, codec);
         } else {
             LWARN("Cannot find motion algorithm '" + name + "', skipping");
         }
@@ -82,7 +82,7 @@ bool MotionController::set_video_stream(const AVStream *stream){
     return ret;
 }
 
-bool MotionController::set_audio_stream(const AVStream *stream){
+bool MotionController::set_audio_stream(const AVStream *stream, const AVCodecContext *codec){
     if (!stream){
         return false;//there is no audio stream
     }
@@ -98,7 +98,7 @@ bool MotionController::set_audio_stream(const AVStream *stream){
     for (auto &name : algo_list){
         auto ma = find_algo(name);
         if (ma != NULL){
-            ret &= ma->set_audio_stream(stream);
+            ret &= ma->set_audio_stream(stream, codec);
         } else {
             LWARN("Cannot find motion algorithm '" + name + "', skipping");
         }

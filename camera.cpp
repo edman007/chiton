@@ -176,8 +176,8 @@ void Camera::run(void){
     bool failed = false;
     int frame_cnt = 0;
     ImageUtil img(db, cfg);
-    motion.set_video_stream(stream.get_video_stream());
-    motion.set_audio_stream(stream.get_audio_stream());
+    motion.set_video_stream(stream.get_video_stream(), stream.get_codec_context(stream.get_video_stream()));
+    motion.set_audio_stream(stream.get_audio_stream(), stream.get_codec_context(stream.get_audio_stream()));
     while (!shutdown && !failed && stream.get_next_frame(pkt)){
         watchdog = true;
         last_pts = pkt.pts;

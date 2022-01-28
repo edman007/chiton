@@ -33,8 +33,8 @@ public:
     MotionAlgo(Config &cfg, Database &db) : cfg(cfg), db(db) {};
     virtual ~MotionAlgo() {};
     virtual bool process_frame(const AVFrame *frame, bool video) = 0;//process the frame, return false on error, video is true if video frame is supplied
-    virtual bool set_video_stream(const AVStream *stream) {return true;};//identify the video stream
-    virtual bool set_audio_stream(const AVStream *stream) {return true;};//identify the audio stream
+    virtual bool set_video_stream(const AVStream *stream, const AVCodecContext *codec) {return true;};//identify the video stream
+    virtual bool set_audio_stream(const AVStream *stream, const AVCodecContext *codec) {return true;};//identify the audio stream
     virtual const std::string& get_name(void) = 0;//return the name of the algorithm
 private:
     Config &cfg;

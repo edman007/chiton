@@ -32,12 +32,17 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/channel_layout.h>
 #include <libavutil/imgutils.h>
+#include <libavutil/hwcontext.h>
 };
 #include <mutex>
 
 #ifdef HAVE_VDPAU
 #include <vdpau/vdpau.h>
 #include <libavutil/hwcontext_vdpau.h>
+#endif
+
+#ifdef HAVE_VAAPI
+#include <libavutil/hwcontext_vaapi.h>
 #endif
 
 //fix FFMPEG and c++1x issues

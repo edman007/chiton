@@ -37,7 +37,7 @@ Filter::Filter(Config& cfg) : cfg(cfg) {
     tmp_frame = av_frame_alloc();
     init_complete = false;
     passthrough = false;
-    time_base = {0, 0};
+    time_base = {1, 1};
     filter_graph = NULL;
     buffersink_ctx = NULL;
     buffersrc_ctx = NULL;

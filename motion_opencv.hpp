@@ -25,17 +25,21 @@
 #include "config_build.hpp"
 #ifdef HAVE_OPENCV
 #include "motion_algo.hpp"
+#include "filter.hpp"
+#include <opencv2/core.hpp>
 
 class MotionOpenCV : public MotionAlgo {
 public:
     MotionOpenCV(Config &cfg, Database &db);
     ~MotionOpenCV();
     bool process_frame(const AVFrame *frame, bool video);//process the frame, return false on error
-    bool set_video_stream(const AVStream *stream);//identify the video stream
+    bool set_video_stream(const AVStream *stream, const AVCodecContext *codec);//identify the video stream
     const std::string& get_name(void);//return the name of the algorithm
 private:
-
-
+    cv::UMat buf;//the Mat we operate on
+    cv::UMat avg;//the average reference frame
+    AVFrame *input;
+    Filter fmt_filter;
 };
 
 class MotionOpenCVAllocator : public MotionAlgoAllocator {

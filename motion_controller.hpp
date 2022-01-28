@@ -35,8 +35,8 @@ public:
     MotionController(Database &db, Config &cfg);
     ~MotionController();
     bool process_frame(int index, const AVFrame *frame);//process the frame, return false on error
-    bool set_video_stream(const AVStream *stream);//identify the video stream
-    bool set_audio_stream(const AVStream *stream);//identify the audio stream
+    bool set_video_stream(const AVStream *stream, const AVCodecContext *codec);//identify the video stream
+    bool set_audio_stream(const AVStream *stream, const AVCodecContext *codec);//identify the audio stream
     bool decode_video(void);//true if video is required (configured to do video motion detection)
     bool decode_audio(void);//true if audio is required (configured to do audio motion  detection)
 
