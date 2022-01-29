@@ -36,8 +36,8 @@ public:
     bool set_video_stream(const AVStream *stream, const AVCodecContext *codec);//identify the video stream
     const std::string& get_name(void);//return the name of the algorithm
 private:
-    cv::UMat buf;//the Mat we operate on
-    cv::UMat avg;//the average reference frame
+    cv::UMat buf_mat;//the Mat we operate on
+    cv::Mat input_mat;//the sw mat
     AVFrame *input;
     Filter fmt_filter;
 };

@@ -62,7 +62,7 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
             cv::va_intel::convertFromVASurface(hwctx->display, surf, cv::Size(frame->width, frame->height), tmp1);
             //change to CV_16UC1
             tmp1.convertTo(tmp2, CV_16U, 256);
-            cv::cvtColor(tmp2, buf, cv::COLOR_BGR2GRAY);
+            cv::cvtColor(tmp2, buf_mat, cv::COLOR_BGR2GRAY);
         } catch (cv::Exception &e){
             LWARN("Error converting image from VA-API To OpenCV: " + e.msg);
             return false;
@@ -76,19 +76,17 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
             LWARN("OpenCV Failed to Send Frame");
             return false;
         }
+        buf_mat.release();
+        input_mat.release();
+        av_frame_unref(input);
         if (!fmt_filter.get_frame(input)){
             LWARN("OpenCV Failed to Get Frame");
             return false;
         }
         //CV_16UC1 matches the format in set_video_stream()
-        //buf = cv::Mat(input->height, input->width, CV_16UC1);
-        //memcpy();
-        cv::Mat myMat = cv::Mat(input->height, input->width, CV_16UC1, input->data, input->linesize[0]);
-        myMat.getUMat(cv::ACCESS_READ).copyTo(buf);
-    }
-
-    if (avg.empty()){
-        buf.copyTo(avg);
+        input_mat = cv::Mat(input->height, input->width, CV_16UC1, input->data, input->linesize[0]);
+        input_mat.copyTo(buf_mat);
+        //buf_mat = input_mat.getUMat(cv::ACCESS_READ);
     }
 
     return true;
