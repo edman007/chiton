@@ -74,6 +74,7 @@ bool Filter::send_frame(const AVFrame *frame){
             return false;
         } else {
             av_frame_ref(tmp_frame, frame);
+            tmp_frame_filled = true;
             return true;
         }
     }
@@ -89,6 +90,7 @@ bool Filter::send_frame(const AVFrame *frame){
 bool Filter::get_frame(AVFrame *frame){
     if (passthrough){
         if (tmp_frame_filled){
+            av_frame_unref(frame);
             av_frame_move_ref(frame, tmp_frame);
             tmp_frame_filled = false;
             peeked = false;
