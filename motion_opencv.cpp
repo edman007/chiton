@@ -40,7 +40,6 @@ MotionOpenCV::~MotionOpenCV(){
     av_frame_free(&input);
 }
 bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
-    LWARN("OpenCV is processing frame");
     if (!video){
         return true;
     }
@@ -57,12 +56,13 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
             return false;
         }
         hwctx = static_cast<AVVAAPIDeviceContext*>(device_ctx->hwctx);
-        cv::UMat tmp;
+        cv::UMat tmp1, tmp2;
         const VASurfaceID surf = reinterpret_cast<uintptr_t const>(frame->data[3]);
         try {
-            cv::va_intel::convertFromVASurface(hwctx->display, surf, cv::Size(frame->width, frame->height), tmp);
+            cv::va_intel::convertFromVASurface(hwctx->display, surf, cv::Size(frame->width, frame->height), tmp1);
             //change to CV_16UC1
-            cv::cvtColor(tmp, buf, cv::COLOR_BGR2GRAY);
+            tmp1.convertTo(tmp2, CV_16U, 256);
+            cv::cvtColor(tmp2, buf, cv::COLOR_BGR2GRAY);
         } catch (cv::Exception &e){
             LWARN("Error converting image from VA-API To OpenCV: " + e.msg);
             return false;
@@ -105,6 +105,7 @@ bool MotionOpenCV::set_video_stream(const AVStream *stream, const AVCodecContext
             cv::va_intel::ocl::initializeContextFromVA(hw_ctx->display, true);
         }
     }
+
     //stream->
     //cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_ENABLE_MEM_USE_HOST_PTR", true);
     //CODEC is only needed for HW Mapping...we will map it ourself
