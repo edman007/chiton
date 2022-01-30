@@ -20,9 +20,10 @@
  **************************************************************************
  */
 #include "motion_controller.hpp"
-
-#include "motion_opencv.hpp"
 #include "util.hpp"
+#include "motion_opencv.hpp"
+#include "motion_cvbackground.hpp"
+
 
 MotionController::MotionController(Database &db, Config &cfg) : db(db), cfg(cfg) {
     video_idx = -1;
@@ -30,7 +31,9 @@ MotionController::MotionController(Database &db, Config &cfg) : db(db), cfg(cfg)
     //register all known algorithms
 #ifdef HAVE_OPENCV
     register_motion_algo(new MotionOpenCVAllocator());
+    register_motion_algo(new MotionCVBackgroundAllocator());
 #endif
+    add_algos();
 }
 
 MotionController::~MotionController(){
@@ -63,22 +66,11 @@ bool MotionController::set_video_stream(const AVStream *stream, const AVCodecCon
         return false;//there is no video stream
     }
     video_idx = stream->id;
-    std::vector<std::string> algo_list;
-    if (!parse_algos("motion-video-algos", algo_list)){
-        return true;//nothing to configure
-    }
-    if (algo_list[0] == "" || algo_list[0] == "none"){
-        return true;//explicitly disabled
-    }
     bool ret = true;
-    for (auto &name : algo_list){
-        auto ma = find_algo(name);
-        if (ma != NULL){
-            ret &= ma->set_video_stream(stream, codec);
-        } else {
-            LWARN("Cannot find motion algorithm '" + name + "', skipping");
-        }
+    for (auto &ma : algos){
+        ret &= ma->set_video_stream(stream, codec);
     }
+
     return ret;
 }
 
@@ -87,21 +79,9 @@ bool MotionController::set_audio_stream(const AVStream *stream, const AVCodecCon
         return false;//there is no audio stream
     }
     audio_idx = stream->id;
-    std::vector<std::string> algo_list;
-    if (!parse_algos("motion-audio-algos", algo_list)){
-        return true;//nothing to configure
-    }
-    if (algo_list[0] == "" || algo_list[0] == "none"){
-        return true;//explicitly disabled
-    }
     bool ret = true;
-    for (auto &name : algo_list){
-        auto ma = find_algo(name);
-        if (ma != NULL){
-            ret &= ma->set_audio_stream(stream, codec);
-        } else {
-            LWARN("Cannot find motion algorithm '" + name + "', skipping");
-        }
+    for (auto &ma : algos){
+        ret &= ma->set_audio_stream(stream, codec);
     }
     return ret;
 }
@@ -146,9 +126,52 @@ MotionAlgo* MotionController::find_algo(const std::string &name){
     }
     for (auto &ma : supported_algos){
         if (ma->get_name() == name){
-            algos.push_back(ma->allocate(cfg, db));
+            algos.push_back(ma->allocate(cfg, db, *this));
+            algos.back()->init();
             return algos.back();
         }
     }
     return NULL;
+}
+
+MotionAlgo* MotionController::get_algo_before(const std::string &name, const MotionAlgo *algo){
+    for (auto it = algos.begin(); it != algos.end(); it++){
+        if (*it == algo){
+            for (auto &ma : supported_algos){
+                if (ma->get_name() == name){
+                    MotionAlgo *new_algo = ma->allocate(cfg, db, *this);
+                    algos.insert(it, new_algo);
+                    new_algo->init();
+                    return new_algo;
+                }
+            }
+            return NULL;//not found
+        }
+        if ((*it)->get_name() == name){
+            return *it;
+        }
+    }
+    return NULL;//algo was not found
+}
+
+bool MotionController::add_algos(void){
+    std::vector<std::string> algo_list;
+    if (!parse_algos("motion-algos", algo_list)){
+        return true;//nothing to configure
+    }
+    if (algo_list[0] == "" || algo_list[0] == "none"){
+        return true;//explicitly disabled
+    }
+
+    bool ret = false;
+    for (auto &name : algo_list){
+        auto ma = find_algo(name);
+        if (ma != NULL){
+            ret |= true;
+        } else {
+            LWARN("Cannot find motion algorithm '" + name + "', skipping");
+        }
+    }
+
+    return true;
 }

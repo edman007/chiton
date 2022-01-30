@@ -1,5 +1,5 @@
-#ifndef __MOTION_ALGO_OPENCV_HPP__
-#define __MOTION_ALGO_OPENCV_HPP__
+#ifndef __MOTION_ALGO_CVBACKGROUND_HPP__
+#define __MOTION_ALGO_CVBACKGROUND_HPP__
 /**************************************************************************
  *
  *     This file is part of Chiton.
@@ -25,26 +25,27 @@
 #include "config_build.hpp"
 #ifdef HAVE_OPENCV
 #include "motion_algo.hpp"
+#include "motion_opencv.hpp"
 #include "filter.hpp"
 #include <opencv2/core.hpp>
 
-class MotionOpenCV : public MotionAlgo {
+class MotionCVBackground : public MotionAlgo {
 public:
-    MotionOpenCV(Config &cfg, Database &db, MotionController &controller);
-    ~MotionOpenCV();
+    MotionCVBackground(Config &cfg, Database &db, MotionController &controller);
+    ~MotionCVBackground();
     bool process_frame(const AVFrame *frame, bool video);//process the frame, return false on error
     bool set_video_stream(const AVStream *stream, const AVCodecContext *codec);//identify the video stream
     const std::string& get_name(void);//return the name of the algorithm
-    const cv::UMat& get_UMat(void);//return the UMat for this frame
+    const cv::UMat get_background(void);
+    bool init(void);//called immeditly after the constructor to allow dependicies to be setup
 private:
-    cv::UMat buf_mat;//the Mat we operate on
-    cv::Mat input_mat;//the sw mat
-    AVFrame *input;
-    Filter fmt_filter;
+    MotionOpenCV *ocv;
+    cv::UMat avg;
+    float tau;
 };
 
-class MotionOpenCVAllocator : public MotionAlgoAllocator {
-    MotionAlgo* allocate(Config &cfg, Database &db, MotionController &controller) {return new MotionOpenCV(cfg, db, controller);};
+class MotionCVBackgroundAllocator : public MotionAlgoAllocator {
+    MotionAlgo* allocate(Config &cfg, Database &db, MotionController &controller) {return new MotionCVBackground(cfg, db, controller);};
     const std::string& get_name(void);
 };
 

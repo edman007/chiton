@@ -26,25 +26,29 @@
 #include "chiton_ffmpeg.hpp"
 #include "chiton_config.hpp"
 
+class MotionAlgo;
+#include "motion_controller.hpp"
 
 //this class runs all motion detection algorithms
 class MotionAlgo {
 public:
-    MotionAlgo(Config &cfg, Database &db) : cfg(cfg), db(db) {};
+    MotionAlgo(Config &cfg, Database &db, MotionController &controller) : cfg(cfg), db(db), controller(controller) {};
     virtual ~MotionAlgo() {};
     virtual bool process_frame(const AVFrame *frame, bool video) = 0;//process the frame, return false on error, video is true if video frame is supplied
     virtual bool set_video_stream(const AVStream *stream, const AVCodecContext *codec) {return true;};//identify the video stream
     virtual bool set_audio_stream(const AVStream *stream, const AVCodecContext *codec) {return true;};//identify the audio stream
     virtual const std::string& get_name(void) = 0;//return the name of the algorithm
-private:
+    virtual bool init(void) {return true;};//called immeditly after the constructor to allow dependicies to be setup
+protected:
     Config &cfg;
     Database &db;
+    MotionController &controller;
 };
 
 class MotionAlgoAllocator  {
 public:
     virtual ~MotionAlgoAllocator(){};
-    virtual MotionAlgo* allocate(Config &cfg, Database &db) = 0;
+    virtual MotionAlgo* allocate(Config &cfg, Database &db, MotionController &controller) = 0;
     virtual const std::string& get_name(void) = 0;
 };
 #endif

@@ -25,8 +25,11 @@
 #include "config_build.hpp"
 #include "chiton_ffmpeg.hpp"
 #include "chiton_config.hpp"
+class MotionController;
+class MotionAlgoAllocator;
 #include "motion_algo.hpp"
 #include <vector>
+#include <list>
 
 
 //this class runs all motion detection algorithms
@@ -39,8 +42,9 @@ public:
     bool set_audio_stream(const AVStream *stream, const AVCodecContext *codec);//identify the audio stream
     bool decode_video(void);//true if video is required (configured to do video motion detection)
     bool decode_audio(void);//true if audio is required (configured to do audio motion  detection)
-
-    void register_motion_algo(MotionAlgoAllocator* maa);
+    //returns the motion algorithm with name, will be executed before algo, returns null if the algorithm does not exist, calls init() on the algorithm
+    MotionAlgo* get_algo_before(const std::string &name, const MotionAlgo *algo);
+    void register_motion_algo(MotionAlgoAllocator* maa);//registers an allocator and makes an algorithm available for use
 private:
     Database &db;
     Config &cfg;
@@ -49,11 +53,13 @@ private:
 
     int video_idx;
     int audio_idx;
-    std::vector<MotionAlgo*> algos;
+    std::list<MotionAlgo*> algos;
 
     void clear_algos(void);//clear & delete algos
     bool parse_algos(const std::string param, std::vector<std::string> &algo_list);//read the config value param, write out all algorithms to algo_list, return true if non-empty
     MotionAlgo* find_algo(const std::string &name);//return the algo with a given name, null if it does not exist, allocate it if not already done
+    bool add_algos(void);//put all algos in algos
+    bool init(void);//init all algos
 };
 
 #endif

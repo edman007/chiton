@@ -32,7 +32,7 @@
 
 static const std::string algo_name = "opencv";
 
-MotionOpenCV::MotionOpenCV(Config &cfg, Database &db) : MotionAlgo(cfg, db), fmt_filter(Filter(cfg)) {
+MotionOpenCV::MotionOpenCV(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller), fmt_filter(Filter(cfg)) {
     input = av_frame_alloc();
 }
 
@@ -93,7 +93,6 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
 }
 
 bool MotionOpenCV::set_video_stream(const AVStream *stream, const AVCodecContext *codec) {
-    LWARN("SET VIDEO Stream, open CV!");
     if (codec && codec->hw_frames_ctx){
         //find the VAAPI Display
         AVHWDeviceContext* device_ctx = reinterpret_cast<AVHWDeviceContext*>(codec->hw_frames_ctx->data);
@@ -122,6 +121,10 @@ const std::string& MotionOpenCV::get_name(void) {
 
 const std::string& MotionOpenCVAllocator::get_name(void) {
     return algo_name;
+}
+
+const cv::UMat& MotionOpenCV::get_UMat(void){
+    return buf_mat;
 }
 
 //HAVE_OPENCV

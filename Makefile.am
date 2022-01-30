@@ -38,7 +38,7 @@ chiton_SOURCES = main.cpp config.cpp config_parser.cpp database.cpp mariadb.cpp 
 	export.hpp export.cpp image_util.hpp image_util.cpp filter.hpp filter.cpp \
 	io/io_wrapper.hpp io/cfmp4.cpp io/cfmp4.hpp \
 	motion_controller.hpp motion_controller.cpp motion_algo.hpp motion_algo.cpp \
-	motion_opencv.hpp motion_opencv.cpp
+	motion_opencv.hpp motion_opencv.cpp motion_cvbackground.hpp motion_cvbackground.cpp
 
 #these are actually to make it possible to serve the website out of the source for development
 EXTRA_chiton_DEPENDENCIES=hls pinch-zoom
