@@ -44,12 +44,17 @@ bool MotionCVBackground::process_frame(const AVFrame *frame, bool video){
     if (!ocv){
         return false;
     }
+
+    //always do the math in CV_16U for extra precision
     if (avg.empty()){
-        LWARN("Copying MAT");
-        ocv->get_UMat().copyTo(avg);
+        ocv->get_UMat().convertTo(avg, CV_16U, 256.0);
+        ocv->get_UMat().copyTo(low_res);
     } else {
         //compute the frame average
-        cv::addWeighted(avg, tau, ocv->get_UMat(), 1-tau, 0, avg);
+        cv::UMat buf16;
+        ocv->get_UMat().convertTo(buf16, CV_16U, 256.0);
+        cv::addWeighted(avg, tau, buf16, 1-tau, 0, avg);
+        avg.convertTo(low_res, CV_8U, 1.0/256.0);
     }
     return true;
 }

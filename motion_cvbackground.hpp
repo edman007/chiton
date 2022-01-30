@@ -38,9 +38,11 @@ public:
     const std::string& get_name(void);//return the name of the algorithm
     const cv::UMat get_background(void);
     bool init(void);//called immeditly after the constructor to allow dependicies to be setup
+    cv::UMat get_UMat(void);//returns a CV_8UC1
 private:
     MotionOpenCV *ocv;
-    cv::UMat avg;
+    cv::UMat avg;//the 16-bit average image
+    cv::UMat low_res;//low res version derived from the 16-bit
     float tau;
 };
 

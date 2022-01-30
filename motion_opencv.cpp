@@ -43,6 +43,9 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
     if (!video){
         return true;
     }
+    buf_mat.release();
+    input_mat.release();
+
     //opencv libva is HAVE_VA, our libva is HAVE_VAAPI
 #ifdef HAVE_VAAPI
     //OPENCV has VA support
@@ -56,13 +59,25 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
             return false;
         }
         hwctx = static_cast<AVVAAPIDeviceContext*>(device_ctx->hwctx);
-        cv::UMat tmp1, tmp2;
+        cv::UMat tmp1;
         const VASurfaceID surf = reinterpret_cast<uintptr_t const>(frame->data[3]);
         try {
             cv::va_intel::convertFromVASurface(hwctx->display, surf, cv::Size(frame->width, frame->height), tmp1);
-            //change to CV_16UC1
-            tmp1.convertTo(tmp2, CV_16U, 256);
-            cv::cvtColor(tmp2, buf_mat, cv::COLOR_BGR2GRAY);
+            //change to CV_8UC1
+            if (tmp1.depth() == CV_8U){
+                cv::cvtColor(tmp1, buf_mat, cv::COLOR_BGR2GRAY);
+            } else {
+                cv::UMat tmp2;
+                double alpha = 1.0;
+                if (tmp1.depth() == CV_16U){
+                    alpha = 1.0/256;
+                } else {
+                    LWARN("convertFromVASurface provided unsupported depth");
+                }
+                tmp1.convertTo(tmp2, CV_8U, alpha);
+                cv::cvtColor(tmp2, buf_mat, cv::COLOR_BGR2GRAY);
+            }
+
         } catch (cv::Exception &e){
             LWARN("Error converting image from VA-API To OpenCV: " + e.msg);
             return false;
@@ -70,21 +85,18 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
     } else
 #endif
     {
-        LDEBUG("SW OpenCV Conversion");
         //direct VAAPI conversion not possible
         if (!fmt_filter.send_frame(frame)){
             LWARN("OpenCV Failed to Send Frame");
             return false;
         }
-        buf_mat.release();
-        input_mat.release();
         av_frame_unref(input);
         if (!fmt_filter.get_frame(input)){
             LWARN("OpenCV Failed to Get Frame");
             return false;
         }
         //CV_16UC1 matches the format in set_video_stream()
-        input_mat = cv::Mat(input->height, input->width, CV_16UC1, input->data, input->linesize[0]);
+        input_mat = cv::Mat(input->height, input->width, CV_8UC1, input->data, input->linesize[0]);
         input_mat.copyTo(buf_mat);
         //buf_mat = input_mat.getUMat(cv::ACCESS_READ);
     }
@@ -107,11 +119,7 @@ bool MotionOpenCV::set_video_stream(const AVStream *stream, const AVCodecContext
     //cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_ENABLE_MEM_USE_HOST_PTR", true);
     //CODEC is only needed for HW Mapping...we will map it ourself
     fmt_filter.set_source_time_base(stream->time_base);
-#if defined(__BYTE_ORDER__)&&(__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-    fmt_filter.set_target_fmt(AV_PIX_FMT_GRAY16BE, AV_CODEC_ID_NONE, 0);
-#else
-    fmt_filter.set_target_fmt(AV_PIX_FMT_GRAY16LE, AV_CODEC_ID_NONE, 0);
-#endif
+    fmt_filter.set_target_fmt(AV_PIX_FMT_GRAY8, AV_CODEC_ID_NONE, 0);
     return true;
 }
 
