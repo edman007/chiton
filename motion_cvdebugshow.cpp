@@ -20,65 +20,58 @@
  **************************************************************************
  */
 
-#include "motion_cvbackground.hpp"
+#include "motion_cvdebugshow.hpp"
 #ifdef HAVE_OPENCV
+#ifdef DEBUG
 #include "util.hpp"
-
 #include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 
-static const std::string algo_name = "cvbackground";
+static const std::string algo_name = "cvdebugshow";
 
-MotionCVBackground::MotionCVBackground(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller) {
+MotionCVDebugShow::MotionCVDebugShow(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller) {
+    cvmask = NULL;
+    cvbackground = NULL;
     ocv = NULL;
-    tau = 0.01;
 }
 
-MotionCVBackground::~MotionCVBackground(){
-    ocv = NULL;//we don't own it
+MotionCVDebugShow::~MotionCVDebugShow(){
+    cvmask = NULL;//we don't own it
+    cvbackground = NULL;
+    ocv = NULL;
 }
 
-bool MotionCVBackground::process_frame(const AVFrame *frame, bool video){
+bool MotionCVDebugShow::process_frame(const AVFrame *frame, bool video){
     if (!video){
         return true;
     }
-    if (!ocv){
-        return false;
-    }
-
-    //always do the math in CV_16U for extra precision
-    if (avg.empty()){
-        ocv->get_UMat().convertTo(avg, CV_16U, 256.0);
-        ocv->get_UMat().copyTo(low_res);
-    } else {
-        //compute the frame average
-        cv::UMat buf16;
-        ocv->get_UMat().convertTo(buf16, CV_16U, 256.0);
-        cv::addWeighted(avg, 1-tau, buf16, tau, 0, avg);
-        avg.convertTo(low_res, CV_8U, 1.0/256.0);
-    }
+    return true;
+    cv::imshow("CVDebugShow - Mask", cvmask->get_masked());
+    //cv::imshow("CVDebugShow", cvbackground->get_background());
+    //cv::imshow("CVDebugShow", ocv->get_UMat());
+    cv::waitKey(1);
     return true;
 }
 
-bool MotionCVBackground::set_video_stream(const AVStream *stream, const AVCodecContext *codec) {
+bool MotionCVDebugShow::set_video_stream(const AVStream *stream, const AVCodecContext *codec) {
     return true;
 }
 
-const std::string& MotionCVBackground::get_name(void) {
+const std::string& MotionCVDebugShow::get_name(void) {
     return algo_name;
 }
 
-const std::string& MotionCVBackgroundAllocator::get_name(void) {
+const std::string& MotionCVDebugShowAllocator::get_name(void) {
     return algo_name;
 }
 
-bool MotionCVBackground::init(void) {
+bool MotionCVDebugShow::init(void) {
     ocv = static_cast<MotionOpenCV*>(controller.get_algo_before("opencv", this));
+    cvmask = static_cast<MotionCVMask*>(controller.get_algo_before("cvmask", this));
+    cvbackground = static_cast<MotionCVBackground*>(controller.get_algo_before("cvbackground", this));
     return true;
-}
-
-const cv::UMat MotionCVBackground::get_background(void){
-    return low_res;
 }
 
 //HAVE_OPENCV
+#endif
 #endif

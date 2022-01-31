@@ -27,8 +27,12 @@
 #ifdef HAVE_VAAPI
 #include <opencv2/core/va_intel.hpp>
 #endif
-
 #include <opencv2/imgproc.hpp>
+
+//debug things
+#include <opencv2/highgui.hpp>
+#include "image_util.hpp"
+
 
 static const std::string algo_name = "opencv";
 
@@ -72,7 +76,7 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
                 if (tmp1.depth() == CV_16U){
                     alpha = 1.0/256;
                 } else {
-                    LWARN("convertFromVASurface provided unsupported depth");
+                    LWARN("convertFromVASurface provided unsupported depth, not scaling it");
                 }
                 tmp1.convertTo(tmp2, CV_8U, alpha);
                 cv::cvtColor(tmp2, buf_mat, cv::COLOR_BGR2GRAY);
@@ -99,6 +103,7 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
         input_mat = cv::Mat(input->height, input->width, CV_8UC1, input->data, input->linesize[0]);
         input_mat.copyTo(buf_mat);
         //buf_mat = input_mat.getUMat(cv::ACCESS_READ);
+
     }
 
     return true;

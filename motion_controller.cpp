@@ -23,6 +23,8 @@
 #include "util.hpp"
 #include "motion_opencv.hpp"
 #include "motion_cvbackground.hpp"
+#include "motion_cvmask.hpp"
+#include "motion_cvdebugshow.hpp"
 
 
 MotionController::MotionController(Database &db, Config &cfg) : db(db), cfg(cfg) {
@@ -32,6 +34,8 @@ MotionController::MotionController(Database &db, Config &cfg) : db(db), cfg(cfg)
 #ifdef HAVE_OPENCV
     register_motion_algo(new MotionOpenCVAllocator());
     register_motion_algo(new MotionCVBackgroundAllocator());
+    register_motion_algo(new MotionCVMaskAllocator());
+    register_motion_algo(new MotionCVDebugShowAllocator());
 #endif
     add_algos();
 }

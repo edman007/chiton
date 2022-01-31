@@ -1,5 +1,5 @@
-#ifndef __MOTION_ALGO_CVBACKGROUND_HPP__
-#define __MOTION_ALGO_CVBACKGROUND_HPP__
+#ifndef __MOTION_ALGO_CVDEBUGSHOW_HPP__
+#define __MOTION_ALGO_CVDEBUGSHOW_HPP__
 /**************************************************************************
  *
  *     This file is part of Chiton.
@@ -24,31 +24,31 @@
 
 #include "config_build.hpp"
 #ifdef HAVE_OPENCV
+#ifdef DEBUG
 #include "motion_algo.hpp"
-#include "motion_opencv.hpp"
-#include "filter.hpp"
+#include "motion_cvmask.hpp"
+#include "motion_cvbackground.hpp"
 #include <opencv2/core.hpp>
 
-class MotionCVBackground : public MotionAlgo {
+class MotionCVDebugShow : public MotionAlgo {
 public:
-    MotionCVBackground(Config &cfg, Database &db, MotionController &controller);
-    ~MotionCVBackground();
+    MotionCVDebugShow(Config &cfg, Database &db, MotionController &controller);
+    ~MotionCVDebugShow();
     bool process_frame(const AVFrame *frame, bool video);//process the frame, return false on error
     bool set_video_stream(const AVStream *stream, const AVCodecContext *codec);//identify the video stream
     const std::string& get_name(void);//return the name of the algorithm
-    const cv::UMat get_background(void);//get the averaged background
     bool init(void);//called immeditly after the constructor to allow dependicies to be setup
 private:
     MotionOpenCV *ocv;
-    cv::UMat avg;//the 16-bit average image
-    cv::UMat low_res;//low res version derived from the 16-bit
-    float tau;
+    MotionCVMask *cvmask;
+    MotionCVBackground *cvbackground;
 };
 
-class MotionCVBackgroundAllocator : public MotionAlgoAllocator {
-    MotionAlgo* allocate(Config &cfg, Database &db, MotionController &controller) {return new MotionCVBackground(cfg, db, controller);};
+class MotionCVDebugShowAllocator : public MotionAlgoAllocator {
+    MotionAlgo* allocate(Config &cfg, Database &db, MotionController &controller) {return new MotionCVDebugShow(cfg, db, controller);};
     const std::string& get_name(void);
 };
 
+#endif
 #endif
 #endif
