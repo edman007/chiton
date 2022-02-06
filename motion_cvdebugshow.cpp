@@ -45,10 +45,10 @@ bool MotionCVDebugShow::process_frame(const AVFrame *frame, bool video){
     if (!video){
         return true;
     }
-    return true;
-    cv::imshow("CVDebugShow - Mask", cvmask->get_masked());
+    //return true;
+    //cv::imshow("CVDebugShow - Mask", cvmask->get_masked());
     //cv::imshow("CVDebugShow", cvbackground->get_background());
-    //cv::imshow("CVDebugShow", ocv->get_UMat());
+    cv::imshow("CVDebugShow", ocv->get_UMat());
     cv::waitKey(1);
     return true;
 }

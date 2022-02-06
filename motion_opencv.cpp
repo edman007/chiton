@@ -47,8 +47,8 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
     if (!video){
         return true;
     }
-    buf_mat.release();
-    input_mat.release();
+    //buf_mat.release();
+    //input_mat.release();
 
     //opencv libva is HAVE_VA, our libva is HAVE_VAAPI
 #ifdef HAVE_VAAPI
@@ -63,7 +63,6 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
             return false;
         }
         hwctx = static_cast<AVVAAPIDeviceContext*>(device_ctx->hwctx);
-        cv::UMat tmp1;
         const VASurfaceID surf = reinterpret_cast<uintptr_t const>(frame->data[3]);
         try {
             cv::va_intel::convertFromVASurface(hwctx->display, surf, cv::Size(frame->width, frame->height), tmp1);
@@ -71,7 +70,6 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
             if (tmp1.depth() == CV_8U){
                 cv::cvtColor(tmp1, buf_mat, cv::COLOR_BGR2GRAY);
             } else {
-                cv::UMat tmp2;
                 double alpha = 1.0;
                 if (tmp1.depth() == CV_16U){
                     alpha = 1.0/256;
@@ -81,7 +79,6 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
                 tmp1.convertTo(tmp2, CV_8U, alpha);
                 cv::cvtColor(tmp2, buf_mat, cv::COLOR_BGR2GRAY);
             }
-
         } catch (cv::Exception &e){
             LWARN("Error converting image from VA-API To OpenCV: " + e.msg);
             return false;
@@ -100,9 +97,9 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
             return false;
         }
         //CV_16UC1 matches the format in set_video_stream()
-        input_mat = cv::Mat(input->height, input->width, CV_8UC1, input->data, input->linesize[0]);
-        input_mat.copyTo(buf_mat);
-        //buf_mat = input_mat.getUMat(cv::ACCESS_READ);
+        input_mat = cv::Mat(input->height, input->width, CV_8UC1, input->data[0], input->linesize[0]);
+        //input_mat.copyTo(buf_mat);
+        buf_mat = input_mat.getUMat(cv::ACCESS_READ);
 
     }
 

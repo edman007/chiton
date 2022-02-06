@@ -39,6 +39,7 @@ public:
 private:
     cv::UMat buf_mat;//the Mat we operate on
     cv::Mat input_mat;//the sw mat
+    cv::UMat tmp1, tmp2;//temporary buffers
     AVFrame *input;
     Filter fmt_filter;
 };
