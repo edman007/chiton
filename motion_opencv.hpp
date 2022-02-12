@@ -43,11 +43,13 @@ private:
     AVFrame *input;
     Filter fmt_filter;
     bool map_cl;//true if using opencl mapping instead of direct vaapi mapping
-
+    bool map_indirect;//true if mapping indirectly from VA-API to SW OpenCV
 #ifdef HAVE_OPENCL
     void map_ocl_frame(AVFrame *input);
 #endif
-
+#ifdef HAVE_VAAPI
+    void indirect_vaapi_map(const AVFrame *input);
+#endif
 };
 
 class MotionOpenCVAllocator : public MotionAlgoAllocator {

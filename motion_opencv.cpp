@@ -49,6 +49,7 @@ static const std::string algo_name = "opencv";
 MotionOpenCV::MotionOpenCV(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller), fmt_filter(Filter(cfg)) {
     input = av_frame_alloc();
     map_cl = true;
+    map_indirect = true;
 }
 
 MotionOpenCV::~MotionOpenCV(){
@@ -60,6 +61,12 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
     }
     buf_mat.release();
     input_mat.release();
+#ifdef HAVE_VAAPI
+    //this is a higher speed indirect (no-interopt) version for non-intel HW
+    if (map_indirect && frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx){
+        indirect_vaapi_map(frame);
+    } else
+#endif
 #ifdef HAVE_OPENCL
     if (map_cl && frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx){
         //map it to openCL
@@ -81,14 +88,12 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
     //OPENCV has VA support
     //check if the incoming frame is VAAPI
     if (frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx){
-        AVHWFramesContext *hw_frames = (AVHWFramesContext *)frame->hw_frames_ctx->data;
-        AVHWDeviceContext *device_ctx = hw_frames->device_ctx;
-        AVVAAPIDeviceContext *hwctx;
-        if (device_ctx->type != AV_HWDEVICE_TYPE_VAAPI){
+        AVVAAPIDeviceContext *hwctx = get_vaapi_ctx_from_frames(frame->hw_frames_ctx);;
+        if (!hwctx){
             LERROR("VAAPI frame does not have VAAPI device");
             return false;
         }
-        hwctx = static_cast<AVVAAPIDeviceContext*>(device_ctx->hwctx);
+
         const VASurfaceID surf = reinterpret_cast<uintptr_t const>(frame->data[3]);
         try {
             cv::va_intel::convertFromVASurface(hwctx->display, surf, cv::Size(frame->width, frame->height), tmp1);
@@ -213,5 +218,100 @@ void MotionOpenCV::map_ocl_frame(AVFrame *input){
 //HAVE_OPENCL
 #endif
 
+#ifdef HAVE_VAAPI
+//inspired from OpenCVs convertFromvasurface
+void MotionOpenCV::indirect_vaapi_map(const AVFrame *input){
+    AVVAAPIDeviceContext* hw_ctx = get_vaapi_ctx_from_frames(input->hw_frames_ctx);
+    if (!hw_ctx){
+        LWARN("No VAAPI context found");
+        return;
+    }
+
+    const VASurfaceID surface = reinterpret_cast<uintptr_t const>(input->data[3]);
+    VAStatus status = 0;
+
+    status = vaSyncSurface(hw_ctx->display, surface);
+    if (status != VA_STATUS_SUCCESS){
+        LWARN("vaSyncSurface: Failed");
+        return;
+    }
+
+    VAImage image;
+    status = vaDeriveImage(hw_ctx->display, surface, &image);
+    if (status != VA_STATUS_SUCCESS){
+        //try vaCreateImage + vaGetImage
+        //pick a format
+        int num_formats = vaMaxNumImageFormats(hw_ctx->display);
+        if (num_formats <= 0){
+            LWARN("VA-API: vaMaxNumImageFormats failed");
+            return;
+        }
+        std::vector<VAImageFormat> fmt_list(num_formats);
+
+        status = vaQueryImageFormats(hw_ctx->display, fmt_list.data(), &num_formats);
+        if (status != VA_STATUS_SUCCESS){
+            LWARN("VA-API: vaQueryImageFormats failed");
+            return;
+        }
+        VAImageFormat *selected_format = nullptr;
+        for (auto &fmt : fmt_list){
+            if (fmt.fourcc == VA_FOURCC_NV12 || fmt.fourcc == VA_FOURCC_YV12){
+                selected_format = &fmt;
+                break;
+            }
+        }
+        if (selected_format == nullptr){
+            LWARN("VA-API: vaQueryImageFormats did not return a supported format");
+            return;
+        }
+
+        status = vaCreateImage(hw_ctx->display, selected_format, input->width, input->height, &image);
+        if (status != VA_STATUS_SUCCESS){
+            LWARN("VA-API: vaCreateImage failed");
+            return;
+        }
+
+        status = vaGetImage(hw_ctx->display, surface, 0, 0, input->width, input->height, image.image_id);
+        if (status != VA_STATUS_SUCCESS){
+            vaDestroyImage(hw_ctx->display, image.image_id);
+            LWARN("VA-API: vaPutImage failed");
+            return;
+        }
+    }
+
+    unsigned char* buffer = 0;
+    status = vaMapBuffer(hw_ctx->display, image.buf, (void **)&buffer);
+    if (status != VA_STATUS_SUCCESS){
+        LWARN("VA-API: vaMapBuffer failed");
+    }
+
+    if (image.format.fourcc == VA_FOURCC_NV12){
+        input_mat = cv::Mat(input->height, input->width, CV_8UC1, buffer + image.offsets[0], image.pitches[0]);
+    } else if (image.format.fourcc == VA_FOURCC_YV12) {
+        input_mat = cv::Mat(input->height, input->width, CV_8UC1, buffer + image.offsets[0], image.pitches[0]);
+    } else {
+        LWARN("VA-API didn't return correct format");
+        return;
+    }
+    input_mat.copyTo(buf_mat);//buf_mat is now the luma channel which is close enough for us
+    input_mat.release();
+
+    status = vaUnmapBuffer(hw_ctx->display, image.buf);
+    if (status != VA_STATUS_SUCCESS){
+        LWARN("VA-API: vaUnmapBuffer failed");
+        return;
+    }
+
+    status = vaDestroyImage(hw_ctx->display, image.image_id);
+    if (status != VA_STATUS_SUCCESS){
+        LWARN("VA-API: vaDestroyImage failed");
+        return;
+    }
+
+}
+
+
+//HAVE_VAAPI
+#endif
 //HAVE_OPENCV
 #endif

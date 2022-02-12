@@ -67,8 +67,8 @@ const std::string& MotionCVDebugShowAllocator::get_name(void) {
 
 bool MotionCVDebugShow::init(void) {
     ocv = static_cast<MotionOpenCV*>(controller.get_algo_before("opencv", this));
-    cvmask = static_cast<MotionCVMask*>(controller.get_algo_before("cvmask", this));
-    cvbackground = static_cast<MotionCVBackground*>(controller.get_algo_before("cvbackground", this));
+    //cvmask = static_cast<MotionCVMask*>(controller.get_algo_before("cvmask", this));
+    //cvbackground = static_cast<MotionCVBackground*>(controller.get_algo_before("cvbackground", this));
     return true;
 }
 
