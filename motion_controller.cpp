@@ -35,7 +35,9 @@ MotionController::MotionController(Database &db, Config &cfg) : db(db), cfg(cfg)
     register_motion_algo(new MotionOpenCVAllocator());
     register_motion_algo(new MotionCVBackgroundAllocator());
     register_motion_algo(new MotionCVMaskAllocator());
+#ifdef DEBUG
     register_motion_algo(new MotionCVDebugShowAllocator());
+#endif
 #endif
     add_algos();
 }
