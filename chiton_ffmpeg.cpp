@@ -471,7 +471,11 @@ bool CFFUtil::have_vdpau(AVCodecID codec_id, int codec_profile, int width, int h
         return NULL;
     }
     VdpDecoderQueryCapabilities *vdpau_query_caps;
-    VdpStatus status = vdpau_query_caps(hwctx->device, vdpau_profile, &supported, NULL, NULL, &max_width, &max_height);
+    VdpStatus status = hwctx->get_proc_address(hwctx->device, VDP_FUNC_ID_DECODER_QUERY_CAPABILITIES, reinterpret_cast<void**>(&vdpau_query_caps));
+    if (status != VDP_STATUS_OK){
+        return NULL;
+    }
+    status = vdpau_query_caps(hwctx->device, vdpau_profile, &supported, NULL, NULL, &max_width, &max_height);
     if (status != VDP_STATUS_OK){
         return NULL;
     }
