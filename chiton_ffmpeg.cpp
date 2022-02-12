@@ -57,7 +57,9 @@ static const struct {
     MAP(H264,        H264_MAIN,       H264Main    ),
     MAP(H264,        H264_HIGH,       H264High    ),
     MAP(H264,        H264_CONSTRAINED_BASELINE, H264ConstrainedBaseline),
+#if !VA_CHECK_VERSION(1, 0, 0)
     MAP(H264,        H264_BASELINE,   H264Baseline),
+#endif
 #if VA_CHECK_VERSION(0, 37, 0)
     MAP(HEVC,        HEVC_MAIN,       HEVCMain    ),
 #endif
@@ -478,7 +480,7 @@ bool CFFUtil::have_vdpau(AVCodecID codec_id, int codec_profile, int width, int h
         return NULL;
     }
 
-    if (width > max_width || height > max_height){
+    if (static_cast<uint32_t>(width) > max_width || static_cast<uint32_t>(height) > max_height){
         return NULL;
     }
 #endif

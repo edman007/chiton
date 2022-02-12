@@ -156,7 +156,8 @@ int64_t CFMP4::seek(int64_t offset, int whence){
         }
         if (target >= start_byte){
             ifs.seekg(target);
-            return ifs.tellg() - (start_byte - initlen);
+            auto start_pos = (start_byte - initlen);
+            return ifs.tellg() - start_pos;
         }
         target -= start_byte - initlen;
         if (target < 0){
