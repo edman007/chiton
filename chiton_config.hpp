@@ -17,13 +17,14 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2022 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
 
 //we like new stuff
 #define _XOPEN_SOURCE 700
+#define CL_TARGET_OPENCL_VERSION 300
 
 #include <string>
 #include <map>

@@ -27,6 +27,16 @@
 #ifdef HAVE_VAAPI
 #include <opencv2/core/va_intel.hpp>
 #endif
+
+#define CL_TARGET_OPENCL_VERSION 300
+#ifdef HAVE_OPENCL
+#ifdef HAVE_OPENCL_CL_H
+#include <OpenCL/cl.h>
+#else
+#include <CL/cl.h>
+#endif
+#endif
+
 #include <opencv2/imgproc.hpp>
 
 //debug things
@@ -38,6 +48,7 @@ static const std::string algo_name = "opencv";
 
 MotionOpenCV::MotionOpenCV(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller), fmt_filter(Filter(cfg)) {
     input = av_frame_alloc();
+    map_cl = true;
 }
 
 MotionOpenCV::~MotionOpenCV(){
@@ -47,14 +58,29 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
     if (!video){
         return true;
     }
-    //buf_mat.release();
-    //input_mat.release();
-
+    buf_mat.release();
+    input_mat.release();
+#ifdef HAVE_OPENCL
+    if (map_cl && frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx){
+        //map it to openCL
+        if (!fmt_filter.send_frame(frame)){
+            LWARN("OpenCV Failed to Send Frame");
+            return false;
+        }
+        av_frame_unref(input);
+        if (!fmt_filter.get_frame(input)){
+            LWARN("OpenCV Failed to Get Frame");
+            return false;
+        }
+        LWARN("Mapping OpenCL!");
+        map_ocl_frame(input);
+    } else
+#endif
     //opencv libva is HAVE_VA, our libva is HAVE_VAAPI
 #ifdef HAVE_VAAPI
     //OPENCV has VA support
     //check if the incoming frame is VAAPI
-    if (video && frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx){
+    if (frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx){
         AVHWFramesContext *hw_frames = (AVHWFramesContext *)frame->hw_frames_ctx->data;
         AVHWDeviceContext *device_ctx = hw_frames->device_ctx;
         AVVAAPIDeviceContext *hwctx;
@@ -66,6 +92,7 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
         const VASurfaceID surf = reinterpret_cast<uintptr_t const>(frame->data[3]);
         try {
             cv::va_intel::convertFromVASurface(hwctx->display, surf, cv::Size(frame->width, frame->height), tmp1);
+            LWARN("Direct VA-API");
             //change to CV_8UC1
             if (tmp1.depth() == CV_8U){
                 cv::cvtColor(tmp1, buf_mat, cv::COLOR_BGR2GRAY);
@@ -96,10 +123,11 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
             LWARN("OpenCV Failed to Get Frame");
             return false;
         }
+        LWARN("SW Conversion");
         //CV_16UC1 matches the format in set_video_stream()
         input_mat = cv::Mat(input->height, input->width, CV_8UC1, input->data[0], input->linesize[0]);
-        //input_mat.copyTo(buf_mat);
-        buf_mat = input_mat.getUMat(cv::ACCESS_READ);
+        input_mat.copyTo(buf_mat);
+        //buf_mat = input_mat.getUMat(cv::ACCESS_READ);
 
     }
 
@@ -107,21 +135,31 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
 }
 
 bool MotionOpenCV::set_video_stream(const AVStream *stream, const AVCodecContext *codec) {
+    //if the codec does not have VA-API then we need to not use opencl
+#ifdef HAVE_VAAPI
     if (codec && codec->hw_frames_ctx){
         //find the VAAPI Display
-        AVHWDeviceContext* device_ctx = reinterpret_cast<AVHWDeviceContext*>(codec->hw_frames_ctx->data);
-        if (device_ctx && device_ctx->type == AV_HWDEVICE_TYPE_VAAPI){
-            AVVAAPIDeviceContext* hw_ctx = static_cast<AVVAAPIDeviceContext*>(device_ctx->hwctx);
+        AVVAAPIDeviceContext* hw_ctx = get_vaapi_ctx_from_frames(codec->hw_frames_ctx);
+        if (hw_ctx){
             //bind this display to this thread
             cv::va_intel::ocl::initializeContextFromVA(hw_ctx->display, true);
+        } else {
+            map_cl = false;
         }
+    } else
+#endif
+    {
+        map_cl = false;
     }
 
-    //stream->
-    //cv::utils::getConfigurationParameterBool("OPENCV_OPENCL_ENABLE_MEM_USE_HOST_PTR", true);
     //CODEC is only needed for HW Mapping...we will map it ourself
     fmt_filter.set_source_time_base(stream->time_base);
-    fmt_filter.set_target_fmt(AV_PIX_FMT_GRAY8, AV_CODEC_ID_NONE, 0);
+    if (map_cl){
+        LWARN("Setup for OpenCL");
+        fmt_filter.set_target_fmt(AV_PIX_FMT_OPENCL, AV_CODEC_ID_NONE, 0);//
+    } else {
+        fmt_filter.set_target_fmt(AV_PIX_FMT_GRAY8, AV_CODEC_ID_NONE, 0);
+    }
     return true;
 }
 
@@ -136,6 +174,44 @@ const std::string& MotionOpenCVAllocator::get_name(void) {
 const cv::UMat& MotionOpenCV::get_UMat(void){
     return buf_mat;
 }
+
+#ifdef HAVE_OPENCL
+void MotionOpenCV::map_ocl_frame(AVFrame *input){
+    //Extract the two OpenCL Image2Ds from the opencl frame
+    cl_mem luma_image = reinterpret_cast<cl_mem>(input->data[0]);
+    cl_mem chrome_image = reinterpret_cast<cl_mem>(input->data[1]);
+
+    size_t luma_w = 0;
+    size_t luma_h = 0;
+    size_t chroma_w = 0;
+    size_t chroma_h = 0;
+
+    clGetImageInfo(luma_image, CL_IMAGE_WIDTH, sizeof(size_t), &luma_w, 0);
+    clGetImageInfo(luma_image, CL_IMAGE_HEIGHT, sizeof(size_t), &luma_h, 0);
+    clGetImageInfo(chrome_image, CL_IMAGE_WIDTH, sizeof(size_t), &chroma_w, 0);
+    clGetImageInfo(chrome_image, CL_IMAGE_HEIGHT, sizeof(size_t), &chroma_h, 0);
+
+
+    //FIXME: assumes this is NV12
+    tmp1.create(luma_h + chroma_h, luma_w, CV_8U);
+
+    cl_mem dst_buffer = static_cast<cl_mem>(tmp1.handle(cv::ACCESS_READ));
+    cl_command_queue queue = static_cast<cl_command_queue>(cv::ocl::Queue::getDefault().ptr());
+    size_t src_origin[3] = { 0, 0, 0 };
+    size_t luma_region[3] = { luma_w, luma_h, 1 };
+    size_t chroma_region[3] = { chroma_w, chroma_h * 2, 1 };
+
+    //Copy the contents of each Image2Ds to the right place in the
+    //OpenCL buffer which backs the Mat
+    clEnqueueCopyImageToBuffer(queue, luma_image, dst_buffer, src_origin, luma_region, 0, 0, NULL, NULL);
+    clEnqueueCopyImageToBuffer(queue, chrome_image, dst_buffer, src_origin, chroma_region, luma_w * luma_h * 1, 0, NULL, NULL);
+
+    // Block until the copying is done
+    clFinish(queue);
+
+}
+//HAVE_OPENCL
+#endif
 
 //HAVE_OPENCV
 #endif

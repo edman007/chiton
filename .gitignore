@@ -33,7 +33,11 @@ web/inc/external/smarty
 web/static/breeze
 web/static/*-bottom-cursor.png
 web/static/hls.*
-m4/*.m4
+m4/lt~obsolete.m4
+m4/ltversion.m4
+m4/ltsugar.m4
+m4/libtool.m4
+m4/ltoptions.m4
 LICENSE.smarty
 LICENSE.hls
 LICENSE.breeze-icons

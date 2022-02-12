@@ -23,9 +23,9 @@ define([BUILDVER], [0.4.0pre])
 AC_INIT([Chiton Security], BUILDVER, [edman007@edman007.com], [chiton], [https://edman007.com/])
 AC_CONFIG_SRCDIR([main.cpp])
 AC_CONFIG_MACRO_DIR([m4])
+AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([subdir-objects tar-pax dist-xz])
 LT_INIT
-
 
 #pull the correct git revesion
 git_version=$(echo $(git log --oneline --no-walk || echo Unknown) | head -1 | cut -d ' ' -f 1 )
@@ -129,6 +129,17 @@ AS_IF([test "x$enable_opencv" != "xno"],
              AS_VAR_APPEND([[LIBS]], [" $OPENCV_LIBS "])])
              AC_DEFINE([HAVE_OPENCV], [1], [Have OpenCV])])
 AS_IF([test "x$enable_opencv" == "xyes" && test "x$have_opencv" != "x1"], [AC_MSG_ERROR([Could not find OpenCV])])
+
+AC_ARG_ENABLE([opencl],
+  [AS_HELP_STRING([--enable-opencl], [Enable OpenCL and associated components])],
+  [],
+  [enable_opencl=auto])
+AS_IF([test "x$enable_opencl" != "xno"],[AX_CHECK_CL])
+AS_IF([test "x$enable_opencl" == "xyes" && test "X$no_cl" == "Xyes"], [AC_MSG_ERROR([Could not find OpenCL])])
+AS_IF([test "X$no_cl" == "Xyes" || test "x$enable_opencl" == "xno"], [AC_MSG_NOTICE([OpenCL Support Disabled])], [AS_VAR_APPEND([[CPPFLAGS]], [" $CL_CFLAGS "])
+             AS_VAR_APPEND([[LIBS]], [" $CL_LIBS "])
+             AC_DEFINE([HAVE_OPENCL], [1], [Have OpenCL])])
+
 
 
 AC_ARG_WITH([apacheconfigdir],

@@ -26,11 +26,23 @@
 #include "util.hpp"
 #include <cstdio>
 #include <sstream>
+#include <vector>
 #ifdef HAVE_VAAPI
 #include <va/va.h>
-#include <libavutil/hwcontext_vaapi.h>
 #endif
 
+
+#ifdef HAVE_OPENCL
+#ifdef HAVE_OPENCL_CL_H
+#include <OpenCL/cl.h>
+#else
+#include <CL/cl.h>
+#endif
+#endif
+
+#ifdef HAVE_OPENCV
+#include <opencv2/core/ocl.hpp>
+#endif
 thread_local std::string last_line;//contains the continuation of any line that doesn't have a \n
 
 CFFUtil gcff_util;//global instance of our util class
@@ -437,6 +449,7 @@ AVBufferRef *CFFUtil::get_vaapi_ctx(AVCodecID codec_id, int codec_profile, int w
     }
 }
 
+
 bool CFFUtil::have_vdpau(AVCodecID codec_id, int codec_profile, int width, int height){
     load_vdpau();
     if (!vdpau_ctx){
@@ -563,3 +576,180 @@ int CFFUtil::get_vdpau_profile(const AVCodecID codec_id, const int codec_profile
     return AVERROR(EINVAL);
 }
 #endif
+
+AVBufferRef *CFFUtil::get_opencl_ctx(AVCodecID codec_id, int codec_profile, int width, int height){
+    if (have_opencl(codec_id, codec_profile, width, height)){
+        return av_buffer_ref(opencl_ctx);
+    } else {
+        //not supported
+        return NULL;
+    }
+}
+
+bool CFFUtil::have_opencl(AVCodecID codec_id, int codec_profile, int width, int height){
+    load_vaapi();
+    if (!vaapi_ctx){
+        return NULL;
+    }
+
+    //this section is only used to see if VAAPI supports our codec, without VAAPI we can still ask libavcodec to do it, but we won't known
+    //if it's going to work, this will result in is just failing if we try it and it's not supported
+#ifdef HAVE_VAAPI
+    AVVAAPIDeviceContext* hwctx = reinterpret_cast<AVVAAPIDeviceContext*>((reinterpret_cast<AVHWDeviceContext*>(vaapi_ctx->data))->hwctx);
+    //query VAAPI profiles for this codec
+    const AVCodecDescriptor *codec_desc;
+    codec_desc = avcodec_descriptor_get(codec_id);
+    if (!codec_desc) {
+        return NULL;
+    }
+    VAProfile profile, *profile_list = NULL;
+    int profile_count;
+    profile_count = vaMaxNumProfiles(hwctx->display);
+    profile_list = new VAProfile[profile_count];
+    if (!profile_list){
+        return NULL;
+    }
+
+    VAStatus vas;
+    vas = vaQueryConfigProfiles(hwctx->display, profile_list, &profile_count);
+    if (vas != VA_STATUS_SUCCESS) {
+        delete[] profile_list;
+        return NULL;
+    }
+
+    profile = VAProfileNone;
+
+    //search all known codecs to see if there is a matching profile
+    for (unsigned int i = 0; i < FF_ARRAY_ELEMS(vaapi_profile_map); i++) {
+        if (codec_id != vaapi_profile_map[i].codec_id){
+            continue;
+        }
+        for (int j = 0; j < profile_count; j++) {
+            if (vaapi_profile_map[i].va_profile == profile_list[j] &&
+                vaapi_profile_map[i].codec_profile == codec_profile) {
+                profile = profile_list[j];
+                break;//exact found, we are done
+            } else if (vaapi_profile_map[i].va_profile == profile_list[j]){
+                profile = profile_list[j];//in exact found
+            }
+        }
+    }
+    delete[] profile_list;
+
+    //if we couldn't find a matching profile we bail
+    if (profile == VAProfileNone){
+        LINFO("VA-API does not support this codec, no profile found");
+        return NULL;
+    }
+#endif
+
+    bool found = false;
+    AVHWFramesConstraints* c = av_hwdevice_get_hwframe_constraints(vaapi_ctx, NULL);
+    if (!c){
+        return NULL;
+    }
+    //check if this is supported
+    if (c->min_width  <= width || c->max_width  >= width ||
+        c->min_height <= height || c->max_height >= height){
+        //we assume the pixel formats are ok for us
+        found = true;
+    }
+    av_hwframe_constraints_free(&c);
+    return found;
+}
+
+void CFFUtil::load_opencl(void){
+    if (opencl_ctx || opencl_failed || vaapi_failed){
+        return;//quick check, return if not required
+    }
+    load_vaapi();//vaapi is required for opencl as we derive it from our opencl instance
+    lock();//lock and re-check (for races)
+    if (opencl_ctx || opencl_failed || !vaapi_ctx || vaapi_failed){
+        unlock();
+        return;//don't double alloc it
+    }
+
+    //this maps opencl to vaapi
+    int ret = av_hwdevice_ctx_create_derived(&opencl_ctx, AV_HWDEVICE_TYPE_OPENCL, vaapi_ctx, 0);
+    if (ret < 0) {
+        opencl_ctx = NULL;
+        opencl_failed = true;
+        unlock();
+        return;
+    }
+
+     //this maps opencv to opencl
+#if defined(HAVE_OPENCV) && defined(HAVE_OPENCL)
+    //opencv must use this context
+    AVOpenCLDeviceContext * ocl_device_ctx = get_opencl_ctx_from_device(opencl_ctx);
+    size_t param_value_size;
+
+    //Get context properties
+    clGetContextInfo(ocl_device_ctx->context, CL_CONTEXT_PROPERTIES, 0, NULL, &param_value_size);
+    std::vector<cl_context_properties> props(param_value_size/sizeof(cl_context_properties));
+    clGetContextInfo(ocl_device_ctx->context, CL_CONTEXT_PROPERTIES, param_value_size, props.data(), NULL);
+
+    //Find the platform prop
+    cl_platform_id platform;
+    for (int i = 0; props[i] != 0; i = i + 2) {
+        if (props[i] == CL_CONTEXT_PLATFORM) {
+            platform = reinterpret_cast<cl_platform_id>(props[i + 1]);
+        }
+    }
+
+    // Get the name for the platform
+    clGetPlatformInfo(platform, CL_PLATFORM_NAME, 0, NULL, &param_value_size);
+    std::vector <char> platform_name(param_value_size);
+    clGetPlatformInfo(platform, CL_PLATFORM_NAME, param_value_size, platform_name.data(), NULL);
+
+    //Finally: attach the context to OpenCV
+    cv::ocl::attachContext(platform_name.data(), platform, ocl_device_ctx->context, ocl_device_ctx->device_id);
+#endif
+    unlock();
+}
+
+void CFFUtil::free_opencl(void){
+    lock();
+    av_buffer_unref(&opencl_ctx);
+    opencl_failed = false;
+    unlock();
+}
+
+
+AVVAAPIDeviceContext *get_vaapi_ctx_from_device(AVBufferRef *buf){
+    if (!buf || !buf->data){
+        return NULL;
+    }
+    AVHWDeviceContext *device = reinterpret_cast<AVHWDeviceContext*>(buf->data);
+    if (device->type != AV_HWDEVICE_TYPE_VAAPI){
+        return NULL;
+    }
+    return static_cast<AVVAAPIDeviceContext*>(device->hwctx);
+}
+
+AVVAAPIDeviceContext *get_vaapi_ctx_from_frames(AVBufferRef *buf){
+    if (!buf || !buf->data){
+        return NULL;
+    }
+    AVHWFramesContext *frames = reinterpret_cast<AVHWFramesContext*>(buf->data);
+    return get_vaapi_ctx_from_device(frames->device_ref);
+}
+
+AVOpenCLDeviceContext *get_opencl_ctx_from_device(AVBufferRef *buf){
+    if (!buf || !buf->data){
+        return NULL;
+    }
+    AVHWDeviceContext *device = reinterpret_cast<AVHWDeviceContext*>(buf->data);
+    if (device->type != AV_HWDEVICE_TYPE_OPENCL){
+        return NULL;
+    }
+    return static_cast<AVOpenCLDeviceContext*>(device->hwctx);
+}
+
+AVOpenCLDeviceContext *get_opencl_ctx_from_frames(AVBufferRef *buf){
+    if (!buf || !buf->data){
+        return NULL;
+    }
+    AVHWFramesContext *frames = reinterpret_cast<AVHWFramesContext*>(buf->data);
+    return get_opencl_ctx_from_device(frames->device_ref);
+}

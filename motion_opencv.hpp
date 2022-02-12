@@ -42,6 +42,12 @@ private:
     cv::UMat tmp1, tmp2;//temporary buffers
     AVFrame *input;
     Filter fmt_filter;
+    bool map_cl;//true if using opencl mapping instead of direct vaapi mapping
+
+#ifdef HAVE_OPENCL
+    void map_ocl_frame(AVFrame *input);
+#endif
+
 };
 
 class MotionOpenCVAllocator : public MotionAlgoAllocator {

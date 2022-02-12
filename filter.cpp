@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2021 Ed Martin <edman007@edman007.com>
+ *   Copyright 2021-2022 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -30,6 +30,7 @@ extern "C" {
 const AVPixelFormat hw_formats[] = {
     AV_PIX_FMT_VAAPI,
     AV_PIX_FMT_VDPAU,
+    AV_PIX_FMT_OPENCL
 };
 
 Filter::Filter(Config& cfg) : cfg(cfg) {
@@ -246,8 +247,11 @@ bool Filter::init_filter(const AVFrame *frame){
         for (unsigned int i = 0; i < filter_graph->nb_filters; i++){
             AVFilterContext *flt = filter_graph->filters[i];
             if (strcmp(flt->filter->name, "hwmap") == 0 || strcmp(flt->filter->name, "hwupload") == 0){
-                if (!frame->hw_frames_ctx && is_hw(target_fmt)) {//source is SW dest is HW
+                if (!frame->hw_frames_ctx && target_fmt == AV_PIX_FMT_VAAPI) {//source is SW dest is VAAPI
                     flt->hw_device_ctx = gcff_util.get_vaapi_ctx(target_codec, target_profile, frame->width, frame->height);
+                }
+                if (target_fmt == AV_PIX_FMT_OPENCL) {//dest is OpenCL
+                    flt->hw_device_ctx = gcff_util.get_opencl_ctx(target_codec, target_profile, frame->width, frame->height);
                 }
 
             }
@@ -303,6 +307,8 @@ std::string Filter::get_filter_str(const AVFrame *frame) const {
         if (is_hw(target_fmt)){
             if (target_fmt == AV_PIX_FMT_VAAPI){
                 filters_txt << ":derive_device=vaapi";
+            } else if (target_fmt == AV_PIX_FMT_OPENCL){
+                filters_txt << ":derive_device=opencl";
             } else {//check if we made a mistake, VDPAU is not a HW output format
                 LWARN("Unknown target HW format");
             }

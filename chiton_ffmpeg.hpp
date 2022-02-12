@@ -17,7 +17,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020-2021 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2022 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -43,6 +43,10 @@ extern "C" {
 
 #ifdef HAVE_VAAPI
 #include <libavutil/hwcontext_vaapi.h>
+#endif
+
+#ifdef HAVE_OPENCL
+#include <libavutil/hwcontext_opencl.h>
 #endif
 
 //fix FFMPEG and c++1x issues
@@ -106,9 +110,11 @@ public:
     //return a ref or null to the context iff it can handle wxh
     AVBufferRef *get_vaapi_ctx(AVCodecID codec_id, int codec_profile, int width, int height);
     AVBufferRef *get_vdpau_ctx(AVCodecID codec_id, int codec_profile, int width, int height);
+    AVBufferRef *get_opencl_ctx(AVCodecID codec_id, int codec_profile, int width, int height);
 
     bool have_vaapi(AVCodecID codec_id, int codec_profile, int width, int height);//returns true if VAAPI should work
     bool have_vdpau(AVCodecID codec_id, int codec_profile, int width, int height);//returns true if VDPAU should work
+    bool have_opencl(AVCodecID codec_id, int codec_profile, int width, int height);//returns true if OPENCL should work
     bool sw_format_is_hw_compatable(const enum AVPixelFormat pix_fmt);//return true if the format is HW compatable
     std::string get_sw_hw_format_list(Config &cfg);//return the suggested list of formats for use with later HW functions
 
@@ -117,6 +123,9 @@ private:
     void free_vaapi(void);//free the vaapi context
     void load_vdpau(void);//init global vdpau context
     void free_vdpau(void);//free the vdpau context
+    void load_opencl(void);//init global opencl context
+    void free_opencl(void);//free the opencl context
+
 #ifdef HAVE_VDPAU
     int  get_vdpau_profile(const AVCodecID codec_id, const int codec_profile, VdpDecoderProfile *profile);//get the VDPAU Profile
 #endif
@@ -125,6 +134,8 @@ private:
     bool vaapi_failed = false;//if we failed to initilize vaapi
     AVBufferRef *vdpau_ctx = NULL;
     bool vdpau_failed = false;//if we failed to initilize vdpau
+    AVBufferRef *opencl_ctx = NULL;
+    bool opencl_failed = false;//if we failed to initilize opencl
     std::mutex codec_lock;
 
 };
@@ -133,6 +144,15 @@ enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx, const enum AVPixelForma
 enum AVPixelFormat get_vdpau_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);//global VDPAU format selector
 enum AVPixelFormat get_sw_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);//global SW format selector that prefers VAAPI compatible formats
 
+//helper functions to cast FFMPeg HW Context to the native context
+#ifdef HAVE_VAAPI
+AVVAAPIDeviceContext *get_vaapi_ctx_from_device(AVBufferRef *buf);//get VAAPI context from HW Device ctx
+AVVAAPIDeviceContext *get_vaapi_ctx_from_frames(AVBufferRef *buf);//get VAAPI context from HW Frames Ctx
+#endif
+#ifdef HAVE_OPENCL
+AVOpenCLDeviceContext *get_opencl_ctx_from_device(AVBufferRef *buf);//get OpenCL context from HW Device ctx
+AVOpenCLDeviceContext *get_opencl_ctx_from_frames(AVBufferRef *buf);//get OpenCL context from HW Frames Ctx
+#endif
 extern CFFUtil gcff_util;//global FFmpeg lib mangement class
 
 //for passing image coordinates
