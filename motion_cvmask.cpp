@@ -31,7 +31,9 @@ static const std::string algo_name = "cvmask";
 MotionCVMask::MotionCVMask(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller) {
     ocv = NULL;
     background = NULL;
+    //FIXME: Make config parameters
     tau = 0.01;
+    beta = 3.0;
 }
 
 MotionCVMask::~MotionCVMask(){
@@ -52,18 +54,9 @@ bool MotionCVMask::process_frame(const AVFrame *frame, bool video){
     if (sensitivity.empty()){
         diff.copyTo(sensitivity);
     } else {
-        cv::addWeighted(sensitivity, 1-tau, diff, tau, 0, sensitivity);
+        cv::addWeighted(sensitivity, 1-tau, diff, beta*tau, 0, sensitivity);
     }
-    //cv::subtract(diff, sensitivity, diff);
-    float contrast = 10;
-    float brightness = -200;
-    cv::addWeighted(sensitivity, -contrast, diff, contrast, brightness, masked);
-    //cv::absdiff(diff, sensitivity, diff);
-    //diff.copyTo(masked);
-    //cv::compare(diff, sensitivity, diff, cv::CMP_LT);
-    //sensitivity.copyTo(masked);
-    //diff.copyTo(masked);
-    //cv::bitwise_and(diff, ocv->get_UMat(), masked);
+    cv::subtract(diff, sensitivity, masked);
     return true;
 }
 

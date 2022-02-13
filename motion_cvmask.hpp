@@ -43,7 +43,8 @@ private:
     MotionCVBackground *background;
     cv::UMat masked;//the masked image
     cv::UMat sensitivity;
-    float tau;//sensitivity tau
+    float tau;//sensitivity tau (time constant)
+    float beta;//sensitivity beta (diff amplification factor)
 };
 
 class MotionCVMaskAllocator : public MotionAlgoAllocator {

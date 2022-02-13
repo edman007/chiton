@@ -46,9 +46,9 @@ bool MotionCVDebugShow::process_frame(const AVFrame *frame, bool video){
         return true;
     }
     //return true;
-    //cv::imshow("CVDebugShow - Mask", cvmask->get_masked());
+    cv::imshow("CVDebugShow - Mask", cvmask->get_masked());
     //cv::imshow("CVDebugShow", cvbackground->get_background());
-    cv::imshow("CVDebugShow", ocv->get_UMat());
+    //cv::imshow("CVDebugShow", ocv->get_UMat());
     cv::waitKey(1);
     return true;
 }
@@ -67,8 +67,8 @@ const std::string& MotionCVDebugShowAllocator::get_name(void) {
 
 bool MotionCVDebugShow::init(void) {
     ocv = static_cast<MotionOpenCV*>(controller.get_algo_before("opencv", this));
-    //cvmask = static_cast<MotionCVMask*>(controller.get_algo_before("cvmask", this));
-    //cvbackground = static_cast<MotionCVBackground*>(controller.get_algo_before("cvbackground", this));
+    cvmask = static_cast<MotionCVMask*>(controller.get_algo_before("cvmask", this));
+    cvbackground = static_cast<MotionCVBackground*>(controller.get_algo_before("cvbackground", this));
     return true;
 }
 
