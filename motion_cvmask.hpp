@@ -45,6 +45,7 @@ private:
     cv::UMat sensitivity;
     float tau;//sensitivity tau (time constant)
     float beta;//sensitivity beta (diff amplification factor)
+    float thresh;//final thresholding value
 };
 
 class MotionCVMaskAllocator : public MotionAlgoAllocator {

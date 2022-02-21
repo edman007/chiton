@@ -1,5 +1,5 @@
-#ifndef __MOTION_ALGO_CVDEBUGSHOW_HPP__
-#define __MOTION_ALGO_CVDEBUGSHOW_HPP__
+#ifndef __MOTION_ALGO_CVDETECT_HPP__
+#define __MOTION_ALGO_CVDETECT_HPP__
 /**************************************************************************
  *
  *     This file is part of Chiton.
@@ -24,33 +24,35 @@
 
 #include "config_build.hpp"
 #ifdef HAVE_OPENCV
-#ifdef DEBUG
 #include "motion_algo.hpp"
 #include "motion_cvmask.hpp"
-#include "motion_cvbackground.hpp"
-#include "motion_cvdetect.hpp"
 #include <opencv2/core.hpp>
+#include "motion_opencv.hpp"
+#include "cv_target_rect.hpp"
 
-class MotionCVDebugShow : public MotionAlgo {
+//algorithm to implement the cvdetect motion detection algorithm
+class MotionCVDetect : public MotionAlgo {
 public:
-    MotionCVDebugShow(Config &cfg, Database &db, MotionController &controller);
-    ~MotionCVDebugShow();
+    MotionCVDetect(Config &cfg, Database &db, MotionController &controller);
+    ~MotionCVDetect();
     bool process_frame(const AVFrame *frame, bool video);//process the frame, return false on error
     bool set_video_stream(const AVStream *stream, const AVCodecContext *codec);//identify the video stream
     const std::string& get_name(void);//return the name of the algorithm
     bool init(void);//called immeditly after the constructor to allow dependicies to be setup
+    const cv::UMat& get_debug_view(void);
 private:
+    MotionCVMask *masked_objects;//mask we are using
+    std::vector<std::vector<cv::Point>> contours;//the detected contours
+    std::vector<TargetRect> targets;//the targets we are counting
+    cv::UMat debug_view, canny;
     MotionOpenCV *ocv;
-    MotionCVMask *cvmask;
-    MotionCVBackground *cvbackground;
-    MotionCVDetect *cvdetect;
+    void display_objects(void);
 };
 
-class MotionCVDebugShowAllocator : public MotionAlgoAllocator {
-    MotionAlgo* allocate(Config &cfg, Database &db, MotionController &controller) {return new MotionCVDebugShow(cfg, db, controller);};
+class MotionCVDetectAllocator : public MotionAlgoAllocator {
+    MotionAlgo* allocate(Config &cfg, Database &db, MotionController &controller) {return new MotionCVDetect(cfg, db, controller);};
     const std::string& get_name(void);
 };
 
-#endif
 #endif
 #endif

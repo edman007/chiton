@@ -34,6 +34,7 @@ MotionCVMask::MotionCVMask(Config &cfg, Database &db, MotionController &controll
     //FIXME: Make config parameters
     tau = 0.01;
     beta = 3.0;
+    thresh = 70;
 }
 
 MotionCVMask::~MotionCVMask(){
@@ -57,6 +58,7 @@ bool MotionCVMask::process_frame(const AVFrame *frame, bool video){
         cv::addWeighted(sensitivity, 1-tau, diff, beta*tau, 0, sensitivity);
     }
     cv::subtract(diff, sensitivity, masked);
+    cv::threshold(masked, masked, thresh, 255, cv::THRESH_BINARY);
     return true;
 }
 

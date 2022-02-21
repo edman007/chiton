@@ -33,12 +33,14 @@ MotionCVDebugShow::MotionCVDebugShow(Config &cfg, Database &db, MotionController
     cvmask = NULL;
     cvbackground = NULL;
     ocv = NULL;
+    cvdetect = NULL;
 }
 
 MotionCVDebugShow::~MotionCVDebugShow(){
     cvmask = NULL;//we don't own it
     cvbackground = NULL;
     ocv = NULL;
+    cvdetect = NULL;
 }
 
 bool MotionCVDebugShow::process_frame(const AVFrame *frame, bool video){
@@ -46,7 +48,8 @@ bool MotionCVDebugShow::process_frame(const AVFrame *frame, bool video){
         return true;
     }
     //return true;
-    cv::imshow("CVDebugShow - Mask", cvmask->get_masked());
+    cv::imshow("CVDebugShow - Detect", cvdetect->get_debug_view());
+    //cv::imshow("CVDebugShow - Mask", cvmask->get_masked());
     //cv::imshow("CVDebugShow", cvbackground->get_background());
     //cv::imshow("CVDebugShow", ocv->get_UMat());
     cv::waitKey(1);
@@ -69,6 +72,7 @@ bool MotionCVDebugShow::init(void) {
     ocv = static_cast<MotionOpenCV*>(controller.get_algo_before("opencv", this));
     cvmask = static_cast<MotionCVMask*>(controller.get_algo_before("cvmask", this));
     cvbackground = static_cast<MotionCVBackground*>(controller.get_algo_before("cvbackground", this));
+    cvdetect = static_cast<MotionCVDetect*>(controller.get_algo_before("cvdetect", this));
     return true;
 }
 
