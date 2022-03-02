@@ -438,6 +438,16 @@ void StreamUnwrap::timestamp(const AVPacket &packet, struct timeval &time){
     Util::compute_timestamp(get_start_time(), time, packet.pts, input_format_context->streams[packet.stream_index]->time_base);
 }
 
+void StreamUnwrap::timestamp(const AVFrame *frame, int stream_idx, struct timeval &time){
+    if (stream_idx < 0 || stream_idx >= input_format_context->nb_streams){
+        time.tv_sec = 0;
+        time.tv_usec = 0;
+        LWARN("StreamUnwrap timestamp() received invalid streamindex");
+        return;
+    }
+    Util::compute_timestamp(get_start_time(), time, frame->pts, input_format_context->streams[stream_idx]->time_base);
+}
+
 bool StreamUnwrap::is_audio(const AVPacket &packet){
     return input_format_context->streams[packet.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO;
 }

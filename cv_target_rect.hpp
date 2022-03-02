@@ -35,12 +35,12 @@ public:
     TargetRect(const TargetRect &rhs);//copy constructor
     TargetRect(TargetRect &&rhs) noexcept;//move constructor
     ~TargetRect();//destructor
-    const cv::RotatedRect& get_rect(void);//return a reference to the underlying rect
-    bool is_valid(void);//return true is it has not been marked invalid
+    const cv::RotatedRect& get_rect(void) const;//return a reference to the underlying rect
+    bool is_valid(void)const ;//return true is it has not been marked invalid
     void mark_invalid(void);//mark this rect as invalid
-    int get_count(void);//get the number of times this has been seen
-    const AVFrame *get_best_frame(void);//return the best frame found
-    const cv::RotatedRect& get_best_rect(void);//return the rect for the best frame
+    int get_count(void) const;//get the number of times this has been seen
+    const AVFrame *get_best_frame(void) const;//return the best frame found
+    const cv::RotatedRect& get_best_rect(void) const;//return the rect for the best frame
 
 private:
     cv::RotatedRect rect, best_rect;//the underlying rects

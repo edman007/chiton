@@ -40,7 +40,8 @@ chiton_SOURCES = main.cpp config.cpp config_parser.cpp database.cpp mariadb.cpp 
 	motion_controller.hpp motion_controller.cpp motion_algo.hpp motion_algo.cpp \
 	motion_opencv.hpp motion_opencv.cpp motion_cvbackground.hpp motion_cvbackground.cpp \
 	motion_cvmask.hpp motion_cvmask.cpp motion_cvdebugshow.hpp motion_cvdebugshow.cpp \
-	motion_cvdetect.cpp motion_cvdetect.hpp cv_target_rect.cpp cv_target_rect.hpp
+	motion_cvdetect.cpp motion_cvdetect.hpp cv_target_rect.cpp cv_target_rect.hpp \
+	event.hpp event.cpp event_controller.hpp event_controller.cpp
 
 #these are actually to make it possible to serve the website out of the source for development
 EXTRA_chiton_DEPENDENCIES=hls pinch-zoom

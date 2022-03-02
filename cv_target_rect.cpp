@@ -71,26 +71,27 @@ TargetRect::~TargetRect(){
     av_frame_free(&frame);
 }
 
-const cv::RotatedRect& TargetRect::get_rect(void){
+const cv::RotatedRect& TargetRect::get_rect(void) const{
     return rect;
 }
 
-bool TargetRect::is_valid(void){
+bool TargetRect::is_valid(void) const{
     return valid;
 }
 
 void TargetRect::mark_invalid(void){
     valid = false;
 }
-int TargetRect::get_count(void){
+
+int TargetRect::get_count(void) const{
     return count;
 }
 
-const AVFrame *TargetRect::get_best_frame(void){
+const AVFrame *TargetRect::get_best_frame(void) const{
     return frame;
 }
 
-const cv::RotatedRect& TargetRect::get_best_rect(void){
+const cv::RotatedRect& TargetRect::get_best_rect(void) const{
     return best_rect;
 }
 

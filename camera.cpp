@@ -79,7 +79,7 @@ void Camera::run(void){
     LINFO("Camera " + std::to_string(id) + " connected...");
     std::string out_filename = fm.get_next_path(file_id, id, stream.get_start_time());
     StreamWriter out = StreamWriter(cfg);
-    MotionController motion(db, cfg);
+    MotionController motion(db, cfg, stream);
     out.change_path(out_filename);
     out.set_keyframe_callback(std::bind(&Camera::cut_video, this, std::placeholders::_1, std::placeholders::_2));
     //look at the stream and settings and see what needs encoding and decoding
@@ -176,8 +176,7 @@ void Camera::run(void){
     bool failed = false;
     int frame_cnt = 0;
     ImageUtil img(db, cfg);
-    motion.set_video_stream(stream.get_video_stream(), stream.get_codec_context(stream.get_video_stream()));
-    motion.set_audio_stream(stream.get_audio_stream(), stream.get_codec_context(stream.get_audio_stream()));
+    motion.set_streams();
     while (!shutdown && !failed && stream.get_next_frame(pkt)){
         watchdog = true;
         last_pts = pkt.pts;

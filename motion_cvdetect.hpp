@@ -46,7 +46,8 @@ private:
     std::vector<TargetRect> targets;//the targets we are counting
     cv::UMat debug_view, canny;
     MotionOpenCV *ocv;
-    void display_objects(void);
+    void display_objects(void);//debug tool to display the objects
+    void send_events(void);
 };
 
 class MotionCVDetectAllocator : public MotionAlgoAllocator {

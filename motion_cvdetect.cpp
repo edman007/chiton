@@ -86,6 +86,7 @@ bool MotionCVDetect::process_frame(const AVFrame *frame, bool video){
         LDEBUG("Tracking " + std::to_string(targets.size()) + " targets");
     }
 
+    send_events();
     display_objects();
     return true;
 }
@@ -130,5 +131,22 @@ void MotionCVDetect::display_objects(void){
 const cv::UMat &MotionCVDetect::get_debug_view(void){
     return debug_view;
 }
+
+void MotionCVDetect::send_events(void){
+    for (auto &target : targets){
+        if (target.get_count() == 10){
+            Event &e = controller.get_event_controller().get_new_event();
+            e.set_position(target);
+            struct timeval time;
+            controller.get_frame_timestamp(target.get_best_frame(), true, time);
+            e.set_frame(target.get_best_frame());
+            e.set_timestamp(time);
+            e.set_source(algo_name);
+            LWARN("Sending Event");
+            controller.get_event_controller().send_event(e);
+        }
+    }
+}
+
 //HAVE_OPENCV
 #endif

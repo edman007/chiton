@@ -52,6 +52,7 @@ public:
     bool peek_decoded_vframe(AVFrame *frame);//gets the next previously decoded video frame without popping it off the stack
     void unref_frame(AVPacket &packet);//free resources from frame
     void timestamp(const AVPacket &packet, struct timeval &time);//write the actual timestamp of packet to time
+    void timestamp(const AVFrame *frame, int stream_idx, struct timeval &time);//write the actual timestamp of frame to time
     bool is_audio(const AVPacket &packet);//return true if packet is audio packet
     bool is_video(const AVPacket &packet);//return true if packet is video packet
     AVStream *get_stream(const AVPacket &packet);//return a pointer to the stream that packet is part of

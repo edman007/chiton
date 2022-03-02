@@ -27,7 +27,7 @@
 #include "motion_cvdetect.hpp"
 #include "motion_cvdebugshow.hpp"
 
-MotionController::MotionController(Database &db, Config &cfg) : db(db), cfg(cfg) {
+MotionController::MotionController(Database &db, Config &cfg, StreamUnwrap &stream) : db(db), cfg(cfg), stream(stream), events(cfg, db)  {
     video_idx = -1;
     audio_idx = -1;
     //register all known algorithms
@@ -65,6 +65,12 @@ bool MotionController::process_frame(int index, const AVFrame *frame){
     for (auto &ma : algos){
         ret &= ma->process_frame(frame, video);
     }
+    return ret;
+}
+
+bool MotionController::set_streams(void){
+    bool ret = set_video_stream(stream.get_video_stream(), stream.get_codec_context(stream.get_video_stream()));
+    ret &= set_audio_stream(stream.get_audio_stream(), stream.get_codec_context(stream.get_audio_stream()));
     return ret;
 }
 
@@ -181,4 +187,16 @@ bool MotionController::add_algos(void){
     }
 
     return true;
+}
+
+void MotionController::get_frame_timestamp(const AVFrame *frame, bool video, struct timeval &time){
+    if (video){
+        stream.timestamp(frame, video_idx, time);
+    } else {
+        stream.timestamp(frame, audio_idx, time);
+    }
+}
+
+EventController& MotionController::get_event_controller(void){
+    return events;
 }
