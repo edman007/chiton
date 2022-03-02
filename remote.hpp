@@ -63,6 +63,12 @@
  * CLOSE
  *  - Server responds by closing the connection
  *
+ * LICENSE
+ *  - Prints the license
+ *
+ * TEAPOT
+ *  - Prints I'm a teapot
+ *
  * HELP
  *  - Server responds with 'SUPPORTED COMMANDS:' followed by a space deliminated list of commands supported
  *
@@ -118,6 +124,8 @@ private:
     void cmd_rm_export(int fd, RemoteCommand& rc, std::string &cmd);
     void cmd_close(int fd, RemoteCommand& rc, std::string &cmd);
     void cmd_help(int fd, RemoteCommand& rc, std::string &cmd);
+    void cmd_license(int fd, RemoteCommand& rc, std::string &cmd);
+    void cmd_teapot(int fd, RemoteCommand& rc, std::string &cmd);
 };
 
 #endif

@@ -46,6 +46,8 @@ Remote::Remote(Database &db, Config &cfg, Export &expt) : db(db), cfg(cfg), expt
     command_vec.push_back({"RM-EXPORT", &Remote::cmd_rm_export});
     command_vec.push_back({"CLOSE", &Remote::cmd_close});
     command_vec.push_back({"HELP", &Remote::cmd_help});
+    command_vec.push_back({"LICENSE", &Remote::cmd_license});
+    command_vec.push_back({"TEAPOT", &Remote::cmd_teapot});
 
     if (create_socket()){
         spawn_worker();
@@ -388,4 +390,23 @@ void Remote::cmd_help(int fd, RemoteCommand& rc, std::string &cmd){
         supported_commands += " " + rc.cmd;
     }
     write_data(fd, "SUPPORTED COMMANDS:" + supported_commands + "\n");
+}
+
+
+void Remote::cmd_license(int fd, RemoteCommand& rc, std::string &cmd){
+    write_data(fd, "chiton Copyright (C) 2020-2022  Ed Martin <edman007@edman007.com> \n"
+               "This program is free software: you can redistribute it and/or modify "
+               "it under the terms of the GNU General Public License as published by "
+               "the Free Software Foundation, either version 3 of the License, or "
+               "(at your option) any later version. "
+               "This program is distributed in the hope that it will be useful, "
+               "but WITHOUT ANY WARRANTY; without even the implied warranty of "
+               "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the "
+               "GNU General Public License for more details. "
+               "You should have received a copy of the GNU General Public License "
+               "along with this program.  If not, see <https://www.gnu.org/licenses/>.\n");
+}
+
+void Remote::cmd_teapot(int fd, RemoteCommand& rc, std::string &cmd){
+    write_data(fd, "I'm a teapot! 29b6b3dad9327e74f5bff8259f9965a5\n");//echo -n edman007''@''edman007.com | md5sum  -
 }
