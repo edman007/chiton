@@ -35,7 +35,7 @@ public:
     ~MotionCVBackground();
     bool process_frame(const AVFrame *frame, bool video);//process the frame, return false on error
     bool set_video_stream(const AVStream *stream, const AVCodecContext *codec);//identify the video stream
-    const std::string& get_name(void);//return the name of the algorithm
+    static const std::string& get_mod_name(void);//return the name of the algorithm
     const cv::UMat get_background(void);//get the averaged background
     bool init(void);//called immeditly after the constructor to allow dependicies to be setup
 private:
@@ -43,11 +43,6 @@ private:
     cv::UMat avg;//the 16-bit average image
     cv::UMat low_res;//low res version derived from the 16-bit
     float tau;
-};
-
-class MotionCVBackgroundAllocator : public MotionAlgoAllocator {
-    MotionAlgo* allocate(Config &cfg, Database &db, MotionController &controller) {return new MotionCVBackground(cfg, db, controller);};
-    const std::string& get_name(void);
 };
 
 #endif

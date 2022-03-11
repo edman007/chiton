@@ -28,7 +28,7 @@
 
 static const std::string algo_name = "cvdetect";
 
-MotionCVDetect::MotionCVDetect(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller) {
+MotionCVDetect::MotionCVDetect(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller, algo_name) {
     masked_objects = NULL;
     ocv = NULL;
 }
@@ -95,17 +95,13 @@ bool MotionCVDetect::set_video_stream(const AVStream *stream, const AVCodecConte
     return true;
 }
 
-const std::string& MotionCVDetect::get_name(void) {
-    return algo_name;
-}
-
-const std::string& MotionCVDetectAllocator::get_name(void) {
+const std::string& MotionCVDetect::get_mod_name(void) {
     return algo_name;
 }
 
 bool MotionCVDetect::init(void) {
-    ocv = static_cast<MotionOpenCV*>(controller.get_algo_before("opencv", this));
-    masked_objects = static_cast<MotionCVMask*>(controller.get_algo_before("cvmask", this));
+    ocv = static_cast<MotionOpenCV*>(controller.get_module_before("opencv", this));
+    masked_objects = static_cast<MotionCVMask*>(controller.get_module_before("cvmask", this));
     return true;
 }
 

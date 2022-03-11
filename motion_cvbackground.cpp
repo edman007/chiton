@@ -28,7 +28,7 @@
 
 static const std::string algo_name = "cvbackground";
 
-MotionCVBackground::MotionCVBackground(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller) {
+MotionCVBackground::MotionCVBackground(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller, algo_name) {
     ocv = NULL;
     tau = 0.01;
 }
@@ -63,16 +63,12 @@ bool MotionCVBackground::set_video_stream(const AVStream *stream, const AVCodecC
     return true;
 }
 
-const std::string& MotionCVBackground::get_name(void) {
-    return algo_name;
-}
-
-const std::string& MotionCVBackgroundAllocator::get_name(void) {
+const std::string& MotionCVBackground::get_mod_name(void){
     return algo_name;
 }
 
 bool MotionCVBackground::init(void) {
-    ocv = static_cast<MotionOpenCV*>(controller.get_algo_before("opencv", this));
+    ocv = static_cast<MotionOpenCV*>(controller.get_module_before("opencv", this));
     return true;
 }
 

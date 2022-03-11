@@ -19,32 +19,4 @@
  *
  **************************************************************************
  */
-
-#include "event_controller.hpp"
-#include "util.hpp"
-
-
-EventController::EventController(Config &cfg, Database &db) : ModuleController<EventNotification, EventController>(cfg, db, "event") {
-
-};
-
-EventController::~EventController(){
-
-}
-
-
-Event& EventController::get_new_event(void){
-    for (auto &e : events){
-        if (!e.is_valid()){
-            e.clear();
-            return e;
-        }
-    }
-    events.emplace_back(Event(cfg));
-    return events.back();
-}
-
-bool EventController::send_event(Event& event){
-    LINFO("Event Sent");
-    event.invalidate();
-}
+#include "event_notification.hpp"

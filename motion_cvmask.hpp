@@ -35,7 +35,7 @@ public:
     ~MotionCVMask();
     bool process_frame(const AVFrame *frame, bool video);//process the frame, return false on error
     bool set_video_stream(const AVStream *stream, const AVCodecContext *codec);//identify the video stream
-    const std::string& get_name(void);//return the name of the algorithm
+    static const std::string& get_mod_name(void);//return the name of the algorithm
     bool init(void);//called immeditly after the constructor to allow dependicies to be setup
     const cv::UMat get_masked(void);//returns a CV_8UC1 (static bits masked out)
 private:
@@ -46,11 +46,6 @@ private:
     float tau;//sensitivity tau (time constant)
     float beta;//sensitivity beta (diff amplification factor)
     float thresh;//final thresholding value
-};
-
-class MotionCVMaskAllocator : public MotionAlgoAllocator {
-    MotionAlgo* allocate(Config &cfg, Database &db, MotionController &controller) {return new MotionCVMask(cfg, db, controller);};
-    const std::string& get_name(void);
 };
 
 #endif

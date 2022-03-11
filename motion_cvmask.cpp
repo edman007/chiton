@@ -28,7 +28,7 @@
 
 static const std::string algo_name = "cvmask";
 
-MotionCVMask::MotionCVMask(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller) {
+MotionCVMask::MotionCVMask(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller, algo_name) {
     ocv = NULL;
     background = NULL;
     //FIXME: Make config parameters
@@ -66,17 +66,13 @@ bool MotionCVMask::set_video_stream(const AVStream *stream, const AVCodecContext
     return true;
 }
 
-const std::string& MotionCVMask::get_name(void) {
-    return algo_name;
-}
-
-const std::string& MotionCVMaskAllocator::get_name(void) {
+const std::string& MotionCVMask::get_mod_name(void) {
     return algo_name;
 }
 
 bool MotionCVMask::init(void) {
-    ocv = static_cast<MotionOpenCV*>(controller.get_algo_before("opencv", this));
-    background = static_cast<MotionCVBackground*>(controller.get_algo_before("cvbackground", this));
+    ocv = static_cast<MotionOpenCV*>(controller.get_module_before("opencv", this));
+    background = static_cast<MotionCVBackground*>(controller.get_module_before("cvbackground", this));
     return true;
 }
 

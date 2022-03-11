@@ -29,7 +29,7 @@
 
 static const std::string algo_name = "cvdebugshow";
 
-MotionCVDebugShow::MotionCVDebugShow(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller) {
+MotionCVDebugShow::MotionCVDebugShow(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller, algo_name) {
     cvmask = NULL;
     cvbackground = NULL;
     ocv = NULL;
@@ -60,19 +60,15 @@ bool MotionCVDebugShow::set_video_stream(const AVStream *stream, const AVCodecCo
     return true;
 }
 
-const std::string& MotionCVDebugShow::get_name(void) {
-    return algo_name;
-}
-
-const std::string& MotionCVDebugShowAllocator::get_name(void) {
+const std::string& MotionCVDebugShow::get_mod_name(void) {
     return algo_name;
 }
 
 bool MotionCVDebugShow::init(void) {
-    ocv = static_cast<MotionOpenCV*>(controller.get_algo_before("opencv", this));
-    cvmask = static_cast<MotionCVMask*>(controller.get_algo_before("cvmask", this));
-    cvbackground = static_cast<MotionCVBackground*>(controller.get_algo_before("cvbackground", this));
-    cvdetect = static_cast<MotionCVDetect*>(controller.get_algo_before("cvdetect", this));
+    ocv = static_cast<MotionOpenCV*>(controller.get_module_before("opencv", this));
+    cvmask = static_cast<MotionCVMask*>(controller.get_module_before("cvmask", this));
+    cvbackground = static_cast<MotionCVBackground*>(controller.get_module_before("cvbackground", this));
+    cvdetect = static_cast<MotionCVDetect*>(controller.get_module_before("cvdetect", this));
     return true;
 }
 

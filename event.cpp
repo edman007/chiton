@@ -23,7 +23,7 @@
 #include "event.hpp"
 #include "util.hpp"
 
-Event::Event(Config &cfg, Database &db) : cfg(cfg), db(db) {
+Event::Event(Config &cfg) : cfg(cfg) {
     src = NULL;
     clear();
 };

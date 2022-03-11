@@ -46,7 +46,7 @@
 
 static const std::string algo_name = "opencv";
 
-MotionOpenCV::MotionOpenCV(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller), fmt_filter(Filter(cfg)) {
+MotionOpenCV::MotionOpenCV(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller, algo_name), fmt_filter(Filter(cfg)) {
     input = av_frame_alloc();
     map_cl = true;
     map_indirect = true;
@@ -168,11 +168,7 @@ bool MotionOpenCV::set_video_stream(const AVStream *stream, const AVCodecContext
     return true;
 }
 
-const std::string& MotionOpenCV::get_name(void) {
-    return algo_name;
-}
-
-const std::string& MotionOpenCVAllocator::get_name(void) {
+const std::string& MotionOpenCV::get_mod_name(void) {
     return algo_name;
 }
 

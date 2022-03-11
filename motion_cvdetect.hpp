@@ -37,7 +37,7 @@ public:
     ~MotionCVDetect();
     bool process_frame(const AVFrame *frame, bool video);//process the frame, return false on error
     bool set_video_stream(const AVStream *stream, const AVCodecContext *codec);//identify the video stream
-    const std::string& get_name(void);//return the name of the algorithm
+    static const std::string& get_mod_name(void);//return the name of the algorithm
     bool init(void);//called immeditly after the constructor to allow dependicies to be setup
     const cv::UMat& get_debug_view(void);
 private:
@@ -48,11 +48,6 @@ private:
     MotionOpenCV *ocv;
     void display_objects(void);//debug tool to display the objects
     void send_events(void);
-};
-
-class MotionCVDetectAllocator : public MotionAlgoAllocator {
-    MotionAlgo* allocate(Config &cfg, Database &db, MotionController &controller) {return new MotionCVDetect(cfg, db, controller);};
-    const std::string& get_name(void);
 };
 
 #endif

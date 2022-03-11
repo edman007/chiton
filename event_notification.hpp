@@ -1,5 +1,5 @@
-#ifndef __MOTION_ALGO_CVDEBUGSHOW_HPP__
-#define __MOTION_ALGO_CVDEBUGSHOW_HPP__
+#ifndef __EVENT_NOTIFICATION_HPP__
+#define __EVENT_NOTIFICATION_HPP__
 /**************************************************************************
  *
  *     This file is part of Chiton.
@@ -23,29 +23,20 @@
  */
 
 #include "config_build.hpp"
-#ifdef HAVE_OPENCV
-#ifdef DEBUG
-#include "motion_algo.hpp"
-#include "motion_cvmask.hpp"
-#include "motion_cvbackground.hpp"
-#include "motion_cvdetect.hpp"
-#include <opencv2/core.hpp>
+#include "chiton_ffmpeg.hpp"
+#include "chiton_config.hpp"
 
-class MotionCVDebugShow : public MotionAlgo {
+class EventNotification;
+#include "event_controller.hpp"
+
+//this class runs all motion detection algorithms
+class EventNotification  : public Module<EventNotification, EventController> {
 public:
-    MotionCVDebugShow(Config &cfg, Database &db, MotionController &controller);
-    ~MotionCVDebugShow();
-    bool process_frame(const AVFrame *frame, bool video);//process the frame, return false on error
-    bool set_video_stream(const AVStream *stream, const AVCodecContext *codec);//identify the video stream
-    static const std::string& get_mod_name(void);//return the name of the algorithm
-    bool init(void);//called immeditly after the constructor to allow dependicies to be setup
-private:
-    MotionOpenCV *ocv;
-    MotionCVMask *cvmask;
-    MotionCVBackground *cvbackground;
-    MotionCVDetect *cvdetect;
+    EventNotification(Config &cfg, Database &db, EventController &controller) : Module<EventNotification, EventController>(cfg, db, controller, "event") {};
+    virtual ~EventNotification() {};
+    virtual bool send_event(Event &e) = 0;//Send the event through notification method
+    virtual const std::string& get_name(void) = 0;//return the name of the notification algorithm
+    virtual bool init(void) {return true;};//called immeditly after the constructor to allow dependicies to be setup
 };
 
-#endif
-#endif
 #endif

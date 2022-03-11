@@ -25,18 +25,23 @@
 #include "config_build.hpp"
 #include "chiton_ffmpeg.hpp"
 #include "chiton_config.hpp"
+#include "module_controller.hpp"
 #include "event.hpp"
+class EventController;
+#include "event_notification.hpp"
 
 //this class manages events, sending out notifications
-class EventController {
+class EventController : public ModuleController<EventNotification, EventController> {
 public:
     EventController(Config &cfg, Database &db);
     ~EventController();
     Event& get_new_event(void);//allocate a new Event, note, Event must be sent via send_event() or marked invalid
     bool send_event(Event& event);//send event, it is not valid to access the Event after calling send_event()
-protected:
-    Config &cfg;
-    Database &db;
+    //returns the event notification algorithm with name, will be executed before algo, returns null if the algorithm does not exist, calls init() on the algorithm
+    EventNotification* get_notification_before(const std::string &name, const EventNotification *algo);
+    void register_event_notification(ModuleAllocator<EventNotification, EventController>* maa);//registers an allocator and makes an algorithm available for use
+
+private:
     std::vector<Event> events;
 };
 #endif

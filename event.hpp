@@ -28,10 +28,12 @@
 #ifdef HAVE_OPENCV
 #include "cv_target_rect.hpp"
 #endif
+
+
 //this class is a single event instance
 class Event {
 public:
-    Event(Config &cfg, Database &db);
+    Event(Config &cfg);
     ~Event();
 
     void clear();//initilizes the event for future use
@@ -42,19 +44,21 @@ public:
     //frame and position should be set for video
     bool set_timestamp(struct timeval &etime);//set the timestamp of the event (currently, the timestamp of the thumbnail)
     const struct timeval &get_timestamp(void);//get the timestamp of the event
+
     bool set_position(float x0, float y0, float x1, float y1);//set the position of the event
+    const std::vector<float>& get_position();//returns a vector of 4 float, in this order: x0, y0, x1, y1
 #ifdef HAVE_OPENCV
     bool set_position(const TargetRect &rect);//set the position of the event
 #endif
-    const std::vector<float>& get_position();//returns a vector of 4 float, in this order: x0, y0, x1, y1
+
     bool set_frame(const AVFrame *frame);//set the frame
     const AVFrame* get_frame(void);//return the frame that the event was found in
+
     bool set_source(const std::string &name);//set the name of the source module
     const std::string& get_source(void);//get the name of the source module
-protected:
-    Config &cfg;
-    Database &db;
 
+private:
+    Config &cfg;
     AVFrame *src;
     struct timeval time;
     std::vector<float> pos;
