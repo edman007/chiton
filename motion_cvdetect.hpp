@@ -48,6 +48,11 @@ private:
     MotionOpenCV *ocv;
     void display_objects(void);//debug tool to display the objects
     void send_events(void);
+
+    //config parameters
+    float min_dist;//min distance between objects to track seperatly
+    float min_area;//miniumn area of an object to track
+    int tracking_time_send;//number of frames tracked to trigger an event
 };
 
 #endif

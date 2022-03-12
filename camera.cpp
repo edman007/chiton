@@ -196,7 +196,7 @@ void Camera::run(void){
         if (frame && stream.is_video(pkt) && decode_video){
             if (stream.decode_packet(pkt)){
                 while (!failed && stream.get_decoded_frame(pkt.stream_index, frame)){
-                    LDEBUG("Decoded Video Frame");
+                    //LDEBUG("Decoded Video Frame");
                     motion.process_frame(pkt.stream_index, frame);
                     if (encode_video){
                         //Filter the frame before encoding
@@ -232,7 +232,7 @@ void Camera::run(void){
         } else if (frame && stream.is_audio(pkt) && decode_audio){
                 if (stream.decode_packet(pkt)){
                     while (!failed && stream.get_decoded_frame(pkt.stream_index, frame)){
-                        LDEBUG("Decoded Audio Frame");
+                        //LDEBUG("Decoded Audio Frame");
                         motion.process_frame(pkt.stream_index, frame);
                         if (encode_audio){
                             if (!out.write(frame, stream.get_stream(pkt))){

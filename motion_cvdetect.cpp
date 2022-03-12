@@ -31,6 +31,22 @@ static const std::string algo_name = "cvdetect";
 MotionCVDetect::MotionCVDetect(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller, algo_name) {
     masked_objects = NULL;
     ocv = NULL;
+
+    min_dist = cfg.get_value_double("motion-cvdetect-dist");
+    if (min_dist <= 0 || min_dist > 10000){
+        min_dist = 150.0;
+    }
+    min_dist *= min_dist;//multiply it here to skip the sq root later
+
+    min_area = cfg.get_value_double("motion-cvdetect-area");
+    if (min_area < 0){
+        min_area = 150.0;
+    }
+
+    tracking_time_send = cfg.get_value_int("motion-cvdetect-tracking");
+    if (tracking_time_send < 1){
+        tracking_time_send = 1;
+    }
 }
 
 MotionCVDetect::~MotionCVDetect(){
@@ -43,21 +59,18 @@ bool MotionCVDetect::process_frame(const AVFrame *frame, bool video){
     }
 
     //find contours
-    float thresh = 150.0;
+    //float thresh = 150.0;
     //cv::Canny(masked_objects->get_masked(), canny, thresh, thresh*2 );
     //cv::findContours(canny, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
     cv::findContours(masked_objects->get_masked(), contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
 
     std::vector<TargetRect> new_targets;
-    float min_area = 150.0;
     //compute the bounding rect for all
-    float min_dist = thresh*thresh;
     for (auto ctr : contours){
         auto new_rect = cv::minAreaRect(ctr);
         if (new_rect.size.area() < min_area){
             continue;//toss the small spots
         }
-        float nearest_dist = std::numeric_limits<float>::max();
         bool found_new = false;
         for (auto &old_target : targets){
             if (!old_target.is_valid()){
@@ -128,7 +141,7 @@ const cv::UMat &MotionCVDetect::get_debug_view(void){
 
 void MotionCVDetect::send_events(void){
     for (auto &target : targets){
-        if (target.get_count() == 10){
+        if (target.get_count() == tracking_time_send){
             Event &e = controller.get_event_controller().get_new_event();
             e.set_position(target);
             struct timeval time;

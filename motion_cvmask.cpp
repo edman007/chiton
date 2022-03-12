@@ -32,9 +32,18 @@ MotionCVMask::MotionCVMask(Config &cfg, Database &db, MotionController &controll
     ocv = NULL;
     background = NULL;
     //FIXME: Make config parameters
-    tau = 0.01;
-    beta = 3.0;
-    thresh = 70;
+    tau = cfg.get_value_double("motion-cvmask-tau");
+    if (tau < 0 || tau > 1){
+        tau = 0.01;
+    }
+    beta = cfg.get_value_double("motion-cvmask-beta");
+    if (beta < 0 || beta > 255){
+        beta = 3.0;
+    }
+    thresh = cfg.get_value_int("motion-cvmask-threshold");
+    if (thresh < 1 || thresh > 255){
+        thresh = 30;
+    }
 }
 
 MotionCVMask::~MotionCVMask(){

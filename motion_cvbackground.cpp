@@ -30,7 +30,10 @@ static const std::string algo_name = "cvbackground";
 
 MotionCVBackground::MotionCVBackground(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller, algo_name) {
     ocv = NULL;
-    tau = 0.01;
+    tau = cfg.get_value_double("motion-cvbackground-tau");
+    if (tau < 0 || tau > 1){
+        tau = 0.01;
+    }
 }
 
 MotionCVBackground::~MotionCVBackground(){

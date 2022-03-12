@@ -53,6 +53,7 @@ bool EventConsole::send_event(Event &e){
     const std::vector<float>& pos = e.get_position();
     s << pos[0] << "x" << pos[1] << "-" << pos[2] << "x" << pos[3];
     LINFO(s.str());
+    return true;
 }
 
 const std::string& EventConsole::get_mod_name(void){
