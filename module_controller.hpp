@@ -59,7 +59,7 @@ private:
 
 
 template <class Mod, class Controller> ModuleController<Mod, Controller>::ModuleController(Config &cfg, Database &db, const std::string name) : cfg(cfg), db(db), name(name) {
-    //just sets the variables
+
 }
 
 template <class Mod, class Controller> ModuleController<Mod, Controller>::~ModuleController(){

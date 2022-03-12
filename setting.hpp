@@ -108,5 +108,5 @@ const std::vector<Setting> setting_options {
  {"log-color-enabled", "1", "Enable CLI color <1|0>", "Enable Color Logging", SETTING_OPTIONAL_SYSTEM},
  {"log-name-length", "16", " Logging Camera Name Length", "Maxiumn Length of thread name (typically the camera) to copy into log messages", SETTING_OPTIONAL_SYSTEM},
  {"motion-mods", "cvdetect", "Motion Algorithms <none|abc[:xyz...]>", "List of motion algorithms to run against, ':' delimited", SETTING_OPTIONAL_CAMERA},
- {"event-mods", "", "Event Notification Algorithms <none|abc[:xyz...]>", "List of Event Notification algorithms to run against, ':' delimited", SETTING_OPTIONAL_CAMERA},
+ {"event-mods", "console", "Event Notification Algorithms <none|abc[:xyz...]>", "List of Event Notification algorithms to run against, ':' delimited", SETTING_OPTIONAL_CAMERA},
 };

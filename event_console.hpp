@@ -1,5 +1,5 @@
-#ifndef __EVENT_NOTIFICATION_HPP__
-#define __EVENT_NOTIFICATION_HPP__
+#ifndef __EVENT_CONSOLE_HPP__
+#define __EVENT_CONSOLE_HPP__
 /**************************************************************************
  *
  *     This file is part of Chiton.
@@ -22,19 +22,16 @@
  **************************************************************************
  */
 
-#include "config_build.hpp"
-#include "chiton_ffmpeg.hpp"
-#include "chiton_config.hpp"
+#include "event_notification.hpp"
 
-class EventNotification;
-#include "event_controller.hpp"
 
-//this class runs all motion detection algorithms
-class EventNotification  : public Module<EventNotification, EventController> {
+//this writes events to the console/logging
+class EventConsole : public EventNotification {
 public:
-    EventNotification(Config &cfg, Database &db, EventController &controller, const std::string &name) : Module<EventNotification, EventController>(cfg, db, controller, name) {};
-    virtual ~EventNotification() {};
-    virtual bool send_event(Event &e) = 0;//Send the event through notification method
+    EventConsole(Config &cfg, Database &db, EventController &controller);
+    ~EventConsole();
+    bool send_event(Event &e);//Send the event through notification method
+    static const std::string& get_mod_name(void);
+private:
 };
-
 #endif

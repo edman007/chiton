@@ -73,7 +73,6 @@ bool MotionCVDetect::process_frame(const AVFrame *frame, bool video){
                 new_targets.push_back(TargetRect(old_target, new_rect, frame));
                 old_target.mark_invalid();
                 found_new = true;
-                LDEBUG("Tracked Target!");
                 break;
             }
         }
@@ -113,7 +112,6 @@ void MotionCVDetect::display_objects(void){
         if (target.get_count() < 10){
             continue;
         }
-        LDEBUG("Drawing Tracked Target!");
         cv::Scalar color = cv::Scalar( rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256) );
         cv::Point2f vertices[4];
         target.get_rect().points(vertices);
@@ -138,7 +136,6 @@ void MotionCVDetect::send_events(void){
             e.set_frame(target.get_best_frame());
             e.set_timestamp(time);
             e.set_source(algo_name);
-            LWARN("Sending Event");
             controller.get_event_controller().send_event(e);
         }
     }

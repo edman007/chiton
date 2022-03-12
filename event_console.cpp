@@ -20,37 +20,41 @@
  **************************************************************************
  */
 
-#include "event_controller.hpp"
-#include "util.hpp"
-
 #include "event_console.hpp"
+#include <sstream>
+#include <ctime>
 
-EventController::EventController(Config &cfg, Database &db) : ModuleController<EventNotification, EventController>(cfg, db, "event") {
-    register_module(new ModuleFactory<EventConsole, EventNotification, EventController>());
-    add_mods();
-};
+static std::string algo_name = "console";
 
-EventController::~EventController(){
+EventConsole::EventConsole(Config &cfg, Database &db, EventController &controller) : EventNotification(cfg, db, controller, algo_name){
 
 }
 
+EventConsole::~EventConsole(){
 
-Event& EventController::get_new_event(void){
-    for (auto &e : events){
-        if (!e.is_valid()){
-            e.clear();
-            return e;
-        }
-    }
-    events.emplace_back(Event(cfg));
-    return events.back();
 }
 
-bool EventController::send_event(Event& event){
-    bool ret = true;
-    for (auto &n : mods){
-        ret &= n->send_event(event);
+bool EventConsole::send_event(Event &e){
+    std::ostringstream s;
+    s << "EVENT: " << e.get_source() << " @ \"";
+    const struct timeval &etime = e.get_timestamp();
+    struct tm real_time;
+    localtime_r(&etime.tv_sec, &real_time);
+    const int date_len = 64;
+    char date_str[date_len];
+    size_t ret = strftime(date_str, date_len - 1, "%c", &real_time);
+    if (ret > 0){
+        s << date_str << "";
+    } else {
+        s << "??";
     }
-    event.invalidate();
-    return ret;
+
+    s << "\", position: ";
+    const std::vector<float>& pos = e.get_position();
+    s << pos[0] << "x" << pos[1] << "-" << pos[2] << "x" << pos[3];
+    LINFO(s.str());
+}
+
+const std::string& EventConsole::get_mod_name(void){
+    return algo_name;
 }
