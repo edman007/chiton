@@ -96,8 +96,8 @@ template <class Mod, class Controller> void ModuleController<Mod, Controller>::r
 }
 
 template <class Mod, class Controller> void ModuleController<Mod, Controller>::clear_mods(void){
-    for (auto &m : mods){
-        delete m;
+    for (auto m =  mods.rbegin(); m != mods.rend(); ++m){//do it backwards to prevent dependency problems
+        delete *m;
     }
     mods.clear();
 }

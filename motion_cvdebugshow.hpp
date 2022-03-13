@@ -31,6 +31,9 @@
 #include "motion_cvdetect.hpp"
 #include <opencv2/core.hpp>
 
+//this algorithm will make a window and show a UMat
+//it is NOT threadsafe in our arch, will will result in a deadlock when the camera restarts
+//because imshow seems to reference the initial thread that made a window
 class MotionCVDebugShow : public MotionAlgo {
 public:
     MotionCVDebugShow(Config &cfg, Database &db, MotionController &controller);
