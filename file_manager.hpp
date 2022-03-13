@@ -45,7 +45,8 @@ public:
     //enters the image into the database if starttime is not NULL
     //if starttime is NULL, path is kept as is
     //name will be re-written to include the extension, if non-empty will become a prefix
-    bool get_image_path(std::string &path, std::string &name, const std::string &extension, const struct timeval *start_time = NULL);
+    //if file_id is non-null, then the ID is written to it if it was written to the db
+    bool get_image_path(std::string &path, std::string &name, const std::string &extension, const struct timeval *start_time = NULL, long *file_id = NULL);
 
     //returns the real for the segments referenced as id and path name from the database
     std::string get_path(long int name, const std::string &db_path, const std::string &ext);

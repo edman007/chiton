@@ -33,7 +33,7 @@ ImageUtil::~ImageUtil(){
 
 }
 
-bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const struct timeval *start_time /* = NULL */, rect src/* = {-1, -1, 0, 0}*/){
+bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const struct timeval *start_time /* = NULL */, rect src/* = {-1, -1, 0, 0}*/,  long *file_id/* = NULL*/){
     LDEBUG("Writing JPEG");
     //check if it's valid
     if (!frame){
@@ -121,7 +121,7 @@ bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const s
     FileManager fm(db, cfg);
     std::string path;
     bool success = false;
-    if (fm.get_image_path(path, name, ".jpg", start_time)){
+    if (fm.get_image_path(path, name, ".jpg", start_time, file_id)){
         std::ofstream out_s = fm.get_fstream_write(name, path);
         LWARN("Writing to " + name);
         if (out_s.is_open()){
@@ -139,7 +139,7 @@ bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const s
     return success;
 }
 
-bool ImageUtil::write_frame_png(const AVFrame *frame, std::string &name, const struct timeval *start_time /* = NULL */, rect src/* = {-1, -1, 0, 0}*/){
+bool ImageUtil::write_frame_png(const AVFrame *frame, std::string &name, const struct timeval *start_time /* = NULL */, rect src/* = {-1, -1, 0, 0}*/,  long *file_id/* = NULL*/){
     LWARN("Can't write out PNGs");
     return false;
 }

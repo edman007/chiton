@@ -106,7 +106,7 @@ template <class Mod, class Controller> bool ModuleController<Mod, Controller>::p
     const std::string &str_list = cfg.get_value(param);
     std::string::size_type start = 0;
     while (start < str_list.length()){
-        auto end = str_list.find(":", start);
+        auto end = str_list.find(",", start);
         if (end == start){
             start++;
             continue;

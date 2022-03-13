@@ -48,7 +48,8 @@ private:
 
     bool upgrade_from_1_0(void);//upgrade from 1_0 to latest
     bool upgrade_from_1_1(void);//upgrade from 1_1 to latest
-    bool upgrade_from_1_2(void);//upgrade from 1_1 to latest
+    bool upgrade_from_1_2(void);//upgrade from 1_2 to latest
+    bool upgrade_from_1_3(void);//upgrade from 1_2 to latest
 };
 
 #endif

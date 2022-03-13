@@ -149,6 +149,12 @@ void MotionCVDetect::send_events(void){
             e.set_frame(target.get_best_frame());
             e.set_timestamp(time);
             e.set_source(algo_name);
+            float score = target.get_best_rect().size.area();
+            float max_size = masked_objects->get_masked().cols*masked_objects->get_masked().rows;
+            score /= max_size;
+            score *= 100.0;
+            e.set_score(score);
+            LWARN("Sending Event!");
             controller.get_event_controller().send_event(e);
         }
     }

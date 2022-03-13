@@ -57,6 +57,9 @@ public:
     bool set_source(const std::string &name);//set the name of the source module
     const std::string& get_source(void);//get the name of the source module
 
+    bool set_score(float score);//set the score of the event (0-100)
+    float get_score(void);//get the score of the event (0-100)
+
 private:
     Config &cfg;
     AVFrame *src;
@@ -64,5 +67,6 @@ private:
     std::vector<float> pos;
     std::string source;
     bool valid;
+    float score;
 };
 #endif

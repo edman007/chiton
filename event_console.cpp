@@ -52,6 +52,7 @@ bool EventConsole::send_event(Event &e){
     s << "\", position: ";
     const std::vector<float>& pos = e.get_position();
     s << pos[0] << "x" << pos[1] << "-" << pos[2] << "x" << pos[3];
+    s << ", score: " << e.get_score();
     LINFO(s.str());
     return true;
 }

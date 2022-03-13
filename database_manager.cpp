@@ -26,7 +26,7 @@
 //we increment Major when we break backwards compatibility
 static const int CURRENT_DB_VERSION_MAJOR = 1;
 //we increment minor when we add a backwards compatible version
-static const int CURRENT_DB_VERSION_MINOR = 3;
+static const int CURRENT_DB_VERSION_MINOR = 4;
 static const std::string CURRENT_DB_VERSION = std::to_string(CURRENT_DB_VERSION_MAJOR) + "." + std::to_string(CURRENT_DB_VERSION_MINOR);
 
 DatabaseManager::DatabaseManager(Database &db) : db(db) {
@@ -82,6 +82,20 @@ bool DatabaseManager::initilize_db(){
         "PRIMARY KEY (`id`), "
         "KEY starttime (starttime) "
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    const std::string events_tbl ="CREATE TABLE `events` ("
+        "`id` int(11) NOT NULL AUTO_INCREMENT, "
+        "`camera` int(11) NOT NULL, "
+        "`img` int(11) DEFAULT NULL, "
+        "`source` varchar(64) NOT NULL, "
+        "`starttime` bigint(20) NOT NULL, "
+        "`x0` int(11) NOT NULL, "
+        "`y0` int(11) NOT NULL, "
+        "`x1` int(11) NOT NULL, "
+        "`y1` int(11) NOT NULL, "
+        "`score` float NOT NULL, "
+        "PRIMARY KEY (`id`), "
+        "KEY camera (`camera`, `source`, `starttime`) "
+        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ";
 
     //create the config table
     DatabaseResult *res = db.query(config_tbl);
@@ -122,6 +136,17 @@ bool DatabaseManager::initilize_db(){
             delete res;
         } else {
             LFATAL("Could not create images table");
+            ret = false;
+        }
+    }
+
+    //create the events table
+    if (ret){
+        res = db.query(events_tbl);
+        if (res){
+            delete res;
+        } else {
+            LFATAL("Could not create events table");
             ret = false;
         }
     }
@@ -213,6 +238,8 @@ bool DatabaseManager::upgrade_database(int major, int minor){
             return upgrade_from_1_1();
         case 2:
             return upgrade_from_1_2();
+        case 3:
+            return upgrade_from_1_3();
         default:
             return false;
         }
@@ -331,6 +358,39 @@ bool DatabaseManager::upgrade_from_1_2(void){
         delete res;
     } else {
         LFATAL("Could not alter video table");
+        ret = false;
+    }
+
+    if (ret){
+        return upgrade_from_1_3();
+    } else {
+        return ret;
+    }
+
+}
+
+bool DatabaseManager::upgrade_from_1_3(void){
+    const std::string events_tbl ="CREATE TABLE `events` ("
+        "`id` int(11) NOT NULL AUTO_INCREMENT, "
+        "`camera` int(11) NOT NULL, "
+        "`img` int(11) DEFAULT NULL, "
+        "`source` varchar(64) NOT NULL, "
+        "`starttime` bigint(20) NOT NULL, "
+        "`x0` int(11) NOT NULL, "
+        "`y0` int(11) NOT NULL, "
+        "`x1` int(11) NOT NULL, "
+        "`y1` int(11) NOT NULL, "
+        "`score` float NOT NULL, "
+        "PRIMARY KEY (`id`), "
+        "KEY camera (`camera`, `source`, `starttime`) "
+        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ";
+
+    bool ret = true;
+    DatabaseResult *res = db.query(events_tbl);
+    if (res){
+        delete res;
+    } else {
+        LFATAL("Could not create events table");
         ret = false;
     }
 

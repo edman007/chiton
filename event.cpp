@@ -93,6 +93,7 @@ void Event::clear(){
     time.tv_sec = 0;
     time.tv_usec = 0;
     source = "?";
+    score = 0;
     valid = true;
 }
 
@@ -110,4 +111,22 @@ bool Event::set_source(const std::string &name){
 }
 const std::string& Event::get_source(void){
     return source;
+}
+
+
+bool Event::set_score(float new_score){
+    score = new_score;
+    if (score < 0){
+        score = 0;
+        return false;
+    }
+    if (score > 100){
+        score = 100;
+        return false;
+    }
+    return true;
+}
+
+float Event::get_score(void){
+    return score;
 }

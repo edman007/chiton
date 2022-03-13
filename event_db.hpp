@@ -1,3 +1,5 @@
+#ifndef __EVENT_DB_HPP__
+#define __EVENT_DB_HPP__
 /**************************************************************************
  *
  *     This file is part of Chiton.
@@ -20,39 +22,17 @@
  **************************************************************************
  */
 
-#include "event_controller.hpp"
-#include "util.hpp"
+#include "event_notification.hpp"
+#include "image_util.hpp"
 
-#include "event_console.hpp"
-#include "event_db.hpp"
-
-EventController::EventController(Config &cfg, Database &db) : ModuleController<EventNotification, EventController>(cfg, db, "event") {
-    register_module(new ModuleFactory<EventDB, EventNotification, EventController>());
-    register_module(new ModuleFactory<EventConsole, EventNotification, EventController>());
-    add_mods();
+//this writes events to the db/logging
+class EventDB : public EventNotification {
+public:
+    EventDB(Config &cfg, Database &db, EventController &controller);
+    ~EventDB();
+    bool send_event(Event &e);//Send the event through notification method
+    static const std::string& get_mod_name(void);
+private:
+    ImageUtil im;
 };
-
-EventController::~EventController(){
-
-}
-
-
-Event& EventController::get_new_event(void){
-    for (auto &e : events){
-        if (!e.is_valid()){
-            e.clear();
-            return e;
-        }
-    }
-    events.emplace_back(Event(cfg));
-    return events.back();
-}
-
-bool EventController::send_event(Event& event){
-    bool ret = true;
-    for (auto &n : mods){
-        ret &= n->send_event(event);
-    }
-    event.invalidate();
-    return ret;
-}
+#endif

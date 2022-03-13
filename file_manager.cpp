@@ -449,7 +449,7 @@ std::string FileManager::get_real_base(const std::string base){
     return real_base;
 }
 
-bool FileManager::get_image_path(std::string &path, std::string &name, const std::string &extension, const struct timeval *start_time /* = NULL */){
+bool FileManager::get_image_path(std::string &path, std::string &name, const std::string &extension, const struct timeval *start_time /* = NULL */, long *file_id /* = NULL */){
     if (start_time != NULL){
         path = get_date_path(cfg.get_value_int("camera-id"), *start_time) + "/";
         if (name != ""){
@@ -458,10 +458,13 @@ bool FileManager::get_image_path(std::string &path, std::string &name, const std
         std::string ptime = std::to_string(Util::pack_time(*start_time));
         std::string sql = "INSERT INTO images (camera, path, prefix, extension, starttime) VALUES (" +
             cfg.get_value("camera-id") + ",'" + db.escape(path) + "','" + db.escape(name) + "','" + db.escape(extension) + "'," + ptime + ")";
-        long file_id = 0;
-        DatabaseResult* res = db.query(sql, NULL, &file_id);
+        long db_file_id = 0;
+        DatabaseResult* res = db.query(sql, NULL, &db_file_id);
         if (res){
-            name += std::to_string(file_id) + extension;
+            name += std::to_string(db_file_id) + extension;
+            if (file_id){
+                *file_id = db_file_id;
+            }
             delete res;
         } else {
             return false;
