@@ -116,4 +116,7 @@ const std::vector<Setting> setting_options {
  {"motion-cvdetect-area", "1000.0", "Motion CVDetect Miniumn Area <0->", "Miniumn area of an object to send motion events", SETTING_OPTIONAL_CAMERA},
  {"motion-cvdetect-tracking", "10", "Motion CVDetect Tracking Time <0->", "Number of frames that an object must be tracked to trigger an event", SETTING_OPTIONAL_CAMERA},
  {"motion-cvbackground-tau", "0.01", "Motion CVBackground Tau <0-1>", "Tau parameter for CVBackground Algorithm", SETTING_OPTIONAL_CAMERA},
+ {"motion-opencv-map-indirect", "false", "Motion OpenCV Indirect Mapping <true|false>", "Use libva to map the image and copy the brightness, "
+  "recommended for AMD GPUs", SETTING_OPTIONAL_CAMERA},
+ {"motion-opencv-map-cl", "false", "Motion OpenCV OpenCL Mapping <true|false>", "Use ffmpeg to map it to opencl, and map that buffer directly to opencv", SETTING_OPTIONAL_CAMERA},
 };

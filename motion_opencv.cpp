@@ -48,8 +48,8 @@ static const std::string algo_name = "opencv";
 
 MotionOpenCV::MotionOpenCV(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller, algo_name), fmt_filter(Filter(cfg)) {
     input = av_frame_alloc();
-    map_cl = true;
-    map_indirect = true;
+    map_indirect = cfg.get_value("motion-opencv-map-indirect") == "true";//if true will use libva to copy the brighness
+    map_cl = cfg.get_value("motion-opencv-map-cl") == "true";//use ffmpeg to convert to opencl and then map that into opencv
 }
 
 MotionOpenCV::~MotionOpenCV(){
@@ -79,7 +79,6 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
             LWARN("OpenCV Failed to Get Frame");
             return false;
         }
-        LWARN("Mapping OpenCL!");
         map_ocl_frame(input);
     } else
 #endif
@@ -97,7 +96,6 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
         const VASurfaceID surf = reinterpret_cast<uintptr_t const>(frame->data[3]);
         try {
             cv::va_intel::convertFromVASurface(hwctx->display, surf, cv::Size(frame->width, frame->height), tmp1);
-            LWARN("Direct VA-API");
             //change to CV_8UC1
             if (tmp1.depth() == CV_8U){
                 cv::cvtColor(tmp1, buf_mat, cv::COLOR_BGR2GRAY);
@@ -128,7 +126,6 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
             LWARN("OpenCV Failed to Get Frame");
             return false;
         }
-        LWARN("SW Conversion");
         //CV_16UC1 matches the format in set_video_stream()
         input_mat = cv::Mat(input->height, input->width, CV_8UC1, input->data[0], input->linesize[0]);
         input_mat.copyTo(buf_mat);
