@@ -114,5 +114,17 @@ Locked Videos:<br />
 </ul>
 {/if}
 
+{if !empty($events)}
+<h3>Events</h3>
+<ul class="events">
+{foreach from=$events item=ev name=EVENT_LIST}
+<li>
+{$ev.source}/{$ev.score} - {$ev.start_txt} {if !empty($ev.img)}<img src="{$ev.img}" />{/if}
+</li>
+{/foreach}
+</ul>
+
+{/if}
+
 </div>{* camera_below *}
 {include file="footer.tpl"}

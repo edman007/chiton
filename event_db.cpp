@@ -45,6 +45,11 @@ bool EventDB::send_event(Event &e){
             .x =  static_cast<int>(pos[0]), .y = static_cast<int>(pos[1]),
             .w = static_cast<int>(pos[2] - pos[0]), .h= static_cast<int>(pos[3] - pos[1])
         };
+        if (dims.x < 0){
+            dims.x = 0;
+        }
+        LWARN("x: " + std::to_string(dims.x) + " y: " + std::to_string(dims.y) +
+            " w: " + std::to_string(dims.w) + " h: " + std::to_string(dims.h));
         std::string source = std::string(e.get_source());
         if (!im.write_frame_jpg(frame, source, &e_time, dims, &im_id)){
             im_id = -1;

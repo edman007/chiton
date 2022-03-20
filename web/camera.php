@@ -32,6 +32,15 @@ if (!isset($_GET['id'])){
 $camera_id = empty($_GET['id']) ? 0 : (int)$_GET['id'];
 $smarty->assign('camera_id', $camera_id);
 $start_ts = empty($_GET['start']) ? (new DateTime('midnight', $tz))->getTimeStamp() : (int)$_GET['start'];
+$start_time = new Datetime("@" . $start_ts);
+$packed_start = DateTime_to_dbtime($start_time);
+$yesterday = $cur_time = new DateTime('now', $tz);;
+$yesterday->sub(new DateInterval('P1D'));
+$packed_endtime = -1;
+if ($start_time->getTimestamp() < $yesterday->getTimestamp()){
+    $endtime = new DateTime('@'.($start_time->getTimestamp() + 3600*24));
+    $packed_endtime = Datetime_to_dbtime($endtime);
+}
 
 //get the camera settings
 $camera_cfg = new WebConfig($db, $camera_id);
@@ -261,6 +270,39 @@ $video_info = array('url' => 'stream.php?id=' . (int)$_GET['id'] . '&start='. $s
 );
 
 $smarty->assign('video_info', $video_info);
+
+
+//get the events
+$events = array();
+$sql = 'SELECT e.id, e.source, e.starttime, e.x0, e.y0, e.x1, e.y1, e.score, e.img, i.path, i.prefix, i.extension '
+     .' FROM events AS e LEFT JOIN images AS i ON e.img = i.id '
+     .' WHERE e.starttime >= ' . $packed_start;
+if ($packed_endtime != -1){
+    $sql .= ' AND e.starttime < '.  $packed_endtime;
+}
+$sql .= ' ORDER BY e.starttime DESC LIMIT 100';
+
+$res = $db->query($sql);
+if ($res){
+    while ($row = $res->fetch_assoc()){
+        $ev_info = array();
+        $ev_info['id'] = $row['id'];
+        if (!empty($row['path'])){
+            $ev_info['img'] = 'vids/' . $row['path']  . $row['prefix'] . $row['img'] . $row['extension'];
+        }
+        $ev_info['score'] = $row['score'];
+        $ev_info['source'] = $row['source'];
+        $start_date = dbtime_to_DateTime($row['starttime']);
+        $ev_info['start_txt'] = $start_date->format('D M jS H:i:s');
+        $ev_info['pos'][0]['x'] = $row['x0'];
+        $ev_info['pos'][0]['y'] = $row['y0'];
+        $ev_info['pos'][1]['x'] = $row['x1'];
+        $ev_info['pos'][1]['y'] = $row['y1'];
+        $events[] = $ev_info;
+    }
+}
+$smarty->assign('events', $events);
+
 $smarty->assign('system_msg', $messages);
 
 $smarty->display('camera.tpl');

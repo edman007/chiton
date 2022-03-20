@@ -166,9 +166,14 @@ AVFrame* ImageUtil::apply_rect(const AVFrame *frame, rect &src){
 
         //and apply the new numbers
         out->crop_left = src.x;
-        out->crop_bottom = src.y;
+        out->crop_top = src.y;
         out->crop_right = out->width - out->crop_left - src.w;
-        out->crop_top = out->height - out->crop_bottom - src.h;
+        out->crop_bottom = out->height - out->crop_top - src.h;
+        LDEBUG("Cropped sides: l:" + std::to_string(out->crop_left) + ", r:" + std::to_string(out->crop_right) +
+               ", t:" + std::to_string(out->crop_top) +", b:" + std::to_string(out->crop_bottom));
+        if (av_frame_apply_cropping(out, AV_FRAME_CROP_UNALIGNED) < 0){
+            LWARN("av_frame_apply_cropping returned an error");
+        }
     }
 
     return out;
