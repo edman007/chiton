@@ -38,6 +38,7 @@ public:
     static const std::string& get_mod_name(void);//return the name of the algorithm
     bool init(void);//called immeditly after the constructor to allow dependicies to be setup
     const cv::UMat get_masked(void);//returns a CV_8UC1 (static bits masked out)
+    const cv::UMat get_sensitivity(void);//returns the underlaying sensitivity mask
 private:
     MotionOpenCV *ocv;
     MotionCVBackground *background;

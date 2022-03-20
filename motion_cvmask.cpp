@@ -34,15 +34,15 @@ MotionCVMask::MotionCVMask(Config &cfg, Database &db, MotionController &controll
     //FIXME: Make config parameters
     tau = cfg.get_value_double("motion-cvmask-tau");
     if (tau < 0 || tau > 1){
-        tau = 0.01;
+        tau = 0.0001;
     }
     beta = cfg.get_value_double("motion-cvmask-beta");
     if (beta < 0 || beta > 255){
-        beta = 3.0;
+        beta = 30.0;
     }
     thresh = cfg.get_value_int("motion-cvmask-threshold");
     if (thresh < 1 || thresh > 255){
-        thresh = 30;
+        thresh = 5;
     }
 }
 
@@ -59,15 +59,16 @@ bool MotionCVMask::process_frame(const AVFrame *frame, bool video){
         return false;
     }
     cv::UMat diff;
-    cv::absdiff(ocv->get_UMat(), background->get_background(), diff);
+    cv::absdiff(ocv->get_UMat(), background->get_background(), diff);//difference between the background
 
     if (sensitivity.empty()){
-        diff.copyTo(sensitivity);
-    } else {
-        cv::addWeighted(sensitivity, 1-tau, diff, beta*tau, 0, sensitivity);
+        sensitivity = cv::UMat(diff.size(), CV_32FC1);
+        diff.convertTo(sensitivity, CV_32FC1);
     }
-    cv::subtract(diff, sensitivity, masked);
+
+    cv::subtract(diff, sensitivity, masked, cv::noArray(), CV_8U);//compare to
     cv::threshold(masked, masked, thresh, 255, cv::THRESH_BINARY);
+    cv::addWeighted(sensitivity, 1-tau, masked, beta*tau, 0, sensitivity, CV_32FC1);
     return true;
 }
 
@@ -88,5 +89,10 @@ bool MotionCVMask::init(void) {
 const cv::UMat MotionCVMask::get_masked(void){
     return masked;
 }
+
+const cv::UMat MotionCVMask::get_sensitivity(void){
+    return sensitivity;
+}
+
 //HAVE_OPENCV
 #endif

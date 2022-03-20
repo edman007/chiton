@@ -154,7 +154,6 @@ void MotionCVDetect::send_events(void){
             score /= max_size;
             score *= 100.0;
             e.set_score(score);
-            LWARN("Sending Event!");
             controller.get_event_controller().send_event(e);
         }
     }

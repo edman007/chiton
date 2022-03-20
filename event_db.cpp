@@ -34,7 +34,6 @@ EventDB::~EventDB(){
 }
 
 bool EventDB::send_event(Event &e){
-    LWARN("writing event to db");
     //save the thumbnail
     long im_id = -1;
     const AVFrame *frame = e.get_frame();
