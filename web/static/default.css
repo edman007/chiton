@@ -256,3 +256,37 @@ ul.settings li  {
         height:90%;
     }
 }
+
+ul.events {
+    height:40em;
+    overflow-y:scroll;
+    list-style-type: none;
+    padding-left:0.1em;
+}
+
+ul.events * {
+
+}
+ul.events img {
+    float:left;
+    width:30%;
+}
+ul.events .ev_txt {
+    float:left;
+    width:50%;
+    padding-left:5%;
+}
+ul.events li {
+    clear:left;
+    margin-top:0.2em;
+    margin-bottom:0.2em;
+    padding:0.2em;
+    min-height:4em;
+    display: flex;
+    align-items: center;
+    background-color:rgb(30, 30, 30);
+}
+
+ul.events li:hover {
+    background-color:rgb(40, 40, 40);
+}

@@ -1,524 +1,575 @@
+var cameraList = new Array();
+
+const audioLevels = ["high", "medium", "low", "mute"];
+
+
 function loadSite(page){
     if (page == "camera" || page == "home"){
         loadPlayer();
     }
 }
+
 function loadPlayer(){
-    if (Hls.isSupported()) {
-        var vtargets = document.getElementsByTagName('video');
-        for (var i = 0; i < vtargets.length; i++){
-            loadHLS(vtargets[i]);
-            loadShortcuts(vtargets[i]);
-        }
+    var vtargets = document.getElementsByTagName('video');
+    for (var i = 0; i < vtargets.length; i++){
+        cameraList.push(new CameraState(vtargets[i]));
     }    
-    
 }
 
-//also loads the pinchZoom function after the video load
-function loadHLS(video){
-    var pinchZ;
-    if (Hls.isSupported()) {
-        var videoWrapper = video.parentElement;
-        var videoViewPort = videoWrapper.parentElement;
-        var vcontrol = videoViewPort.getElementsByClassName("vcontrol")[0];
+class CameraState {
 
-        // bind them together
-        var cfg = {
-            "debug": true,
-            "enableWorker": true,
-            "liveBackBufferLength": 900,
-            "lowLatencyMode": true,
-            "backBufferLength": 90,
-            /* "maxFragLookUpTolerance": true, */
-        };
-        var hls = new Hls(cfg);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-            var source = video.getElementsByTagName("source");
-            if (source.length >= 1){
-                hls.loadSource(source[0].src);
-                hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
-                    initVolume(video, vcontrol);
-                    playVideo(video, vcontrol);
-                });
+    //html elements for the camera
+    video;
+    videoWrapper;
+    videoViewPort;
+    vcontrol;
+
+    //camera metadata
+    camera;
+    start_ts;
+
+    //the data for the camera
+    jsonData = Array();
+
+
+    //video is the reference to the video tag
+    constructor(video){
+        this.video = video;
+        this.videoWrapper = this.video.parentElement;
+        this.videoViewPort = this.videoWrapper.parentElement;
+        this.vcontrol = this.videoViewPort.getElementsByClassName("vcontrol")[0];
+        this.camera = parseInt(this.vcontrol.getElementsByClassName("cameraid")[0].innerHTML);
+        this.start_ts = parseInt(this.vcontrol.getElementsByClassName("starttime")[0].innerHTML);
+        this.loadHLS();
+        this.loadShortcuts();
+    }
+
+    static getCam(id){
+        for (var i of cameraList){
+            if (i.getId() == id){
+                return i;
             }
-        });
-        function lockViewPortSize(){
-            videoViewPort.style.height = videoWrapper.scrollHeight + "px";
-            hls.off(Hls.Events.FRAG_BUFFERED, lockViewPortSize);
+        }
+        return null;
+    }
+
+    getId(){
+        return this.camera;
+    }
+    //also loads the pinchZoom function after the video load
+    loadHLS(){
+        var pinchZ;
+        if (Hls.isSupported()) {
+            // bind them together
+            var cfg = {
+                "debug": true,
+                "enableWorker": true,
+                "liveBackBufferLength": 900,
+                "lowLatencyMode": true,
+                "backBufferLength": 90,
+                "liveSyncDurationCount": 3,
+                /* "maxFragLookUpTolerance": true, */
+            };
+            var hls = new Hls(cfg);
+            hls.attachMedia(this.video);
+            let cam = this;
+
+            hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+                let source = cam.video.getElementsByTagName("source");
+                if (source.length >= 1){
+                    hls.loadSource(source[0].src);
+                    hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+                        cam.initVolume();
+                        cam.playVideo();
+                    });
+                }
+            });
+            function lockViewPortSize(){
+                cam.videoViewPort.style.height = cam.videoWrapper.scrollHeight + "px";
+                hls.off(Hls.Events.FRAG_BUFFERED, lockViewPortSize);
+
+            }
+            hls.on(Hls.Events.FRAG_BUFFERED, lockViewPortSize);
+        } else if (this.video.canPlayType('application/vnd.apple.mpegurl')) {
+            this.video.src = videoSrc;
+            this.video.addEventListener('loadedmetadata', function() {
+                this.video.play();
+                this.playVideo();
+                //lock in the viewport height
+                this.videoViewPort.style.height = this.videoWrapper.offsetHeight + "px";
+            });
+        }
+    }
+
+    loadShortcuts(){
+        //get the parent div
+        var startWidth = this.videoWrapper.offsetWidth;
+        var maxWidth = startWidth*8;
+        var lastOffsetX = 0;
+        var lastOffsetY = 0;
+
+        var touchStartX = 0;
+        var touchStartY = 0;
+        var swipeProcessed = false;
+
+
+        this.loadControls();
+
+        var mouseWheelF = (ev) => {
+            if (!ev.shiftKey){
+                ev.preventDefault();
+                ev.stopPropagation();
+                //media player shift
+                if (ev.deltaY > 0){
+                    jumpTime(60);//FIXME: Should be a config variable
+                } else {
+                    jumpTime(-60);
+                }
+            }
+            return false;
+        };
+        let cam = this;
+        this.videoViewPort.addEventListener('mousewheel', mouseWheelF, true);
+
+        //play/pause callbacks
+        this.vcontrol.getElementsByClassName("playbtn")[0].addEventListener('click', (ev) => {cam.playVideo();}, false);
+        this.vcontrol.getElementsByClassName("pausebtn")[0].addEventListener('click', (ev) => {cam.pauseVideo();}, false);
+
+        //volume callbacks
+        var volButtons = this.vcontrol.getElementsByClassName("volume");
+        for (var vb of volButtons){
+            vb.addEventListener('click', (ev) => {cam.cycleVolume();}, true);
+        }
+
+        //callback to manage switching out of fullscreen both through the exif fullscreen or if the browser forced it
+        function clearFS(){
+            if (!document.fullscreenElement){
+                cam.vcontrol.getElementsByClassName("fullscreen")[0].addEventListener('click', enterFS, false);
+                cam.vcontrol.getElementsByClassName("fullscreen")[0].removeEventListener('click', exitFS);
+                document.onFullscreenChange = null;
+            }
+        }
+
+        var exitFS;
+        var enterFS = (e) => {
+            cam.goFullscreen();
+            cam.vcontrol.getElementsByClassName("fullscreen")[0].removeEventListener('click', enterFS);
+            cam.vcontrol.getElementsByClassName("fullscreen")[0].addEventListener('click', exitFS, false);
+            document.onfullscreenchange = clearFS;
+        };
+
+        var exitFS = (e) => {
+            clearFS();
+            cam.exitFullscreen();
+        };
+
+        //add fullscreen callback
+        this.vcontrol.getElementsByClassName("fullscreen")[0].addEventListener('click', enterFS, false);
+
+        //load the video timestamps
+        this.loadVideoTS();
+
+        function jumpTime(seconds){
+            var target = cam.video.currentTime + seconds;
+            if (target < 0){
+                cam.video.currentTime = 0;
+            } else if (target > cam.video.duration){
+                cam.video.currentTime = cam.video.currentTime - 6;//FIXME: the 6 should be a config variable
+            } else {
+                cam.video.currentTime = target;
+            }
+            if (cam.video.paused || cam.video.seeking){
+                cam.playVideo();
+            }
 
         }
-        hls.on(Hls.Events.FRAG_BUFFERED, lockViewPortSize);
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = videoSrc;
-        video.addEventListener('loadedmetadata', function() {
-            video.play();
-            playVideo(video, vcontrol);
-            //lock in the viewport height
-            videoViewPort.style.height = videoWrapper.offsetHeight + "px";
-        });
+
+        //mobile functions...
+
+        //swipe is left/right
+        var touchStartF = (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            swipeProcessed = false;
+        };
+
+        var touchEndF = (e) => {
+            if (swipeProcessed){
+                return;
+            }
+            var deltaX = e.changedTouches[0].clientX - touchStartX;
+            var deltaY = e.changedTouches[0].clientY - touchStartY;
+            if (Math.abs(deltaX) > Math.abs(deltaY)){
+                if (deltaX > 0){
+                    //swipe right
+                    jumpTime(+60);//FIXME: the 60 should be a config variable
+                } else {
+                    //swipe left
+                    jumpTime(-60);
+                }
+            }
+            swipeProcessed = true;
+
+        };
+
+        this.vcontrol.addEventListener('touchstart', touchStartF, false);
+        this.vcontrol.addEventListener('touchmove', touchEndF, false);
     }
-}
+
     
-    
-    
-function loadShortcuts(video){
-    //get the parent div
-    var videoWrapper = video.parentElement;
-    var videoViewPort = videoWrapper.parentElement;
-    var startWidth = videoWrapper.offsetWidth;
-    var maxWidth = startWidth*8;
-    var lastOffsetX = 0;
-    var lastOffsetY = 0;
-    var vcontrol = videoViewPort.getElementsByClassName("vcontrol")[0];
-    var touchStartX = 0;
-    var touchStartY = 0;
-    var swipeProcessed = false;
 
 
-    loadControls(video, vcontrol);
 
-    var mouseWheelF = (ev) => {
-        if (!ev.shiftKey){
+    loadControls(){
+        //delete the video controls
+        this.video.controls = false;
+        this.vcontrol.classList.remove("hidden");
+    }
+
+    //play video, and update controls if successful
+    playVideo(){
+        var promise = this.video.play();
+        if (promise !== undefined) {
+            promise.then(_ => {
+                //playing?
+                this.vcontrol.getElementsByClassName("playbtn")[0].classList.add("hidden");
+                this.vcontrol.getElementsByClassName("pausebtn")[0].classList.remove("hidden");
+            }).catch(error => {
+                // Autoplay was prevented.
+                // console.log("Denied?");
+                // Show a "Play" button so that user can start playback.
+            });
+        }
+    }
+
+    pauseVideo(){
+        var promise = this.video.pause();
+        this.vcontrol.getElementsByClassName("playbtn")[0].classList.remove("hidden");
+        this.vcontrol.getElementsByClassName("pausebtn")[0].classList.add("hidden");
+    }
+
+
+
+    //cycles between the volume levels of the volume
+    cycleVolume(){
+        var vol = this.getVolumeLevelIdx();
+        var newVol = (vol + 1) % audioLevels.length;//pick the next one
+        //make the update
+        var volControl = this.vcontrol.getElementsByClassName("volume");
+        for (var e of volControl){
+            if (e.classList.contains("volume_" + audioLevels[vol])){
+                e.classList.add("hidden");
+            }
+            if (e.classList.contains("volume_" + audioLevels[newVol])){
+                e.classList.remove("hidden");
+            }
+        }
+        this.setVolume(newVol);
+    }
+
+    //set the volume to one of the Indexes of audioLevels
+    setVolume(level){
+        //and set the new volume
+        switch (level){
+        case 0:
+            this.video.volume = 1.0;
+            break;
+        case 1:
+            this.video.volume = 0.67;
+            break;
+        case 2:
+            this.video.volume = 0.33;
+            break;
+        case 3:
+            this.video.volume = 0;
+            break;
+        default:
+            console.log('Unsupported Volume');
+        }
+    }
+
+    //checks the current playback volume and returns the index of audioLevels corrasponding to it
+    getVolumeLevelIdx(){
+        var vol = this.video.volume;
+        if (vol > 0.95){
+            return 0;//high (1.0)
+        } else if (vol > 0.4) {
+            return 1;//medium (0.67)
+        } else if (vol > 0) {
+            return 2;//low (0.33)
+        } else {
+            return 3;//mute (0)
+        }
+    }
+
+    //checks the HTML for the default volume and selects that
+    initVolume(){
+        for (var i = 0; i < audioLevels.level; i++){
+            var el = this.vcontrol.getElementsByClassName("volume_" + audioLevels[i]);
+            if (el.classList.contains("hidden")){
+                this.setVolume(i);
+                return i;
+            }
+        }
+        this.setVolume(3);
+        return 3;//shouldn't get here, pick mute
+    }
+    //brings a video fullscreen
+    goFullscreen(){
+        if (!document.fullscreenElement) {
+            this.vcontrol.parentElement.requestFullscreen();
+        }
+    }
+
+    //exits fullscreen
+    exitFullscreen(){
+        if (document.exitFullscreen){
+            document.exitFullscreen();
+        }
+    }
+
+    //loads the timestamp bar and controls
+    loadVideoTS(){
+        var fullDay = 3600*24;
+        var totalGaps = 0;
+        var vcontrol_box = this.vcontrol.getElementsByClassName("control_box")[0];
+
+        var pointer = null;
+
+        var pointerMoved = false;
+        var pointerDelta = 0;
+        var pointerStartPos = 0;
+        let cam = this;
+        function cursorDragEnable(ev){
+            pointerMoved = false;
+            pointerDelta = 0;
+            pointerStartPos = pointer.offsetLeft + ev.offsetX;
+            document.addEventListener('mousemove', cursorDrag, false);
+            document.addEventListener('mouseup', cursorDragDisable, false);
+            ev.preventDefault();
+            return false;
+        }
+
+        function cursorDrag(ev){
+            pointerMoved = true;
+            pointerDelta += ev.movementX;
+            var newPos = pointerStartPos + pointerDelta;
+            var newTS = cam.convertToTS(newPos/progressBar.offsetWidth);
+            cam.video.currentTime = newTS;
+            if (cam.video.paused || can.video.seeking){
+                cam.playVideo();
+            }
+            ev.preventDefault();
+        }
+
+        function cursorDragDisable(ev){
+            document.removeEventListener('mousemove', cursorDrag);
+            document.removeEventListener('mouseup', cursorDragDisable);
+            if (pointerMoved == false){
+
+            }
+            ev.preventDefault();
+            return false;
+        }
+
+        function cursorClick(ev){
+            var newPos = pointer.offsetLeft + ev.offsetX;
+            var newTS = cam.convertToTS(newPos/progressBar.offsetWidth);
+            cam.video.currentTime = newTS;
+            if (cam.video.paused || cam.video.seeking){
+                cam.playVideo();
+            }
+
             ev.preventDefault();
             ev.stopPropagation();
-            //media player shift
-            if (ev.deltaY > 0){
-                jumpTime(60);//FIXME: Should be a config variable
-            } else {
-                jumpTime(-60);
-            }
-        }
-    
-        return false;
-    };
-    
-    videoViewPort.addEventListener('mousewheel', mouseWheelF, true);
-
-    //play/pause callbacks
-    vcontrol.getElementsByClassName("playbtn")[0].addEventListener('click', (ev) => {playVideo(video, vcontrol);}, false);
-    vcontrol.getElementsByClassName("pausebtn")[0].addEventListener('click', (ev) => {pauseVideo(video, vcontrol);}, false);
-
-    //volume callbacks
-    var volButtons = vcontrol.getElementsByClassName("volume");
-    for (vb of volButtons){
-        vb.addEventListener('click', (ev) => {cycleVolume(video, vcontrol);}, true);
-    }
-
-    //callback to manage switching out of fullscreen both through the exif fullscreen or if the browser forced it
-    function clearFS(){
-        if (!document.fullscreenElement){
-            vcontrol.getElementsByClassName("fullscreen")[0].addEventListener('click', enterFS, false);
-            vcontrol.getElementsByClassName("fullscreen")[0].removeEventListener('click', exitFS);
-            document.onFullscreenChange = null;
-        }
-    }
-    
-    var exitFS;
-    var enterFS = (e) => {
-        goFullscreen(video, vcontrol);
-        vcontrol.getElementsByClassName("fullscreen")[0].removeEventListener('click', enterFS);
-        vcontrol.getElementsByClassName("fullscreen")[0].addEventListener('click', exitFS, false);
-        document.onfullscreenchange = clearFS;
-    };
-
-    var exitFS = (e) => {
-        clearFS();
-        exitFullscreen(video, vcontrol);
-    };
-
-    //add fullscreen callback
-    vcontrol.getElementsByClassName("fullscreen")[0].addEventListener('click', enterFS, false);
-
-    //load the video timestamps
-    loadVideoTS(video, vcontrol);
-
-    function jumpTime(seconds){
-        var target = video.currentTime + seconds;
-        if (target < 0){
-            video.currentTime = 0;
-        } else if (target > video.duration){
-            video.currentTime = video.currentTime - 6;//FIXME: the 6 should be a config variable
-        } else {
-            video.currentTime = target;
-        }
-        if (video.paused || video.seeking){
-            playVideo(video, vcontrol);
         }
 
-    }
 
-    //mobile functions...
-
-    //swipe is left/right
-    var touchStartF = (e) => {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        swipeProcessed = false;
-    };
-
-    var touchEndF = (e) => {
-        if (swipeProcessed){
-            return;
-        }
-        var deltaX = e.changedTouches[0].clientX - touchStartX;
-        var deltaY = e.changedTouches[0].clientY - touchStartY;
-        if (Math.abs(deltaX) > Math.abs(deltaY)){
-            if (deltaX > 0){
-                //swipe right
-                jumpTime(+60);//FIXME: the 60 should be a config variable
-            } else {
-                //swipe left
-                jumpTime(-60);
-            }
-        }
-        swipeProcessed = true;
-
-    };
-
-    vcontrol.addEventListener('touchstart', touchStartF, false);
-    vcontrol.addEventListener('touchmove', touchEndF, false);
-}
-
-
-
-function loadControls(video, vcontrol){
-    //delete the video controls
-    video.controls = false;
-    vcontrol.classList.remove("hidden");
-    
-}
-
-//play video, and update controls if successful
-function playVideo(video, vcontrol){
-    var promise = video.play();
-    if (promise !== undefined) {
-        promise.then(_ => {
-            //playing?
-            vcontrol.getElementsByClassName("playbtn")[0].classList.add("hidden");
-            vcontrol.getElementsByClassName("pausebtn")[0].classList.remove("hidden");
-        }).catch(error => {
-            // Autoplay was prevented.
-            // console.log("Denied?");
-            // Show a "Play" button so that user can start playback.
+        //query the info...
+        this.getCameraInfo((jdata) => {
+            cam.jsonData = jdata;
+            //console.log(jsonData);
+            totalGaps = cam.drawGaps();
+            pointer = cam.vcontrol.getElementsByClassName("cursor")[0]
+            pointer.addEventListener('mousedown', cursorDragEnable, false);
+            pointer.addEventListener('click', cursorClick, false);
         });
-    }
-    
-}
 
-function pauseVideo(video, vcontrol){
-    var promise = video.pause();
-    vcontrol.getElementsByClassName("playbtn")[0].classList.remove("hidden");
-    vcontrol.getElementsByClassName("pausebtn")[0].classList.add("hidden");
-    
-}
+        var tsBox = this.vcontrol.getElementsByClassName("tsBox")[0];
+        tsBox.innerHTML = this.getTSHTML(0, 3600*24);
 
-const audioLevels = ["high", "medium", "low", "mute"];
+        var progressBar = this.vcontrol.getElementsByClassName("progress")[0];
 
-//cycles between the volume levels of the volume
-function cycleVolume(video, vcontrol){
-    var vol = getVolumeLevelIdx(video, vcontrol);
-    var newVol = (vol + 1) % audioLevels.length;//pick the next one
-    //make the update
-    var volControl = vcontrol.getElementsByClassName("volume");
-    for (e of volControl){
-        if (e.classList.contains("volume_" + audioLevels[vol])){
-            e.classList.add("hidden");
-        }
-        if (e.classList.contains("volume_" + audioLevels[newVol])){
-            e.classList.remove("hidden");
-        }
-    }
-    setVolume(video, vcontrol, newVol);
-}
+        this.video.addEventListener('timeupdate', (ev) => {
+            var actualTime = cam.convertTSToTime(cam.video.currentTime);
+            var actualDuration = cam.convertTSToTime(cam.video.duration)
+            tsBox.innerHTML = cam.getTSHTML(actualTime, actualDuration);
+            var barWidth = progressBar.offsetWidth;
+            var newEnd = (actualDuration/fullDay)*barWidth;
 
-//set the volume to one of the Indexes of audioLevels
-function setVolume(video, vcontrol, level){
-    //and set the new volume
-    switch (level){
-    case 0:
-        video.volume = 1.0;
-        break;
-    case 1:
-        video.volume = 0.67;
-        break;
-    case 2:
-        video.volume = 0.33;
-        break;
-    case 3:
-        video.volume = 0;
-        break;
-    default:
-        console.log('Unsupported Volume');
-    }
-}
+            if (cam.vcontrol.getElementsByClassName("future").length == 1){
+                cam.vcontrol.getElementsByClassName("future")[0].style.width =  (barWidth - (newEnd))+"px";
+            }
+            if (pointer !== null){
+                pointer.style.left = (actualTime/fullDay*barWidth) - pointer.offsetWidth/2 + "px";
+            }
+        });
 
-//checks the current playback volume and returns the index of audioLevels corrasponding to it
-function getVolumeLevelIdx(video, vcontrol){
-    var vol = video.volume;
-    if (vol > 0.95){
-        return 0;//high (1.0)
-    } else if (vol > 0.4) {
-        return 1;//medium (0.67)
-    } else if (vol > 0) {
-        return 2;//low (0.33)
-    } else {
-        return 3;//mute (0)
-    }
-}
+        this.vcontrol.addEventListener('click', (ev)=>{
+            var offset = ev.offsetX;
+            if (ev.target === vcontrol_box || vcontrol_box.contains(ev.target)){
+                return;//.control_box has all the buttons and we do not jump for clicks there
+            }
+            if (ev.target !== progressBar){
+                offset += ev.target.offsetLeft;
+            }
 
-//checks the HTML for the default volume and selects that
-function initVolume(video, vcontrol){
-    for (var i = 0; i < audioLevels.level; i++){
-        var el = vcontrol.getElementsByClassName("volume_" + audioLevels[i]);
-        if (el.classList.contains("hidden")){
-            setVolume(video, vcontrol, i);
-            return i;
-        }
-    }
-    setVolume(video, vcontrol, 3);
-    return 3;//shouldn't get here, pick mute
-}
-//brings a video fullscreen
-function goFullscreen(video, vcontrol){
-    if (!document.fullscreenElement) {
-        vcontrol.parentElement.requestFullscreen();
-    }
-    
-}
+            var requestedTime = cam.convertToTS(offset/progressBar.offsetWidth);
+            cam.video.currentTime = requestedTime;
+            if (cam.video.paused || cam.video.seeking){
+                cam.playVideo();
+            }
 
-//exits fullscreen
-function exitFullscreen(video, vcontrol){
-    if (document.exitFullscreen){
-        document.exitFullscreen(); 
-    }
-}
-
-//loads the timestamp bar and controls
-function loadVideoTS(video, vcontrol){
-    var jsonData = Array();
-    var fullDay = 3600*24;
-    var totalGaps = 0;
-    var vcontrol_box = vcontrol.getElementsByClassName("control_box")[0];
-    
-    //query the camera ID and starttime
-    var camera = parseInt(vcontrol.getElementsByClassName("cameraid")[0].innerHTML);
-    var start_ts = parseInt(vcontrol.getElementsByClassName("starttime")[0].innerHTML);
-    var pointer = null;
-
-    var pointerMoved = false;
-    var pointerDelta = 0;
-    var pointerStartPos = 0;
-    function cursorDragEnable(ev){
-        pointerMoved = false;
-        pointerDelta = 0;
-        pointerStartPos = pointer.offsetLeft + ev.offsetX;
-        document.addEventListener('mousemove', cursorDrag, false);
-        document.addEventListener('mouseup', cursorDragDisable, false);
-        ev.preventDefault();
-        return false;
-    }
-    
-    function cursorDrag(ev){
-        pointerMoved = true;
-        pointerDelta += ev.movementX;
-        var newPos = pointerStartPos + pointerDelta;
-        var newTS = convertToTS(newPos/progressBar.offsetWidth, jsonData);
-        video.currentTime = newTS;
-        if (video.paused || video.seeking){
-            playVideo(video, vcontrol);
-        }
-        ev.preventDefault();
+        }, true);
     }
 
-    function cursorDragDisable(ev){
-        document.removeEventListener('mousemove', cursorDrag);
-        document.removeEventListener('mouseup', cursorDragDisable);
-        if (pointerMoved == false){
+    getCameraInfo(cbk){
+        var url = 'info.php?start=' + this.start_ts + '&id=' + this.camera;
 
-        }
-        ev.preventDefault();
-        return false;
+        var xmlhttp = new XMLHttpRequest();
+        xmlhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                var data = JSON.parse(this.responseText);
+                cbk(data);
+            }
+        };
+        xmlhttp.open("GET", url, true);
+        xmlhttp.send();
     }
 
-    function cursorClick(ev){
-        var newPos = pointer.offsetLeft + ev.offsetX;
-        var newTS = convertToTS(newPos/progressBar.offsetWidth, jsonData);
-        video.currentTime = newTS;
-        if (video.paused || video.seeking){
-            playVideo(video, vcontrol);
-        }
+    drawGaps(){
+        var bar = this.vcontrol.getElementsByClassName("progress")[0];
+        var width = bar.offsetWidth;
+        var fullDay = 3600*24;
+        var newHTML = "";
+        var gapWidth = 0;
+        var total_offset = 0;
 
-        ev.preventDefault();
-        ev.stopPropagation();
+        for (var i = 0; i < this.jsonData.gaps.length; i++){
+            gapWidth = (this.jsonData.gaps[i].len / fullDay) * width;
+            if (gapWidth <= 1){
+                gapWidth = 1;
+            }
+
+            var left = (this.jsonData.gaps[i].start_ts / fullDay) * width  /*- total_offset*/;
+            total_offset += gapWidth;
+            newHTML += '<div class="gap" style="width:' + gapWidth+ 'px; left:'+ left+'px;"></div>';
+        }
+        newHTML += '<div class="future"></div>';
+
+        //the current cursor
+        newHTML += '<div class="cursor"></div>';
+        bar.innerHTML = newHTML;
+        return total_offset;
     }
 
-
-    //query the info...
-    getCameraInfo(camera, start_ts, (jdata) => {
-        jsonData = jdata;        
-        //console.log(jsonData);
-        totalGaps = drawGaps(camera, vcontrol, jsonData);
-        pointer = vcontrol.getElementsByClassName("cursor")[0]
-        pointer.addEventListener('mousedown', cursorDragEnable, false);
-        pointer.addEventListener('click', cursorClick, false);
-    });
-
-    var tsBox = vcontrol.getElementsByClassName("tsBox")[0];
-    tsBox.innerHTML = getTSHTML(0, 3600*24);
-
-    var progressBar = vcontrol.getElementsByClassName("progress")[0];
-    
-    video.addEventListener('timeupdate', (ev) => {
-        var actualTime = convertTSToTime(video.currentTime, jsonData);
-        var actualDuration = convertTSToTime(video.duration, jsonData)
-        tsBox.innerHTML = getTSHTML(actualTime, actualDuration);
-        var barWidth = progressBar.offsetWidth;
-        var newEnd = (actualDuration/fullDay)*barWidth;
-
-        if (vcontrol.getElementsByClassName("future").length == 1){
-            vcontrol.getElementsByClassName("future")[0].style.width =  (barWidth - (newEnd))+"px";
-        }
-        if (pointer !== null){
-            pointer.style.left = (actualTime/fullDay*barWidth) - pointer.offsetWidth/2 + "px";
-        }
-    });
-
-    vcontrol.addEventListener('click', (ev)=>{
-        var offset = ev.offsetX;
-        if (ev.target === vcontrol_box || vcontrol_box.contains(ev.target)){
-            return;//.control_box has all the buttons and we do not jump for clicks there
-        }
-        if (ev.target !== progressBar){
-            offset += ev.target.offsetLeft;
-        }
-
-        var requestedTime = convertToTS(offset/progressBar.offsetWidth, jsonData);
-        video.currentTime = requestedTime;
-        if (video.paused || video.seeking){
-            playVideo(video, vcontrol);
-        }
-
-    }, true);
-    
-}
-
-function getCameraInfo(camera, ts, cbk){
-    var url = 'info.php?start=' + ts + '&id=' + camera;
-
-    var xmlhttp = new XMLHttpRequest();
-    xmlhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-            var data = JSON.parse(this.responseText);
-            cbk(data);
-        }
-    };
-    xmlhttp.open("GET", url, true);
-    xmlhttp.send();
-}
-
-function drawGaps(camera, vcontrol, jsonData){
-    var bar = vcontrol.getElementsByClassName("progress")[0];
-    var width = bar.offsetWidth;
-    var fullDay = 3600*24;
-    var newHTML = "";
-    var gapWidth = 0;
-    var total_offset = 0;
-
-    for (var i = 0; i < jsonData.gaps.length; i++){
-        gapWidth = (jsonData.gaps[i].len / fullDay) * width;
-        if (gapWidth <= 1){
-            gapWidth = 1;
-        }
-
-        var left = (jsonData.gaps[i].start_ts / fullDay) * width  /*- total_offset*/;
-        total_offset += gapWidth;
-        newHTML += '<div class="gap" style="width:' + gapWidth+ 'px; left:'+ left+'px;"></div>';
-    }
-    newHTML += '<div class="future"></div>';
-
-    //the current cursor
-    newHTML += '<div class="cursor"></div>';
-    bar.innerHTML = newHTML;
-    return total_offset;
-}
-
-//compute a TimeStamp from a float (0-1) representing the period displayed
-function convertToTS(clickFraction, jsonData){
-    var fullDay = 3600*24;
-    var targetTime = clickFraction*fullDay;
-    var totalGaps = 0;
-
-    if (jsonData.gaps === undefined){
-        return targetTime;
+    //compute a TimeStamp from a float (0-1) representing the period displayed
+    convertToTS(clickFraction){
+        var fullDay = 3600*24;
+        var targetTime = clickFraction*fullDay;
+        return this.convertTimeToTS(targetTime);
     }
 
-    for (var i = 0; i < jsonData.gaps.length; i++){
-        if (jsonData.gaps[i].actual_start_ts < targetTime){
-            totalGaps += jsonData.gaps[i].len;
+    //compute a TimeStamp from a wall time
+    convertTimeToTS(targetTime){
+        var totalGaps = 0;
+        if (this.jsonData.gaps === undefined){
+            return targetTime;
+        }
+
+        for (var i = 0; i < this.jsonData.gaps.length; i++){
+            if (this.jsonData.gaps[i].actual_start_ts < targetTime){
+                totalGaps += this.jsonData.gaps[i].len;
+            } else {
+                //only works if we guarentee gaps is in order, which it should be
+                break;
+            }
+        }
+
+        return targetTime - totalGaps;
+    }
+
+    //convert a video timestamp to Time
+    convertTSToTime(ts){
+        var fullDay = 3600*24;
+        var totalGaps = 0;
+
+        if (this.jsonData.gaps === undefined){
+            return ts;
+        }
+
+        for (var i = 0; i < this.jsonData.gaps.length; i++){
+            if (this.jsonData.gaps[i].actual_start_ts < ts){
+                totalGaps += this.jsonData.gaps[i].len;
+            } else {
+                //only works if we guarentee gaps is in order, which it should be
+                break;
+            }
+        }
+        return ts + totalGaps;
+    }
+
+    getTSHTML(ts, len){
+        return this.tsToStr(ts) + " / " + this.tsToStr(len);
+    }
+
+    tsToStr(ts){
+        if (isNaN(ts)){
+            return "??";
+        }
+        var hours = Math.floor(ts / 3600);
+        ts -= hours*3600;
+        var min = Math.floor(ts / 60);
+        ts -= min*60;
+
+        //and zero pad...
+        if (hours < 10){
+            hours = "0" + hours;
+        }
+        if (min < 10) {
+            min = "0" + min;
+        }
+        if (ts < 10){
+            ts =  "0" + ts.toFixed(3);
         } else {
-            //only works if we guarentee gaps is in order, which it should be
-            break;
+            ts = ts.toFixed(3);
         }
+        return hours +":" + min + ":" + ts;
     }
 
-    return targetTime - totalGaps;
-}
-
-//convert a video timestamp to Time
-function convertTSToTime(ts, jsonData){
-    var fullDay = 3600*24;
-    var totalGaps = 0;
-
-    if (jsonData.gaps === undefined){
-        return ts;
+    //Manages collapsable blocks
+    toggleBlock(caller, target, nextName){
+        document.getElementById(target).classList.toggle("hidden");
+        caller.classList.toggle("td_exp");
+        caller.classList.toggle("td_col");
+        var oldName = caller.innerHTML;
+        caller.innerHTML = nextName;
+        let cam = this;
+        caller.onclick=function(){cam.toggleBlock(caller, target, oldName);};
     }
 
-    for (var i = 0; i < jsonData.gaps.length; i++){
-        if (jsonData.gaps[i].actual_start_ts < ts){
-            totalGaps += jsonData.gaps[i].len;
+    jumpRealTime(wallTime){
+        var target = this.convertTimeToTS(wallTime - this.start_ts);
+        console.log(target);
+        if (target < 0){
+            this.video.currentTime = 0;
+        } else if (target > this.video.duration){
+            this.video.currentTime = this.video.currentTime - 6;//FIXME: the 6 should be a config variable
         } else {
-            //only works if we guarentee gaps is in order, which it should be
-            break;
+            this.video.currentTime = target;
+        }
+        if (this.video.paused || this.video.seeking){
+            this.playVideo();
         }
     }
-    return ts + totalGaps;
-}
-
-function getTSHTML(ts, len){
-    return tsToStr(ts) + " / " + tsToStr(len);
-}
-
-function tsToStr(ts){
-    if (isNaN(ts)){
-        return "??";
-    }
-    var hours = Math.floor(ts / 3600);
-    ts -= hours*3600;
-    var min = Math.floor(ts / 60);
-    ts -= min*60;
-
-    //and zero pad...
-    if (hours < 10){
-        hours = "0" + hours;
-    }
-    if (min < 10) {
-        min = "0" + min;
-    }
-    if (ts < 10){
-        ts =  "0" + ts.toFixed(3);
-    } else {
-        ts = ts.toFixed(3);
-    }
-    return hours +":" + min + ":" + ts;
-}
-
-//Manages collapsable blocks
-function toggleBlock(caller, target, nextName){
-    document.getElementById(target).classList.toggle("hidden");
-    caller.classList.toggle("td_exp");
-    caller.classList.toggle("td_col");
-    var oldName = caller.innerHTML;
-    caller.innerHTML = nextName;
-    caller.onclick=function(){toggleBlock(caller, target, oldName);};
 }

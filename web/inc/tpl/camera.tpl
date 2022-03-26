@@ -26,6 +26,18 @@ Scroll: Skip<br/>
 
 </form>
 </div><br/>
+
+{if !empty($events)}
+<h3>Events</h3>
+<ul class="events">
+{foreach from=$events item=ev name=EVENT_LIST}
+<li onclick="CameraState.getCam({$camera_id}).jumpRealTime({$ev.start_ts});">
+{if !empty($ev.img)}<img src="{$ev.img}" />{/if} <div class="ev_txt">{$ev.start_txt} <br /> {$ev.source} <br/>Score: {$ev.score}</div>
+</li>
+{/foreach}
+</ul>
+{/if}
+
 {/if}
 
 </div>{* camera_sidebar *}
@@ -112,18 +124,6 @@ Locked Videos:<br />
 </li>
 {/foreach}
 </ul>
-{/if}
-
-{if !empty($events)}
-<h3>Events</h3>
-<ul class="events">
-{foreach from=$events item=ev name=EVENT_LIST}
-<li>
-{$ev.source}/{$ev.score} - {$ev.start_txt} {if !empty($ev.img)}<img src="{$ev.img}" />{/if}
-</li>
-{/foreach}
-</ul>
-
 {/if}
 
 </div>{* camera_below *}

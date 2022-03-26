@@ -294,6 +294,7 @@ if ($res){
         $ev_info['source'] = $row['source'];
         $start_date = dbtime_to_DateTime($row['starttime']);
         $ev_info['start_txt'] = $start_date->format('D M jS H:i:s');
+        $ev_info['start_ts'] = $start_date->getTimestamp();
         $ev_info['pos'][0]['x'] = $row['x0'];
         $ev_info['pos'][0]['y'] = $row['y0'];
         $ev_info['pos'][1]['x'] = $row['x1'];
