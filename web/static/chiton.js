@@ -1,7 +1,44 @@
 var cameraList = new Array();
-
+var cameraOptions = new Map();
 const audioLevels = ["high", "medium", "low", "mute"];
 
+//check the hash, parse out start times
+//This is the format used #X,YZ[,YZ...][:X,YZ...]
+//X is the camera number
+//Y is the option
+//Z is the option value
+//Current options:
+// s -> start time of the player
+function parseURLHash(){
+    if (window.location.hash){
+        const camera_sets = window.location.hash.substr(1).split(":");
+        for (let opt of camera_sets){
+            let opt_list = opt.split(',');
+            if (opt_list.length > 1){
+                let cam_num = parseInt(opt_list[0]);
+                if (!isNaN(cam_num)){
+                    let final_opts = new Map();
+                    for (let i = 1; i < opt_list.length; i++){
+                        let param = opt_list[i].substr(0,1);
+                        let val = opt_list[i].substr(1);
+                        switch (param){
+                        case "s":
+                            let stime = parseInt(val);
+                            if (!isNaN(stime)){
+                                final_opts.set("s", stime);
+                            }
+                            break;
+                        default:
+                            console.log("Unknown Hash Param " + param);
+                        }
+                    }
+                    cameraOptions.set(cam_num, final_opts);
+                }
+            }
+        }
+    }
+    console.log(cameraOptions);
+}
 
 function loadSite(page){
     if (page == "camera" || page == "home"){
@@ -10,6 +47,7 @@ function loadSite(page){
 }
 
 function loadPlayer(){
+    parseURLHash();
     var vtargets = document.getElementsByTagName('video');
     for (var i = 0; i < vtargets.length; i++){
         cameraList.push(new CameraState(vtargets[i]));
@@ -28,6 +66,8 @@ class CameraState {
     camera;
     start_ts;
 
+    initialStart;//when positive, the camera is initilized to this start time
+
     //the data for the camera
     jsonData = Array();
 
@@ -40,6 +80,14 @@ class CameraState {
         this.vcontrol = this.videoViewPort.getElementsByClassName("vcontrol")[0];
         this.camera = parseInt(this.vcontrol.getElementsByClassName("cameraid")[0].innerHTML);
         this.start_ts = parseInt(this.vcontrol.getElementsByClassName("starttime")[0].innerHTML);
+
+        this.initialStart = 0;
+        let camOpts = cameraOptions.get(this.camera);
+        if (camOpts !== undefined){
+            if (camOpts.has("s")){
+                this.initialStart = camOpts.get("s");
+            }
+        }
         this.loadHLS();
         this.loadShortcuts();
     }
@@ -393,6 +441,12 @@ class CameraState {
             pointer = cam.vcontrol.getElementsByClassName("cursor")[0]
             pointer.addEventListener('mousedown', cursorDragEnable, false);
             pointer.addEventListener('click', cursorClick, false);
+
+            //if this initialstart is positive, jump to it
+            if (cam.initialStart > 0) {
+                cam.jumpRealTime(cam.initialStart);
+                cam.initialStart = -1;
+            }
         });
 
         var tsBox = this.vcontrol.getElementsByClassName("tsBox")[0];
@@ -560,7 +614,6 @@ class CameraState {
 
     jumpRealTime(wallTime){
         var target = this.convertTimeToTS(wallTime - this.start_ts);
-        console.log(target);
         if (target < 0){
             this.video.currentTime = 0;
         } else if (target > this.video.duration){
