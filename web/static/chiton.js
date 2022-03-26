@@ -112,9 +112,7 @@ class CameraState {
             var cfg = {
                 "debug": true,
                 "enableWorker": true,
-                "liveBackBufferLength": 900,
                 "lowLatencyMode": true,
-                "backBufferLength": 90,
                 "liveSyncDurationCount": 3,
                 /* "maxFragLookUpTolerance": true, */
             };
@@ -140,11 +138,12 @@ class CameraState {
             hls.on(Hls.Events.FRAG_BUFFERED, lockViewPortSize);
         } else if (this.video.canPlayType('application/vnd.apple.mpegurl')) {
             this.video.src = videoSrc;
+            let cam = this;
             this.video.addEventListener('loadedmetadata', function() {
-                this.video.play();
-                this.playVideo();
+                cam.initVolume();
+                cam.playVideo();
                 //lock in the viewport height
-                this.videoViewPort.style.height = this.videoWrapper.offsetHeight + "px";
+                cam.videoViewPort.style.height = cam.videoWrapper.offsetHeight + "px";
             });
         }
     }
