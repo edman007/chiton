@@ -28,16 +28,8 @@ Scroll: Skip<br/>
 </div><br/>
 
 {if !empty($events)}
-<h3>Events</h3>
-<ul class="events">
-{foreach from=$events item=ev name=EVENT_LIST}
-<li onclick="CameraState.getCam({$camera_id}).jumpRealTime({$ev.start_ts});">
-{if !empty($ev.img)}<img src="{$ev.img}" />{/if} <div class="ev_txt"><a href="#{$camera_id},s{$ev.start_ts}">{$ev.start_txt}</a> <br /> {$ev.source} <br/>Score: {$ev.score}</div>
-</li>
-{/foreach}
-</ul>
+{include file="events.tpl" }
 {/if}
-
 {/if}
 
 </div>{* camera_sidebar *}

@@ -37,7 +37,12 @@ require_once('./inc/configdb.php');
 
 require_once('./inc/util.php');
 
-require_once('./inc/web_config.php');
+function class_autoloader($name){
+    $name = strtolower($name);
+    require_once('./inc/' . $name . '.php');
+}
+
+spl_autoload_register('class_autoloader');
 
 if (empty($suppress_smarty)){
     $smarty = new Smarty;

@@ -56,7 +56,7 @@ class WebConfig {
     function isset($name){
         return isset($this->settings[$name]);
     }
-    
+
     //gets the default value of an item
     function get_default_value($name){
         return $this->get_default_info($name)[0];

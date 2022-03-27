@@ -278,15 +278,15 @@ dist-version:
 	echo "$(shell git log --oneline --no-walk  || echo Unknown)" | head -1 | cut -d ' ' -f 1 > dist-version
 
 #all the web files
-dist_web_DATA=web/camera.php  web/index.php  web/info.php  web/settings.php  web/stream.php web/license.php
+dist_web_DATA=web/camera.php  web/index.php  web/info.php  web/settings.php  web/stream.php web/license.php web/events.php
 webdir=$(pkgdatadir)/web
 
-dist_web_inc_DATA=web/inc/main.php web/inc/util.php web/inc/web_config.php web/inc/remote.php
+dist_web_inc_DATA=web/inc/main.php web/inc/util.php web/inc/webconfig.php web/inc/remote.php web/inc/events.php
 web_inc_DATA=web/inc/configdb.php
 web_incdir=$(pkgdatadir)/web/inc
 
 dist_web_inc_tpl_DATA=web/inc/tpl/camera.tpl web/inc/tpl/error.tpl web/inc/tpl/footer.tpl web/inc/tpl/header.tpl \
-	web/inc/tpl/index.tpl web/inc/tpl/player.tpl web/inc/tpl/settings.tpl web/inc/tpl/license.tpl
+	web/inc/tpl/index.tpl web/inc/tpl/player.tpl web/inc/tpl/settings.tpl web/inc/tpl/license.tpl web/inc/tpl/events.tpl
 web_inc_tpldir=$(pkgdatadir)/web/inc/tpl
 
 dist_web_inc_cfg_DATA=web/inc/smarty_cfg/main.conf

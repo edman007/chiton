@@ -273,36 +273,9 @@ $smarty->assign('video_info', $video_info);
 
 
 //get the events
-$events = array();
-$sql = 'SELECT e.id, e.source, e.starttime, e.x0, e.y0, e.x1, e.y1, e.score, e.img, i.path, i.prefix, i.extension '
-     .' FROM events AS e LEFT JOIN images AS i ON e.img = i.id '
-     .' WHERE e.starttime >= ' . $packed_start;
-if ($packed_endtime != -1){
-    $sql .= ' AND e.starttime < '.  $packed_endtime;
-}
-$sql .= ' ORDER BY e.starttime DESC LIMIT 100';
 
-$res = $db->query($sql);
-if ($res){
-    while ($row = $res->fetch_assoc()){
-        $ev_info = array();
-        $ev_info['id'] = $row['id'];
-        if (!empty($row['path'])){
-            $ev_info['img'] = 'vids/' . $row['path']  . $row['prefix'] . $row['img'] . $row['extension'];
-        }
-        $ev_info['score'] = $row['score'];
-        $ev_info['source'] = $row['source'];
-        $start_date = dbtime_to_DateTime($row['starttime']);
-        $ev_info['start_txt'] = $start_date->format('D M jS H:i:s');
-        $ev_info['start_ts'] = $start_date->getTimestamp();
-        $ev_info['pos'][0]['x'] = $row['x0'];
-        $ev_info['pos'][0]['y'] = $row['y0'];
-        $ev_info['pos'][1]['x'] = $row['x1'];
-        $ev_info['pos'][1]['y'] = $row['y1'];
-        $events[] = $ev_info;
-    }
-}
-$smarty->assign('events', $events);
+$events = new Events($db, $camera_cfg, $camera_id);
+$smarty->assign('events', $events->get_events($packed_start, $packed_endtime));
 
 $smarty->assign('system_msg', $messages);
 

@@ -44,6 +44,9 @@ function loadSite(page){
     if (page == "camera" || page == "home"){
         loadPlayer();
     }
+    if (page == "camera"){
+        initEventScroll(cameraList[0].camera);
+    }
 }
 
 function loadPlayer(){
@@ -110,7 +113,7 @@ class CameraState {
         if (Hls.isSupported()) {
             // bind them together
             var cfg = {
-                "debug": true,
+                "debug": false,
                 "enableWorker": true,
                 "lowLatencyMode": true,
                 "liveSyncDurationCount": 3,
@@ -624,4 +627,38 @@ class CameraState {
             this.playVideo();
         }
     }
+}
+
+var event_start = -1;
+function initEventScroll(camera){
+    let ev_ul = document.getElementsByClassName("events")[0];
+    let ev_id_txt = ev_ul.lastElementChild.id.substr(5);
+    let ev_id_arr = ev_id_txt.split('_');
+    let cam = CameraState.getCam(camera);
+    if (ev_id_arr.length == 2 && cam != null){
+        ev_ul.onscroll = (e) => {
+            let dist = e.target.scrollHeight-e.target.scrollTop-e.target.clientHeight;
+            if (dist < 150){//when within 150px of the bottom reload
+                ev_ul.onscroll = undefined;
+                scrollEvents(camera, cam.start_ts, ev_id_arr[1], ev_id_arr[0]);
+            }
+        }
+    }
+
+}
+function scrollEvents(camera,  cam_start, ev_start, last_ev_id){
+    let url = 'events.php?start=' + cam_start + '&id=' + camera + '&ev_start=' + ev_start + '&ev_id=' + last_ev_id
+    let xmlhttp = new XMLHttpRequest();
+    xmlhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            document.getElementsByClassName("events")[0].innerHTML += this.responseText;
+            if (this.responseText.length > 5){
+                initEventScroll(camera);
+            }
+        }
+    };
+    xmlhttp.open("GET", url, true);
+    xmlhttp.send();
+
+
 }
