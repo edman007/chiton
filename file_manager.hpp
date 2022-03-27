@@ -17,7 +17,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020-2021 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2022 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -91,6 +91,7 @@ private:
     std::string get_output_dir(void);//returns the output-dir cfg setting, with some fixups/sanity checks ensuring it always ends in a "/"
     std::string get_real_base(const std::string base);//given an input base, returns a real path that always ends in a /
     long clean_images(unsigned long start_time);//deletes images older than start_time, returns bytes deleted
+    long clean_events(unsigned long start_time);//deletes events older than start_time, returns number deleted
 };
 
 #endif

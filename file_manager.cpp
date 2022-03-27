@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2022 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -159,6 +159,7 @@ void FileManager::clean_disk(void){
 
             //clean the images
             target_clear -= clean_images(oldest_record);
+            clean_events(oldest_record);
         }
 
         if (target_clear > 0){
@@ -501,5 +502,19 @@ long FileManager::clean_images(unsigned long start_time){
         DatabaseResult* del_res = db.query(sql);
         delete del_res;
     }
+    delete res;
     return bytes_deleted;
+}
+
+long FileManager::clean_events(unsigned long start_time){
+    if (start_time == 0){
+        return 0;//bail if it's invalid
+    }
+
+    long events_deleted = 0;
+
+    std::string sql ="DELETE FROM events WHERE starttime < " + std::to_string(start_time);
+    DatabaseResult *res = db.query(sql, &events_deleted, NULL);
+    delete res;
+    return events_deleted;
 }
