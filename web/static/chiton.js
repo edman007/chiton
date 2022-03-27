@@ -37,7 +37,6 @@ function parseURLHash(){
             }
         }
     }
-    console.log(cameraOptions);
 }
 
 function loadSite(page){
