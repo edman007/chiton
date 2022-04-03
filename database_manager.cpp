@@ -56,7 +56,7 @@ bool DatabaseManager::initilize_db(){
         "`av_type` ENUM('audio', 'video', 'audiovideo') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'audiovideo', "
         "`width` INT NULL DEFAULT NULL, "
         "`height` INT NULL DEFAULT NULL, "
-        "`framerate` FLOAT NULL DEFAULT NULL`"
+        "`framerate` FLOAT NULL DEFAULT NULL, "
         "PRIMARY KEY (id,camera,starttime), "
         "KEY endtime (endtime), "
         "KEY starttime (starttime), "
