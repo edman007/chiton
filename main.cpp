@@ -254,7 +254,7 @@ void process_args(Config& arg_cfg, int argc, char **argv){
     arg_cfg.set_value("log-color-enabled", "0");//CLI option is disabled by default, against the default setting
 
     char options[] = "c:vVdqsp:fP:l";//update man/chiton.1 if you touch this!
-    char opt;
+    int opt;
     while ((opt = getopt(argc, argv, options)) != -1){
             switch (opt) {
             case 'c':
