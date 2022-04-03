@@ -3,7 +3,7 @@ Maintainer: @maintainer@
 Section: video
 Priority: optional
 #libva and libvdpau are actually optional, but we build them
-Build-Depends: default-libmysqlclient-dev, libavcodec-dev, libavformat-dev, libavutil-dev, debhelper (>= 10), dh-autoreconf | debhelper (>= 9.20160403~), imagemagick, inkscape | imagemagick-6-common (>= 6.9.11.30) | imagemagick-7-common (>= 7.0.10.29), libva-dev, libvdpau-dev, libopencv-core-dev, opencl-clhpp-headers
+Build-Depends: default-libmysqlclient-dev, libavcodec-dev, libavformat-dev, libavutil-dev, libavfilter-dev, debhelper (>= 10), dh-autoreconf | debhelper (>= 9.20160403~), imagemagick, inkscape | imagemagick-6-common (>= 6.9.11.30) | imagemagick-7-common (>= 7.0.10.29), libva-dev, libvdpau-dev, libopencv-core-dev, opencl-clhpp-headers
 Homepage: @homepage@
 Standards-Version: 4.5.0.2
 Vcs-Git: http://dev.edman007.com/git-repo/chiton.git
