@@ -119,4 +119,6 @@ const std::vector<Setting> setting_options {
  {"motion-opencv-map-indirect", "false", "Motion OpenCV Indirect Mapping <true|false>", "Use libva to map the image and copy the brightness, "
   "recommended for AMD GPUs", SETTING_OPTIONAL_CAMERA},
  {"motion-opencv-map-cl", "false", "Motion OpenCV OpenCL Mapping <true|false>", "Use ffmpeg to map it to opencl, and map that buffer directly to opencv", SETTING_OPTIONAL_CAMERA},
+ {"motioncontroller-skip-ratio", "0.05", "Motion Controller Skip Ratio <0-1>", "The ratio of time that should be spent blocking waiting for packets, 0 disables motion controller "
+  "skipping, 1 will cause all frames to skip motion processing", SETTING_OPTIONAL_CAMERA},
 };

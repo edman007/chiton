@@ -23,10 +23,11 @@
 #include "util.hpp"
 #include "chiton_ffmpeg.hpp"
 
-
 StreamUnwrap::StreamUnwrap(Config& cfg) : cfg(cfg) {
     input_format_context = NULL;
     max_sync_offset = cfg.get_value_int("max-sync-offset");
+    timeshift_mean_delay = 0;
+    timeshift_mean_duration = 0;
 }
 
 StreamUnwrap::~StreamUnwrap(){
@@ -329,11 +330,19 @@ void StreamUnwrap::sort_reorder_queue(void){
 
 bool StreamUnwrap::read_frame(void){
     reorder_queue.emplace_back();
+    struct timeval start_recv_time;
+    Util::get_videotime(start_recv_time);
+
     if (av_read_frame(input_format_context, &reorder_queue.back())){
         reorder_queue.pop_back();
         LINFO("av_read_frame() failed or hit EOF");
         return false;
     }
+
+    struct timeval recv_time;
+    Util::get_videotime(recv_time);
+
+
     //fixup this data...maybe limit it to the first one?
     if (reorder_queue.back().dts == AV_NOPTS_VALUE){
         reorder_queue.back().dts = 0;
@@ -342,11 +351,13 @@ bool StreamUnwrap::read_frame(void){
         reorder_queue.back().pts = 0;
     }
 
-    struct timeval recv_time;
-    Util::get_videotime(recv_time);
-    recv_time.tv_sec -= connect_time.tv_sec;
-    
+    //compute the delay
+    record_delay(start_recv_time, recv_time);
+
     sort_reorder_queue();
+
+    //FIXME: This only considers whole seconds
+    recv_time.tv_sec -= connect_time.tv_sec;
 
     //check if this is a file, if yes we skip timestamp resyncing
     if (input_format_context->url && input_format_context->url[0] == '/'){
@@ -359,7 +370,7 @@ bool StreamUnwrap::read_frame(void){
         connect_time.tv_sec += delta;
         LWARN("Input stream has drifted " + std::to_string(delta) + "s from wall time on camera " + cfg.get_value("camera-id") + ", resyncing..." );
     }
-    
+
     return true;
 }
 
@@ -540,4 +551,27 @@ enum AVPixelFormat StreamUnwrap::get_frame_format(AVCodecContext *ctx, const enu
     }
 
     return get_sw_format(ctx, pix_fmts);
+}
+
+void StreamUnwrap::record_delay(const struct timeval &start, const struct timeval &end){
+    double timeshift_beta = 0.01;
+
+    //compute the packet read delay
+    double delay = end.tv_sec - start.tv_sec;
+    delay += (end.tv_usec - start.tv_usec)/1000000.0;
+    timeshift_mean_delay = timeshift_mean_delay*(1-timeshift_beta) + delay*timeshift_beta;
+
+    //compute the mean time of the packets received
+    double duration = av_q2d(input_format_context->streams[reorder_queue.back().stream_index]->time_base) * reorder_queue.back().duration;
+    duration /= input_format_context->nb_streams;
+    timeshift_mean_duration = timeshift_mean_duration*(1-timeshift_beta) + duration*timeshift_beta;
+}
+
+
+double StreamUnwrap::get_mean_delay(void) const{
+    return timeshift_mean_delay;
+}
+
+double StreamUnwrap::get_mean_duration(void) const{
+    return timeshift_mean_duration;
 }

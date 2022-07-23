@@ -27,9 +27,16 @@
 #include "motion_cvdetect.hpp"
 #include "motion_cvdebugshow.hpp"
 
+
 MotionController::MotionController(Database &db, Config &cfg, StreamUnwrap &stream) : ModuleController<MotionAlgo, MotionController>(cfg, db, "motion"), stream(stream), events(cfg, db)  {
     video_idx = -1;
     audio_idx = -1;
+    skip_ratio = cfg.get_value_double("motioncontroller-skip-ratio");
+    if (skip_ratio < 0){
+        skip_ratio = 0;
+    } else if (skip_ratio > 1){
+        skip_ratio = 1;
+    }
     //register all known algorithms
 #ifdef HAVE_OPENCV
     register_module(new ModuleFactory<MotionOpenCV, MotionAlgo, MotionController>());
@@ -52,6 +59,11 @@ bool MotionController::process_frame(int index, const AVFrame *frame){
     if (!video && index != audio_idx){
         return false;//unknown stream
     }
+    if (should_skip()){
+        LINFO("Skipping frame due to excessive processing time");
+        return true;
+    }
+
     bool ret = true;
     for (auto &ma : mods){
         ret &= ma->process_frame(frame, video);
@@ -108,4 +120,13 @@ void MotionController::get_frame_timestamp(const AVFrame *frame, bool video, str
 
 EventController& MotionController::get_event_controller(void){
     return events;
+}
+
+bool MotionController::should_skip(void){
+    if (stream.get_mean_duration() <= 0 || skip_ratio == 0){
+        return false;//disabled if the duration or skip ratio is unreasonable.
+    } else if (skip_ratio == 1){
+        return true;
+    }
+    return stream.get_mean_delay() <  skip_ratio*stream.get_mean_duration();
 }

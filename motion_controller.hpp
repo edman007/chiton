@@ -48,11 +48,14 @@ private:
     StreamUnwrap &stream;
     EventController events;
 
-    int video_idx;
-    int audio_idx;
+    int video_idx;//index of the video stream
+    int audio_idx;//index of the audio stream
 
+    double skip_ratio;//the configured skip_ratio
     bool set_video_stream(const AVStream *stream, const AVCodecContext *codec);//identify the video stream
     bool set_audio_stream(const AVStream *stream, const AVCodecContext *codec);//identify the audio stream
+
+    bool should_skip(void);//check if we are falling behind and skip if required, return true when we need to skip
 };
 
 #endif

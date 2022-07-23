@@ -60,6 +60,8 @@ public:
     AVStream *get_audio_stream(void);//return a pointer to the best audio stream, NULL if none exists
     AVStream *get_video_stream(void);//return a pointer to the best video stream, NULL if none exists
     bool charge_video_decoder(void);//starts the decoder by decoding the first packet
+    double get_mean_delay(void) const;//return the mean packet delay (the estimated time it took ffmpeg to receive the packet)
+    double get_mean_duration(void) const;//return the mean duration of packets received
 
     const struct timeval& get_start_time(void);
     
@@ -73,14 +75,18 @@ private:
     bool alloc_decode_context(unsigned int stream);//alloc the codec context, returns true if the context exists or was allocated
     bool get_next_packet(AVPacket& packet);//return the next packet, without looking at the previous packets used for encoder charging
     bool get_decoded_frame_int(int stream, AVFrame *frame);//get the next decoded frame, without looking at the decoded video buffer
+    void record_delay(const struct timeval &start, const struct timeval &end);//record the receive delay (to try and guess if it blocked)
     AVFormatContext *input_format_context;
     std::map<int,AVCodecContext*> decode_ctx;//decode context for each stream
 
-    unsigned int reorder_len;
-    std::list<AVPacket> reorder_queue;
+    unsigned int reorder_len;//length of the queue that we look to reorder packets in
+    std::list<AVPacket> reorder_queue;//the reorder queue
 
-    struct timeval connect_time;
+    struct timeval connect_time;//time effective time of the connection (adjusted for long term errors)
     int max_sync_offset;
+
+    double timeshift_mean_delay;//the current mean delay
+    double timeshift_mean_duration;//the current mean duration
 
     //to support early decoding, we can decode into these
     std::deque<AVPacket> decoded_packets;
