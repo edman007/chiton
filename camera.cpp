@@ -26,7 +26,7 @@
 #include "filter.hpp"
 #include "motion_controller.hpp"
 
-Camera::Camera(int camera, Database& db, const Config &sys_cfg) : id(camera), db(db), cfg(sys_cfg), stream(cfg), fm(db, cfg) {
+Camera::Camera(int camera, Database& db, const Config &sys_cfg) : id(camera), cfg(sys_cfg), db(db), stream(cfg), fm(db, cfg) {
     //load the config
     load_cfg();
     shutdown = false;
