@@ -555,16 +555,27 @@ enum AVPixelFormat StreamUnwrap::get_frame_format(AVCodecContext *ctx, const enu
 
 void StreamUnwrap::record_delay(const struct timeval &start, const struct timeval &end){
     double timeshift_beta = 0.01;
-
+    if (timeshift_mean_delay == 0){
+        timeshift_beta = 1;//first run initilization
+    }
     //compute the packet read delay
     double delay = end.tv_sec - start.tv_sec;
     delay += (end.tv_usec - start.tv_usec)/1000000.0;
-    timeshift_mean_delay = timeshift_mean_delay*(1-timeshift_beta) + delay*timeshift_beta;
 
     //compute the mean time of the packets received
     double duration = av_q2d(input_format_context->streams[reorder_queue.back().stream_index]->time_base) * reorder_queue.back().duration;
     duration /= input_format_context->nb_streams;
-    timeshift_mean_duration = timeshift_mean_duration*(1-timeshift_beta) + duration*timeshift_beta;
+
+    if (timeshift_mean_delay != 0){
+        timeshift_mean_delay = timeshift_mean_delay*(1-timeshift_beta) + delay*timeshift_beta;
+        timeshift_mean_duration = timeshift_mean_duration*(1-timeshift_beta) + duration*timeshift_beta;
+    } else {
+        //initilize to duration so frames are not dropped
+        timeshift_mean_delay = duration;
+        timeshift_mean_duration = duration;
+
+    }
+    //LDEBUG("Delay: " + std::to_string(timeshift_mean_delay) + " Duration: " + std::to_string(timeshift_mean_duration));
 }
 
 
