@@ -31,6 +31,7 @@ Export::Export(Database &db, Config &cfg, FileManager &fm) : db(db), cfg(cfg), g
     export_in_progress = false;
     id = 0;
     reserved_bytes = 0;
+    camera_cfg = nullptr;
 }
 
 Export::~Export(void){
@@ -40,6 +41,7 @@ Export::~Export(void){
         runner.join();//always join holding the lock since it could be joined from different threads
     }
     lock.unlock();
+    delete camera_cfg;
 }
 
 bool Export::check_for_jobs(void){
@@ -82,9 +84,11 @@ bool Export::start_job(void){
 void Export::run_job(void){
     Util::set_low_priority();//reduce the thread priority
 
-    camera_cfg.load_camera_config(camera, db);
+    delete camera_cfg;
+    camera_cfg = new Config(cfg);//reinit the config with the system config
+    camera_cfg->load_camera_config(camera, db);
 
-    FileManager fm(db, camera_cfg);
+    FileManager fm(db, *camera_cfg);
     if (path != ""){
         fm.rm_file(path + std::to_string(id) + EXPORT_EXT);
         path = "";
@@ -110,8 +114,8 @@ void Export::run_job(void){
         return;
     }
 
-    StreamUnwrap in = StreamUnwrap(camera_cfg);
-    StreamWriter out = StreamWriter(camera_cfg);
+    StreamUnwrap in = StreamUnwrap(*camera_cfg);
+    StreamWriter out = StreamWriter(*camera_cfg);
     out.change_path(path);
 
     long total_time_target = endtime - starttime;
@@ -136,7 +140,7 @@ void Export::run_job(void){
         std::string segment = fm.get_path(res->get_field_long(4), res->get_field(1), res->get_field(3));
         LDEBUG("Exporting " + segment);
         //we control the input stream by replacing the video-url with the segment
-        camera_cfg.set_value("video-url", segment);
+        camera_cfg->set_value("video-url", segment);
 
         std::unique_ptr<IOWrapper> io;
 
@@ -150,7 +154,7 @@ void Export::run_job(void){
         } else if (res->get_field(3) == ".mp4") {
             reserve_space(fm, res->get_field_long(7) - res->get_field_long(6));
             io = std::unique_ptr<CFMP4>(new CFMP4(segment, res->get_field_long(5), res->get_field_long(6), res->get_field_long(7)));
-            camera_cfg.set_value("video-url", io->get_url());
+            camera_cfg->set_value("video-url", io->get_url());
 
             if (!in.connect(*io.get())){
                 //try the next one...

@@ -51,7 +51,7 @@ private:
     long camera;
     std::string path;
     long progress;
-    Config camera_cfg;
+    Config* camera_cfg;
     long reserved_bytes;
 
     std::thread runner;

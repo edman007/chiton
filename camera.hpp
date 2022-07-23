@@ -37,7 +37,7 @@ class Camera {
      */
     
 public:
-    Camera(int camera, Database& db);
+    Camera(int camera, Database& db, const Config &sys_cfg);
     ~Camera();
     void run(void);//connect and run the camera monitor
     void stop(void);//requests the thread stops

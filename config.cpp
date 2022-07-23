@@ -29,6 +29,10 @@ Config::Config(){
     set_value("camera-id", std::string("-1"));//set the camera ID so other tools can use it
 }
 
+Config::Config(const Config &src) : cfg_db(src.cfg_db) {
+    set_value("camera-id", std::string("-1"));//set the camera ID so other tools can use it
+}
+
 bool Config::load_config(const std::string& path){
     std::ifstream ifs;
     ifs.open(path);

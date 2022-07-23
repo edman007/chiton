@@ -40,7 +40,8 @@ const std::string EXPORT_EXT = ".mp4";
 
 class Config {
 public:
-    Config();
+    Config();//init an empty Config database
+    Config(const Config &src);//init with the same db as some other Config
     bool load_config(const std::string& path);//load the config from the path
     bool load_camera_config(int camera, Database &db);//load the config from the database for a specific camera
     

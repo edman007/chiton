@@ -123,7 +123,7 @@ void run(Config& args){
     std::vector<std::thread> threads;
     while (res && res->next_row()){
         LINFO("Loading camera " + std::to_string(res->get_field_long(0)));
-        cams.emplace_back(new Camera(res->get_field_long(0), db));//create camera
+        cams.emplace_back(new Camera(res->get_field_long(0), db, cfg));//create camera
         threads.emplace_back(&Camera::run, cams.back());//start it
         cams.back()->set_thread_id(threads.back().get_id());
 
@@ -149,7 +149,7 @@ void run(Config& args){
                         if (t.get_id() == c->get_thread_id()){
                             t.join();
                             delete c;
-                            c = new Camera(id, db);
+                            c = new Camera(id, db, cfg);
                             t = std::thread(&Camera::run, c);
                             c->set_thread_id(t.get_id());
                             break;
