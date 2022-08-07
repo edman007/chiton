@@ -28,7 +28,7 @@
 
 static const std::string algo_name = "cvmask";
 
-MotionCVMask::MotionCVMask(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller, algo_name) {
+MotionCVMask::MotionCVMask(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller, algo_name), sensitivity_it(sensitivity_db.begin()) {
     ocv = NULL;
     background = NULL;
     //FIXME: Make config parameters
@@ -44,6 +44,16 @@ MotionCVMask::MotionCVMask(Config &cfg, Database &db, MotionController &controll
     if (thresh < 1 || thresh > 255){
         thresh = 5;
     }
+    int sens_cnt = cfg.get_value_int("motion-cvmask-delay");
+    if (sens_cnt < 1 || sens_cnt > 600){
+        thresh = 30;
+    }
+
+    //initilize the sensitivity_db
+    sensitivity_db.reserve(sens_cnt);
+    sensitivity_it = sensitivity_db.begin();
+    sensitivity_db.insert(sensitivity_it, sens_cnt, cv::UMat());
+    sensitivity_it = sensitivity_db.end() - 1;
 }
 
 MotionCVMask::~MotionCVMask(){
@@ -58,17 +68,26 @@ bool MotionCVMask::process_frame(const AVFrame *frame, bool video){
     if (!ocv || !background){
         return false;
     }
+    auto sensitivity_prev_it = sensitivity_it;
+    sensitivity_it++;
+    if (sensitivity_it == sensitivity_db.end()){
+        sensitivity_it = sensitivity_db.begin();
+    }
+
     cv::UMat diff;
     cv::absdiff(ocv->get_UMat(), background->get_background(), diff);//difference between the background
 
-    if (sensitivity.empty()){
-        sensitivity = cv::UMat(diff.size(), CV_32FC1);
-        diff.convertTo(sensitivity, CV_32FC1);
+    if ((*sensitivity_it).empty()){
+        *sensitivity_it = cv::UMat(diff.size(), CV_32FC1);
+        diff.convertTo(*sensitivity_it, CV_32FC1);
+        if ((*sensitivity_prev_it).empty()){
+            (*sensitivity_it).copyTo(*sensitivity_prev_it);
+        }
     }
 
-    cv::subtract(diff, sensitivity, masked, cv::noArray(), CV_8U);//compare to
+    cv::subtract(diff, *sensitivity_it, masked, cv::noArray(), CV_8U);//compare to current
     cv::threshold(masked, masked, thresh, 255, cv::THRESH_BINARY);
-    cv::addWeighted(sensitivity, 1-tau, masked, beta*tau, 0, sensitivity, CV_32FC1);
+    cv::addWeighted(*sensitivity_prev_it, 1-tau, masked, beta*tau, 0, *sensitivity_it, CV_32FC1);//add to previous and make that the new current
     return true;
 }
 
@@ -91,7 +110,7 @@ const cv::UMat MotionCVMask::get_masked(void){
 }
 
 const cv::UMat MotionCVMask::get_sensitivity(void){
-    return sensitivity;
+    return *sensitivity_it;
 }
 
 //HAVE_OPENCV

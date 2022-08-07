@@ -43,7 +43,8 @@ private:
     MotionOpenCV *ocv;
     MotionCVBackground *background;
     cv::UMat masked;//the masked image
-    cv::UMat sensitivity;
+    std::vector<cv::UMat> sensitivity_db;//storage of all sensitivity UMats
+    std::vector<cv::UMat>::iterator sensitivity_it;//reference to the active sensitivity
     float tau;//sensitivity tau (time constant)
     float beta;//sensitivity beta (diff amplification factor)
     float thresh;//final thresholding value
