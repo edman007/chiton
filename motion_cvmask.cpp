@@ -87,8 +87,8 @@ bool MotionCVMask::process_frame(const AVFrame *frame, bool video){
 
     cv::subtract(diff, *sensitivity_it, masked, cv::noArray(), CV_8U);//compare to current
     cv::threshold(masked, masked, thresh, 255, cv::THRESH_BINARY);
-    cv::addWeighted(*sensitivity_prev_it, 1-tau, masked, beta*tau, 0, *sensitivity_it, CV_32FC1);//add to previous and make that the new current
-    cv::medianBlur(masked, masked, 5);
+    cv::addWeighted(*sensitivity_prev_it, 1-tau, diff, beta*tau, 0, *sensitivity_it, CV_32FC1);//add to previous and make that the new current
+    cv::medianBlur(masked, masked, 5);//this will despeckle the image
 
     return true;
 }

@@ -110,7 +110,7 @@ const std::vector<Setting> setting_options {
  {"motion-mods", "cvdetect", "Motion Algorithms <none|abc[,xyz...]>", "List of motion algorithms to run against, ',' delimited", SETTING_OPTIONAL_CAMERA},
  {"event-mods", "db,console", "Event Notification Algorithms <none|abc[,xyz...]>", "List of Event Notification algorithms to run against, ',' delimited", SETTING_OPTIONAL_CAMERA},
  {"motion-cvmask-tau", "0.01", "Motion CVMask Tau <0-1>", "Tau parameter for CVMask Algorithm", SETTING_OPTIONAL_CAMERA},
- {"motion-cvmask-beta", "50.0", "Motion CVMask Tau <0.0-255.0>", "Beta parameter for CVMask Algorithm", SETTING_OPTIONAL_CAMERA},
+ {"motion-cvmask-beta", "15.0", "Motion CVMask Tau <0.0-255.0>", "Beta parameter for CVMask Algorithm", SETTING_OPTIONAL_CAMERA},
  {"motion-cvmask-threshold", "20", "Motion CVMask Threshold <1-255>", "Threshold parameter for CVMask Algorithm", SETTING_OPTIONAL_CAMERA},
  {"motion-cvmask-delay", "30", "Motion CVMask Threshold <1-600>", "Frame Delay Count before applying sensitivity mask", SETTING_OPTIONAL_CAMERA},
  {"motion-cvdetect-dist", "150.0", "Motion CVDetect Miniumn Distance <0-10000>", "Miniumn distance between objects to count as two objects", SETTING_OPTIONAL_CAMERA},
