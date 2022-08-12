@@ -47,6 +47,7 @@ private:
     MotionCVMask *cvmask;
     MotionCVBackground *cvbackground;
     MotionCVDetect *cvdetect;
+    cv::UMat normalized_buf;
 };
 
 #endif

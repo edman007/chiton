@@ -56,7 +56,8 @@ bool MotionCVDebugShow::process_frame(const AVFrame *frame, bool video){
     //return true;
     cv::imshow("CVDebugShow - Detect", cvdetect->get_debug_view());
     //cv::imshow("CVDebugShow - Mask", cvmask->get_masked());
-    cv::imshow("CVDebugShow - MaskSens", cvmask->get_sensitivity());
+    cv::normalize(cvmask->get_sensitivity(), normalized_buf,  1.0, 0.0, cv::NORM_MINMAX);
+    cv::imshow("CVDebugShow - MaskSens", normalized_buf);
     //cv::imshow("CVDebugShow - Background", cvbackground->get_background());
     //cv::imshow("CVDebugShow - Input", ocv->get_UMat());
     cv::waitKey(1);
