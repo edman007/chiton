@@ -47,7 +47,7 @@ private:
     MotionCVMask *cvmask;
     MotionCVBackground *cvbackground;
     MotionCVDetect *cvdetect;
-    cv::UMat normalized_buf;
+    cv::UMat normalized_buf;//used to convert float images to normalized
 };
 
 #endif
