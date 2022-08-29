@@ -1,4 +1,8 @@
 #!/bin/bash
+#run from the top level
+if [ ! -d maintainer-tools ] ; then
+  cd ..
+fi
 set -e
 ssh debbuild -t 'touch /tmp/chiton-sign && gpg -s --default-key chiton@edman007.com /tmp/chiton-sign && rm /tmp/chiton-sign*'
 make clean

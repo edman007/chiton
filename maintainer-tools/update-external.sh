@@ -1,5 +1,7 @@
 #!/bin/bash
-
+if [ ! -d maintainer-tools ] ; then
+  cd ..
+fi
 #this goes through all external libs and updates them to the latest tag
 cd external
 for i in * ; do
@@ -14,3 +16,5 @@ for i in * ; do
     git checkout $TARGET
     cd ..
 done
+cd external/npm
+npm update hls.js
