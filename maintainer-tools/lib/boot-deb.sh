@@ -52,7 +52,7 @@ if [ ! -f clean.img ] || [ "$2" = "rebuild" ]; then
     echo install-setup.sh | cpio -H newc -o -A -F initrd.preseed
     gzip -1f initrd.preseed
     rm -f drive.img clean.img
-    qemu-img create -f raw $OS_DIR/clean.img 4G
+    qemu-img create -f raw $OS_DIR/clean.img 8G
 
     #boot it
     qemu-system-x86_64 \
@@ -89,7 +89,7 @@ qemu-system-x86_64 \
     -m 6G \
     -smp 12 \
     -device e1000,netdev=$OS_NAME -netdev user,id=$OS_NAME,hostfwd=tcp::$SSH_PORT-:22,hostfwd=tcp::$HTTP_PORT-:80 \
-    -pidfile $OS_DIR/run.pid &
+    -pidfile $OS_DIR/run.pid -daemonize
 
 wait_to_boot
 echo 'Booted'
