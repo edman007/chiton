@@ -15,11 +15,13 @@ If you would like to build from source, it is recommended to run the packaging s
 For debian that would look something like this:
 
 ```bash
-dpkg-source -x chiton-0.1.0git.dsc
-cd chiton-0.1.0git
+sudo apt-get install build-essential fakeroot devscripts
+dpkg-source -x chiton-0.4.0~pre.dsc
+cd chiton-0.1.0pre
+sudo apt-get build-dep .
 debuild -uc -us -i -b
 cd ..
-sudo dpkg -i chiton_0.1.0git-1_amd64.deb
+sudo dpkg -i chiton_0.4.0~pre-1_amd64.deb
 ```
 
 For Slackware that would look something like this:
