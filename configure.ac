@@ -97,6 +97,11 @@ PKG_CHECK_MODULES([FFMPEG], [libavformat libavcodec libavutil libavfilter],
                              [AS_VAR_APPEND([[CPPFLAGS]], [" $FFMPEG_CFLAGS"])
                              AS_VAR_APPEND([[LIBS]], [" $FFMPEG_LIBS "])])
 
+#pthread (actually not required, but we do have a dep for it..)
+AX_PTHREAD([AS_VAR_APPEND([[CPPFLAGS]], [" $PTHREAD_CFLAGS"])
+                             AS_VAR_APPEND([[LIBS]], [" $PTHREAD_LIBS "])
+                             AC_DEFINE([HAVE_PTHREAD], [1], [Have pthread])])
+
 AC_ARG_ENABLE([vaapi],
   [AS_HELP_STRING([--enable-vaapi], [Enable VA-API, not strictly required to use vaapi])],
   [],

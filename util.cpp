@@ -153,6 +153,7 @@ bool Util::disable_syslog(void){
 
 //reduces the priority of the calling thread
 void Util::set_low_priority(void){
+#ifdef HAVE_PTHREAD
     sched_param sch;
     int policy;
     pthread_getschedparam(pthread_self(), &policy, &sch);
@@ -162,7 +163,7 @@ void Util::set_low_priority(void){
     if (pthread_setschedparam(pthread_self(), policy, &sch)){
         LWARN("Could not reduce the scheduling priority");
     }
-
+#endif
 #ifdef SYS_ioprio_set
     //this is actually constants from the kernel source...glibc is missing them,
     //we could include them, but I don't know if it's worth making that a dep for this
