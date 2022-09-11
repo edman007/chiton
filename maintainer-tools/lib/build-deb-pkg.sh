@@ -7,7 +7,7 @@ read -s GPG_SIGN_PASS
 cd ~/pkg
 sudo apt-get update
 sudo apt-get upgrade -y
-sudo apt-get install -y build-essential fakeroot devscripts pkg-config
+sudo apt-get install -y build-essential fakeroot devscripts
 dpkg-source -x chiton-*.dsc
 cd chiton-*/
 if [ "x$GPG_SIGN_KEY" = "x" ]; then
@@ -19,8 +19,8 @@ else
     cat - <<< $GPG_SIGN_PASS > ../gpg-pass
     cat - > ../gpg-cmd <<EOF
 #!/bin/bash
-echo "gpg --batch --pinentry-mode loopback --passphrase-file /home/chiton-build/pkg/gpg-pass \$@"
-cat /home/chiton-build/pkg/gpg-pass
+#echo "gpg --batch --pinentry-mode loopback --passphrase-file /home/chiton-build/pkg/gpg-pass \$@"
+#cat /home/chiton-build/pkg/gpg-pass
 gpg --batch --pinentry-mode loopback --passphrase-file /home/chiton-build/pkg/gpg-pass \$@
 EOF
     chmod +x ../gpg-cmd
