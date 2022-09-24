@@ -17,7 +17,7 @@ For debian that would look something like this:
 ```bash
 sudo apt-get install build-essential fakeroot devscripts
 dpkg-source -x chiton-0.4.0~pre.dsc
-cd chiton-0.1.0pre
+cd chiton-0.4.0pre
 sudo apt-get build-dep .
 debuild -uc -us -i -b
 cd ..
