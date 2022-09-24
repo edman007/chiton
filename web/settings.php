@@ -58,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST'){
         $res = $db->query($sql);
         $row = $res->fetch_assoc();
         $camera_id = $row['new_cam'];
+        $system_messages[] = "Created Camera $camera_id";
     } elseif (!empty($_POST['name'])){
         //update the camera
         foreach($_POST['name'] as $k => &$name){
