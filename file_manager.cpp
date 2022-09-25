@@ -193,7 +193,7 @@ void FileManager::delete_broken_segments(void){
     }
     std::string future_time = std::to_string(Util::pack_time(curtime));
 
-    std::string sql = "SELECT v.name, v.path, c.value, v.extension, v.camera FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' WHERE "
+    std::string sql = "SELECT v.name, v.path, c.value, v.extension, v.camera, v.starttime FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' WHERE "
         "v.endtime < v.starttime OR v.starttime > " + future_time;
     DatabaseResult* res = db.query(sql);
     if (res && res->num_rows() > 0){
@@ -201,10 +201,18 @@ void FileManager::delete_broken_segments(void){
     }
     while (res && res->next_row()){
         const std::string &name = res->get_field(0);
-        rm_segment(res->get_field(2), res->get_field(1), name, res->get_field(3));
-        //delete it from the database
-        sql = "DELETE FROM videos WHERE name = " + name + " AND camera = " + res->get_field(4);
+        //delete this segment from the database
+        sql = "DELETE FROM videos WHERE starttime = " +  res->get_field(5) + " AND name = " + name + " AND camera = " + res->get_field(4);
         DatabaseResult* del_res = db.query(sql);
+        delete del_res;
+
+        //check if that was the last segment in this file, and only if it is, delete it
+        sql = "SELECT COUNT(*) FROM videos WHERE name = " + name + " AND camera = " + res->get_field(4);
+        del_res = db.query(sql);
+        if (res->get_field_long(0) == 0){
+            rm_segment(res->get_field(2), res->get_field(1), name, res->get_field(3));
+        }
+
         delete del_res;
     }
     delete res;
