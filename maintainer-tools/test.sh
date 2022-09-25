@@ -156,6 +156,7 @@ test_install () {
         #we may want to move this, but for now it's our official sample
         mkdir $OS_BASE_DIR/sample-videos/
         curl --output $OS_BASE_DIR/sample-videos/front-1440p-h264-aac.mpg https://dev.edman007.com/~edman007/pub/chiton-dev/front-1440p-h264-aac.mpg
+        curl --output $OS_BASE_DIR/sample-videos/0.1-default.sql https://dev.edman007.com/~edman007/pub/chiton-dev/0.1-default.sql
     fi
 
     if [ "$OS_TYPE" = "debian" ] || [ "$OS_TYPE" = "raspbian" ]; then
