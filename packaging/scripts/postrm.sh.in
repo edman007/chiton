@@ -19,6 +19,9 @@ if [ -f /usr/share/dbconfig-common/dpkg/postrm.mysql ]; then
     dbc_go @PKGNAME@ "$@" || true
 fi
 
+rm -rf @localstatedir@/@PKGNAME@/cache/* || true
+rm -rf @localstatedir@/@PKGNAME@/compile/* || true
+
 if [[ "$1" == "purge" || "$1" == "db_purge" ]]; then
     # We are deleting all our files
     rm -f @runstatedir@/@PKGNAME@.pid 2>&1 > /dev/null || true
@@ -26,7 +29,8 @@ if [[ "$1" == "purge" || "$1" == "db_purge" ]]; then
     rmdir @runstatedir@ 2>&1 > /dev/null || true
     rmdir @localstatedir@/@PKGNAME@/cache/ || true
     rmdir @localstatedir@/@PKGNAME@/compile/ || true
-    rmdir @localstatedir@/@PKGNAME@/vids/ || true #this will likely fail if we have content, this is expected
+    rm -rf @localstatedir@/@PKGNAME@/vids/ || true
+    rmdir @localstatedir@/@PKGNAME@ || true
 
     if [ "@apachesymlinkdir@" != "no" ]; then
         rm -f @apachesymlinkdir@/apache-chiton.conf || true
