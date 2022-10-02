@@ -253,33 +253,72 @@ for HOST_STR in $HOSTS; do
         OS_VERSION=$(echo $HOST_STR | cut -d - -f 2)
         echo "Init $HOST_STR - $OS_TYPE - $OS_VERSION"
         . ./lib/settings.sh
+        ret=0
+        rm $OS_BASE_DIR/success || true
         #Only triggers rebuild (to force redownload use clean)
         if [ $RUN_IMAGE = 1 ]; then
             if [ $OS_TYPE = "debian" ]; then
-                ./lib/boot-deb.sh debian $OS_VERSION rebuild
+                ./lib/boot-deb.sh debian $OS_VERSION rebuild 2>&1 | tee $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
+                if [ "${PIPESTATUS[0]}" != "0" ]; then
+                    ret=1
+                fi
+
             elif [ $OS_TYPE = "raspbian" ]; then
-                ./lib/boot-raspbian.sh raspbian $OS_VERSION rebuild
+                ./lib/boot-raspbian.sh raspbian $OS_VERSION rebuild 2>&1 | tee $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
+                if [ "${PIPESTATUS[0]}" != "0" ]; then
+                    ret=1
+                fi
+
             fi
         fi
 
         #boots for all configs that need the working VM
         if [ $RUN_BOOT = 1 ] || [ $RUN_SOURCE = 1 ] || [ $RUN_BUILD = 1 ] || [ $RUN_TEST = 1 ]; then
             if [ $OS_TYPE = "debian" ]; then
-                ./lib/boot-deb.sh $OS_VERSION boot
+                ./lib/boot-deb.sh $OS_VERSION boot 2>&1 | tee -a $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
+                if [ "${PIPESTATUS[0]}" != "0" ]; then
+                    ret=1
+                fi
+
             elif [ $OS_TYPE = "raspbian" ]; then
-                ./lib/boot-raspbian.sh $OS_VERSION boot
+                ./lib/boot-raspbian.sh $OS_VERSION boot 2>&1 | tee -a $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
+                if [ "${PIPESTATUS[0]}" != "0" ]; then
+                    ret=1
+                fi
+
             fi
         fi
 
         if [ $RUN_BUILD = 1 ]; then
             if [ $OS_TYPE = "debian" ] || [ $OS_TYPE = "raspbian" ] ; then
-                build_deb_pkg
+                build_deb_pkg  | tee $OS_DIR/build.log 2>&1 | sed "s/^/$HOST_STR: /"
+                if [ "${PIPESTATUS[0]}" != "0" ]; then
+                    ret=1
+                fi
+
             fi
         fi
 
         if [ $RUN_TEST = 1 ]; then
-            test_install
+            test_install | tee $OS_DIR/test.log 2>&1 | sed "s/^/$HOST_STR: /"
+            if [ "${PIPESTATUS[0]}" != "0" ]; then
+                ret=1
+            fi
+        fi
+        if [ "$ret" = "0" ] ; then
+            touch $OS_BASE_DIR/success
         fi
     ) &
 done
 wait
+
+echo 'All processes completed, results:'
+echo
+for HOST_STR in $HOSTS; do
+    echo -en "\t$HOST_STR -- "
+    if [[ -f $OS_BASE_DIR/$HOST_STR/success ]]; then
+        echo 'Success!'
+    else
+        echo 'Failed'
+    fi
+done

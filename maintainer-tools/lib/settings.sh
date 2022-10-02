@@ -97,6 +97,7 @@ if [ "x$CHITON_FUNCTIONS" = "x" ]; then
 
     wait_to_boot() {
         while true; do
+            sleep 1
             if [ -r $OS_DIR/run.pid ]; then
                 PID=$(cat $OS_DIR/run.pid)
                 if ps -p $PID > /dev/null; then

@@ -1,7 +1,11 @@
 #!/bin/bash
 cd `dirname $0`
-
-if [ $# -lt 1 ]; then
+set -x
+VALID_VERSION=1
+if [ "$1" != "32" ] &&  [ "$1" != "64" ] ; then
+    VALID_VERSION=0
+fi
+if [ $# -lt 1 ] || [ "$VALID_VERSION" = "0" ]; then
     echo "Usage: $0 <version> [action]"
     echo -e "\tversion: 32 or 64"
     echo -e "\taction: (default is boot)"
@@ -27,7 +31,7 @@ if [ "$2" = "clean" ] || [ "$2" = "rebuild" ] || [ "$2" = "freshen" ]; then
         if ps -p $PID > /dev/null; then
             echo 'Killing running instance'
             kill $PID
-            wait $PID
+            sleep 1
             rm -f $OS_DIR/run.pid
         fi
     fi
@@ -40,7 +44,7 @@ if [ ! -f download.img ] || [ "$2" = "clean" ]; then
     xz -d download.img.xz
 fi
 
-APPEND="'root=/dev/mmcblk0p2 panic=1 rw rootwait dwc_otg.lpm_enable=0 dwc_otg.fiq_enable=0 dwc_otg.fiq_fsm_enable=0'"
+APPEND="root=/dev/mmcblk0p2 panic=1 rw rootwait dwc_otg.lpm_enable=0 dwc_otg.fiq_enable=0 dwc_otg.fiq_fsm_enable=0"
 if [ "$OS_VERSION" = "32" ]; then
     CPU="-M raspi2b "
     QEMU_CMD=qemu-system-arm
@@ -75,7 +79,7 @@ if [ ! -f clean.img ] || [ "$2" = "rebuild" ]; then
     #https://www.osadl.org/Single-View.111+M5c03315dc57.0.html
     $QEMU_CMD \
         $CPU \
-        -append 'root=/dev/mmcblk0p2 panic=1 rw rootwait dwc_otg.lpm_enable=0 dwc_otg.fiq_enable=0 dwc_otg.fiq_fsm_enable=0' \
+        -append "$APPEND" \
         -dtb $OS_DIR/system.dtb -kernel $OS_DIR/kernel -no-reboot \
         -drive if=sd,file=$OS_DIR/clean.img,format=raw -serial stdio \
         -device usb-net,netdev=$OS_NAME -netdev user,id=$OS_NAME,hostfwd=tcp::$SSH_PORT-:22,hostfwd=tcp::$HTTP_PORT-:80 \
@@ -92,10 +96,23 @@ echo '$SSH_KEY_TXT' > ~/.ssh/authorized_keys
 chmod 700 ~/.ssh/
 chmod 600 ~/.ssh/authorized_keys
 sudo passwd -d chiton-build
+
+#based on the resize script in /usr/lib/raspi-config/initrd_resize.sh
+ROOT_PART_DEV=\$(sudo findmnt / -o source -n)
+ROOT_PART_NAME=\$(echo "\$ROOT_PART_DEV" | cut -d "/" -f 3)
+ROOT_DEV_NAME=\$(echo /sys/block/*/"\${ROOT_PART_NAME}" | cut -d "/" -f 4)
+ROOT_DEV="/dev/\${ROOT_DEV_NAME}"
+ROOT_PART_NUM=\$(sudo cat "/sys/block/\${ROOT_DEV_NAME}/\${ROOT_PART_NAME}/partition")
+ROOT_DEV_SIZE=\$(sudo cat "/sys/block/\${ROOT_DEV_NAME}/size")
+TARGET_END=\$((ROOT_DEV_SIZE - 1))
+
+sudo parted -m "\$ROOT_DEV" u s resizepart "\$ROOT_PART_NUM" "\$TARGET_END"
+sudo resize2fs "\$ROOT_PART_DEV"
+
 sudo apt update -y
 sudo shutdown -h now
 EOF
-
+cat preconf.sh
     cat <<EOF > ssh-pass.sh
 #!/usr/bin/env expect
 set timeout 20
@@ -120,22 +137,22 @@ exit \$ret
 EOF
 
     chmod +x ./ssh-pass.sh
-    echo -n 'Waiting to boot'
+    echo 'Waiting to boot'
     while ! ./ssh-pass.sh scp $SSH_OPTS preconf.sh chiton-build@localhost:  2>&1 > /dev/null; do
         echo -n .
         sleep 10;
     done
-    echo -ne '\nConfiguring...'
-    while ! ./ssh-pass.sh ssh $SSH_OPTS chiton-build@localhost 'chmod +x preconf.sh ; ./preconf.sh'  2>&1 > /dev/null ; do
+    echo -e '\nConfiguring...'
+    while ! ./ssh-pass.sh ssh $SSH_OPTS chiton-build@localhost 'chmod +x preconf.sh ; ./preconf.sh' 2>&1 > /dev/null ; do
         echo -n .
         sleep 10
     done
 
-    #cleanup
-    rm ssh-pass.sh preconf.sh
-
     echo -e '\nComplete, shutting down..'
     wait $QEMU_JOB
+
+    #cleanup
+    rm ssh-pass.sh preconf.sh
 fi
 if [ ! -f drive.img ] || [ "$2" = "freshen" ]; then
     echo 'Writing fresh image'
@@ -155,7 +172,7 @@ fi
 
 $QEMU_CMD \
     $CPU \
-    -append $APPEND \
+    -append "$APPEND" \
     -dtb $OS_DIR/system.dtb -kernel $OS_DIR/kernel -no-reboot \
     -drive if=sd,file=$OS_DIR/drive.img,format=raw -serial stdio \
     -device usb-net,netdev=$OS_NAME -netdev user,id=$OS_NAME,hostfwd=tcp::$SSH_PORT-:22,hostfwd=tcp::$HTTP_PORT-:80 \
