@@ -44,7 +44,7 @@ if [ ! -f download.img ] || [ "$2" = "clean" ]; then
     xz -d download.img.xz
 fi
 
-APPEND="root=/dev/mmcblk0p2 panic=1 rw rootwait dwc_otg.lpm_enable=0 dwc_otg.fiq_enable=0 dwc_otg.fiq_fsm_enable=0"
+APPEND="root=/dev/mmcblk0p2 panic=1 rw rootwait dwc_otg.lpm_enable=0 dwc_otg.fiq_enable=0 dwc_otg.fiq_fsm_enable=0 dtoverlay=sdtweak,poll_once"
 if [ "$OS_VERSION" = "32" ]; then
     CPU="-M raspi2b "
     QEMU_CMD=qemu-system-arm
@@ -55,6 +55,7 @@ fi
 
 if [ ! -f clean.img ] || [ "$2" = "rebuild" ]; then
     echo 'Creating fresh image'
+    rm drive.img || true
     cp -v download.img clean.img
     echo 'Preconfiguring Image...'
     START=$(parted clean.img -m unit B  print 2>/dev/null |grep fat32|cut -d : -f 2|sed s/B//)
@@ -81,7 +82,7 @@ if [ ! -f clean.img ] || [ "$2" = "rebuild" ]; then
         $CPU \
         -append "$APPEND" \
         -dtb $OS_DIR/system.dtb -kernel $OS_DIR/kernel -no-reboot \
-        -drive if=sd,file=$OS_DIR/clean.img,format=raw -serial stdio \
+        -drive if=sd,file=$OS_DIR/clean.img,format=raw \
         -device usb-net,netdev=$OS_NAME -netdev user,id=$OS_NAME,hostfwd=tcp::$SSH_PORT-:22,hostfwd=tcp::$HTTP_PORT-:80 \
         -pidfile $OS_DIR/run.pid &
     QEMU_JOB=$!
@@ -90,12 +91,18 @@ if [ ! -f clean.img ] || [ "$2" = "rebuild" ]; then
     SSH_KEY_TXT=$(cat $SSH_KEY_PATH)
     cat <<EOF > preconf.sh
 #!/bin/bash
+set -x
 PATH=$PATH:/sbin:/usr/sbin:/bin:/usr/bin
+cmd_log () {
+  tee /home/chiton-build/preconf.log
+}
 mkdir -p ~/.ssh/
 echo '$SSH_KEY_TXT' > ~/.ssh/authorized_keys
 chmod 700 ~/.ssh/
 chmod 600 ~/.ssh/authorized_keys
-sudo passwd -d chiton-build
+#sudo passwd -d chiton-build 2>&1 | cmd_log
+#insecure method for debugging
+echo 'chiton-build:EW1kpmTAt4WWDwRyjazS' | sudo chpasswd
 
 #based on the resize script in /usr/lib/raspi-config/initrd_resize.sh
 ROOT_PART_DEV=\$(sudo findmnt / -o source -n)
@@ -106,23 +113,31 @@ ROOT_PART_NUM=\$(sudo cat "/sys/block/\${ROOT_DEV_NAME}/\${ROOT_PART_NAME}/parti
 ROOT_DEV_SIZE=\$(sudo cat "/sys/block/\${ROOT_DEV_NAME}/size")
 TARGET_END=\$((ROOT_DEV_SIZE - 1))
 
-sudo parted -m "\$ROOT_DEV" u s resizepart "\$ROOT_PART_NUM" "\$TARGET_END"
-sudo resize2fs "\$ROOT_PART_DEV"
-
-sudo apt update -y
-sudo shutdown -h now
+sudo parted -m "\$ROOT_DEV" u s resizepart "\$ROOT_PART_NUM" "\$TARGET_END" 2>&1 | cmd_log
+sudo resize2fs "\$ROOT_PART_DEV" 2>&1 | cmd_log
+df -h 2>&1 | cmd_log
+echo 'Acquire::Retries "3";' | sudo tee /etc/apt/apt.conf.d/80-retries 2>&1 | cmd_log
+echo 'Updating OS'
+#mandb makes the system bog way down, don't need it updating
+sudo rm -fv /var/lib/man-db/auto-update  2>&1 | cmd_log || true
+echo 'man-db	man-db/auto-update	boolean	false' | sudo debconf-set-selections
+sudo apt-get update -y 2>&1 | cmd_log
+sudo apt-get upgrade -y 2>&1 | cmd_log
+sudo apt-mark hold raspberrypi-kernel 2>&1 | cmd_log
+echo 'Preseed Complete!'
 EOF
 cat preconf.sh
     cat <<EOF > ssh-pass.sh
 #!/usr/bin/env expect
-set timeout 20
-
+set timeout -1
+log_user 1
 set cmd [lrange \$argv 0 end]
 set ret 255
 eval spawn \$cmd
 expect {
   "password:" {
     send "raspberry\n";
+    send_user "raspberry\n";
     set ret 0
   }
   "reset by peer" {
@@ -132,7 +147,10 @@ expect {
     exit 2
   }
 }
+expect eof
+send_user "Got EOF"
 wait
+send_user "Command exited"
 exit \$ret
 EOF
 
@@ -142,13 +160,22 @@ EOF
         echo -n .
         sleep 10;
     done
-    echo -e '\nConfiguring...'
-    while ! ./ssh-pass.sh ssh $SSH_OPTS chiton-build@localhost 'chmod +x preconf.sh ; ./preconf.sh' 2>&1 > /dev/null ; do
+    echo '\nConfiguring...'
+    while ! ./ssh-pass.sh ssh $SSH_OPTS chiton-build@localhost 'chmod +x preconf.sh ; ./preconf.sh' 2>&1  ; do
         echo -n .
         sleep 10
     done
+    echo 'Updating Kernel...'
+    if [ "$OS_VERSION" = "32" ]; then
+        scp $SSH_OPTS chiton-build@localhost:/boot/kernel7l.img kernel
+        scp $SSH_OPTS chiton-build@localhost:/boot/bcm2709-rpi-2-b.dtb system.dtb
+    else
+        scp $SSH_OPTS chiton-build@localhost:/boot/kernel8.img kernel
+        scp $SSH_OPTS chiton-build@localhost:/boot/bcm2710-rpi-3-b.dtb system.dtb
+    fi
 
     echo -e '\nComplete, shutting down..'
+    run_remote_cmd 'sudo systemctl poweroff' || true
     wait $QEMU_JOB
 
     #cleanup
@@ -174,9 +201,9 @@ $QEMU_CMD \
     $CPU \
     -append "$APPEND" \
     -dtb $OS_DIR/system.dtb -kernel $OS_DIR/kernel -no-reboot \
-    -drive if=sd,file=$OS_DIR/drive.img,format=raw -serial stdio \
+    -drive if=sd,file=$OS_DIR/drive.img,format=raw \
     -device usb-net,netdev=$OS_NAME -netdev user,id=$OS_NAME,hostfwd=tcp::$SSH_PORT-:22,hostfwd=tcp::$HTTP_PORT-:80 \
-    -pidfile $OS_DIR/run.pid &
+    -pidfile $OS_DIR/run.pid  -daemonize
 
 wait_to_boot
 
