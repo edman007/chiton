@@ -25,6 +25,19 @@ set -e
 cd `dirname $0`
 OS_TYPE=none
 . ./lib/settings.sh
+VERSION=unknown
+GPG_NEW_PASS=x
+
+
+RUN_IMAGE=0
+RUN_BOOT=0
+RUN_SOURCE=0
+RUN_BUILD=0
+RUN_TEST=0
+
+HOSTS=debian-11
+ALL_HOSTS="debian-11 debian-testing raspbian-32 raspbian-64"
+
 show_help () {
     echo -e "$0 <arg> [addational args]\n"
     echo -e "\thelp - show this help and exit"
@@ -38,19 +51,11 @@ show_help () {
     echo -e "\t-a - Run desired command for all supported systems"
     echo -e "\t-s - Build Source"
     echo -e "\t-r - Rebuild Binary"
+    echo -e "\t-l <Host List> - Set Host list"
+    echo -e "\t\tSupported Hosts: $ALL_HOSTS"
     exit 0
 }
-VERSION=unknown
-GPG_NEW_PASS=x
 
-
-RUN_IMAGE=0
-RUN_BOOT=0
-RUN_SOURCE=0
-RUN_BUILD=0
-RUN_TEST=0
-
-ALL_HOSTS=0
 
 #gets the version number
 get_version () {
@@ -168,6 +173,24 @@ test_install () {
     fi
 }
 
+validate_hosts () {
+    for thost in $1 ;
+    do
+        VALID_HOST=0
+        for vhost in $ALL_HOSTS ;
+        do
+            if [ "$thost" = "$vhost" ]; then
+                VALID_HOST=1
+                break
+            fi
+        done
+        if [ "$VALID_HOST" != "1" ]; then
+            echo "$thost is not a valid host, valid hosts are: $ALL_HOSTS"
+            return 1
+        fi
+    done
+    return 0
+}
 
 
 if [ $# = 0 ]; then
@@ -175,58 +198,68 @@ if [ $# = 0 ]; then
     exit 0
 fi
 
+LOAD_HOST_LIST=0
 for arg in "$@"
 do
-    case $arg in
+    if [ "$LOAD_HOST_LIST" != "0" ]; then
+        LOAD_HOST_LIST=0
+        if validate_hosts "$arg" ; then
+            HOSTS="$arg"
+        else
+            exit 1
+        fi
+    else
+        case $arg in
 
-        "help")
-            show_help
-            exit 0
-            ;;
-        "-h")
-            show_help
-            exit 0
-            ;;
-        "clean")
-            rm -rf $OS_BASE_DIR
-            exit 0
-            ;;
-        "image")
-            RUN_IMAGE=1
-            ;;
-        "boot")
-            RUN_BOOT=1
-            ;;
-        "build")
-            RUN_BUILD=1
-            ;;
-        "test")
-            RUN_TEST=1
-            ;;
-        "gold")
-            ALL_HOSTS=1
-            RUN_TEST=1
-            rm -rf $OS_BASE_DIR || true
-            rm -rf ../release/ || true
-            ;;
-        "-s")
-            rm -rf ../release/ || true
-            ;;
-        "-a")
-            ALL_HOSTS=1
-            ;;
-        "-r")
-            RUN_BUILD=1
-            ;;
-
-    esac
-
+            "help")
+                show_help
+                exit 0
+                ;;
+            "-h")
+                show_help
+                exit 0
+                ;;
+            "clean")
+                rm -rf $OS_BASE_DIR
+                exit 0
+                ;;
+            "image")
+                RUN_IMAGE=1
+                ;;
+            "boot")
+                RUN_BOOT=1
+                ;;
+            "build")
+                RUN_BUILD=1
+                ;;
+            "test")
+                RUN_TEST=1
+                ;;
+            "gold")
+                HOSTS="$ALL_HOSTS"
+                RUN_TEST=1
+                rm -rf $OS_BASE_DIR || true
+                rm -rf ../release/ || true
+                ;;
+            "-s")
+                rm -rf ../release/ || true
+                ;;
+            "-a")
+                HOSTS="$ALL_HOSTS"
+                ;;
+            "-r")
+                RUN_BUILD=1
+                ;;
+            "-l")
+                LOAD_HOST_LIST=1
+                ;;
+            *)
+                echo "Unknown option $arg"
+                exit 1
+                ;;
+        esac
+    fi
 done
-
-HOSTS=debian-11
-if [ $ALL_HOSTS = 1 ]; then
-    HOSTS="debian-11 debian-testing raspbian-32 raspbian-64"
-fi
 
 #determine if rebuild is required
 if [ $RUN_TEST = 1 ]; then
@@ -254,17 +287,18 @@ for HOST_STR in $HOSTS; do
         echo "Init $HOST_STR - $OS_TYPE - $OS_VERSION"
         . ./lib/settings.sh
         ret=0
-        rm $OS_BASE_DIR/success || true
+        rm $OS_DIR/success || true
         #Only triggers rebuild (to force redownload use clean)
         if [ $RUN_IMAGE = 1 ]; then
+            echo "$HOST_STR Imaging..."
             if [ $OS_TYPE = "debian" ]; then
-                ./lib/boot-deb.sh debian $OS_VERSION rebuild 2>&1 | tee $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
+                ./lib/boot-deb.sh $OS_VERSION rebuild 2>&1 | tee $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
                 if [ "${PIPESTATUS[0]}" != "0" ]; then
                     ret=1
                 fi
 
             elif [ $OS_TYPE = "raspbian" ]; then
-                ./lib/boot-raspbian.sh raspbian $OS_VERSION rebuild 2>&1 | tee $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
+                ./lib/boot-raspbian.sh $OS_VERSION rebuild 2>&1 | tee $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
                 if [ "${PIPESTATUS[0]}" != "0" ]; then
                     ret=1
                 fi
@@ -274,6 +308,7 @@ for HOST_STR in $HOSTS; do
 
         #boots for all configs that need the working VM
         if [ $RUN_BOOT = 1 ] || [ $RUN_SOURCE = 1 ] || [ $RUN_BUILD = 1 ] || [ $RUN_TEST = 1 ]; then
+            echo "$HOST_STR Booting..."
             if [ $OS_TYPE = "debian" ]; then
                 ./lib/boot-deb.sh $OS_VERSION boot 2>&1 | tee -a $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
                 if [ "${PIPESTATUS[0]}" != "0" ]; then
@@ -290,6 +325,7 @@ for HOST_STR in $HOSTS; do
         fi
 
         if [ $RUN_BUILD = 1 ]; then
+            echo "$HOST_STR Building..."
             if [ $OS_TYPE = "debian" ] || [ $OS_TYPE = "raspbian" ] ; then
                 build_deb_pkg  | tee $OS_DIR/build.log 2>&1 | sed "s/^/$HOST_STR: /"
                 if [ "${PIPESTATUS[0]}" != "0" ]; then
@@ -300,13 +336,17 @@ for HOST_STR in $HOSTS; do
         fi
 
         if [ $RUN_TEST = 1 ]; then
+            echo "$HOST_STR Testing..."
             test_install | tee $OS_DIR/test.log 2>&1 | sed "s/^/$HOST_STR: /"
             if [ "${PIPESTATUS[0]}" != "0" ]; then
                 ret=1
             fi
         fi
         if [ "$ret" = "0" ] ; then
-            touch $OS_BASE_DIR/success
+            echo "$HOST_STR Success"
+            touch $OS_DIR/success
+        else
+            echo "$HOST_STR Failed"
         fi
     ) &
 done
