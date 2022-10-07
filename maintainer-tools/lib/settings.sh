@@ -37,9 +37,9 @@ HTTPS_OFFSET=2
 
 #offset per VM
 VM_OFFSET=5
-echo "Setting up $OS_TYPE/$OS_VERSION"
 HOST_GPG=$(command -v gpg2 || echo gpg)
 if [ "$OS_TYPE" != "none" ]; then
+    echo "Setting up $OS_TYPE/$OS_VERSION"
     #Settings for each VM kind
     #this script requires OS_TYPE and OS_VERSION is set
     if [ "$OS_TYPE" = "raspbian" ]; then
