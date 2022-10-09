@@ -61,7 +61,7 @@ if [ "$OS_TYPE" != "none" ]; then
             #debian stable
             OS_NAME=debian-11
             OS_ID=2
-            PACKAGE_URL=https://cdimage.debian.org/debian-cd/11.4.0/amd64/iso-cd/debian-11.4.0-amd64-netinst.iso
+            PACKAGE_URL=https://cdimage.debian.org/debian-cd/11.5.0/amd64/iso-cd/debian-11.5.0-amd64-netinst.iso
         elif [ "$OS_VERSION" = "testing" ]; then
             OS_NAME=debian-testing
             OS_ID=3
