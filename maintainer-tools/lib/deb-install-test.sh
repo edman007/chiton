@@ -27,11 +27,12 @@ cd install-test
 
 if dpkg -l | grep chiton ; then
     echo "chiton	chiton/dbconfig-remove	boolean	true" | sudo debconf-set-selections
+    echo "chiton	chiton/purge	boolean	true" | sudo debconf-set-selections
     sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y chiton || true
     sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y chiton-dbgsym || true
 fi
-#install curl, needed for our scripts
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl
+#install curl and expect, needed for our scripts
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl expect
 #install mariadb
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ./chiton_*.deb
@@ -51,6 +52,27 @@ function pre_configure_check () {
 
 #get database login
 function configure () {
+    cat > expect_chiton_log <<EOF
+#!/usr/bin/env expect
+set timeout 90
+log_user 1
+set cmd [lrange \$argv 0 end]
+eval spawn \$cmd
+expect {
+  "Lost connection to cam 0" {
+    send_user "Image Processed\n"
+    close
+    exit 0
+  }
+}
+send_user "Timeout!\n"
+exit 255
+EOF
+    chmod +x expect_chiton_log
+
+    #set the verbosity way up
+    echo -en "\nverbosity=5" | sudo tee -a /etc/chiton/chiton.cfg
+
     #setup a server with the config
     curl -s -d create_camera=1 -X POST http://localhost/chiton/settings.php | grep -A 1 statusmsg
     curl -s -d 'name[0]=video-url&value[0]=/home/chiton-build/install-test/vids/front-1440p-h264-aac.mpg&camera[0]=0' \
@@ -61,7 +83,7 @@ function configure () {
 
     #record stuff for 60 seconds
     echo 'Waiting for video to be processed'
-    sleep 60
+    sudo ./expect_chiton_log journalctl -u chiton -f --no-pager -n0
     echo "Stopping Record"
     #and shutdown
     curl -s -d 'name[0]=active&value[0]=0&camera[0]=0' \
@@ -125,7 +147,7 @@ function deconfigure_check (){
         exit 1
     fi
     sudo apachectl configtest
-    if ! sudo mysqldump chiton > /dev/null ; then
+    if sudo mysqldump chiton > /dev/null ; then
         echo 'DB not removed'
         exit 1
     fi
@@ -159,11 +181,13 @@ post_configure_check
 
 #remove and reinstall
 echo "chiton chiton/dbconfig-remove	boolean	false" | sudo debconf-set-selections
+echo "chiton	chiton/purge	boolean	false" | sudo debconf-set-selections
 sudo DEBIAN_FRONTEND=noninteractive apt-get remove chiton -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ./chiton_*.deb
 echo 'Checking reinstalled'
 post_configure_check
 echo "chiton chiton/dbconfig-remove	boolean	true" | sudo debconf-set-selections
+echo "chiton	chiton/purge	boolean	true" | sudo debconf-set-selections
 sudo DEBIAN_FRONTEND=noninteractive apt-get purge chiton -y
 deconfigure_check
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ./chiton_*.deb
