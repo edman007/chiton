@@ -58,8 +58,6 @@ fi
 if [ ! -f pkg.iso ] || [ "$2" = "clean" ]; then
     rm -f pkg.iso clean.img drive.img initrd.gz vmlinuz
     wget $PACKAGE_URL -O pkg.iso
-    isoinfo -i pkg.iso -x '/INSTALL.AMD/INITRD.GZ;1' > initrd.gz
-    isoinfo -i pkg.iso -x '/INSTALL.AMD/VMLINUZ.;1' > vmlinuz
 fi
 
 if [ ! -f clean.img ] || [ "$2" = "rebuild" ]; then
@@ -67,6 +65,8 @@ if [ ! -f clean.img ] || [ "$2" = "rebuild" ]; then
     cp -v $MAINTAINER_DIR/lib/deb-preseed.cfg preseed.cfg
     cp $SSH_KEY_PATH id_rsa.pub
     cp $MAINTAINER_DIR/lib/install-setup.sh .
+    isoinfo -i pkg.iso -x '/INSTALL.AMD/INITRD.GZ;1' > initrd.gz
+    isoinfo -i pkg.iso -x '/INSTALL.AMD/VMLINUZ.;1' > vmlinuz
     gzip -dc initrd.gz > initrd.preseed
     echo preseed.cfg | cpio -H newc -o -A -F initrd.preseed
     echo id_rsa.pub | cpio -H newc -o -A -F initrd.preseed
