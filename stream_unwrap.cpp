@@ -450,7 +450,7 @@ void StreamUnwrap::timestamp(const AVPacket &packet, struct timeval &time){
 }
 
 void StreamUnwrap::timestamp(const AVFrame *frame, int stream_idx, struct timeval &time){
-    if (stream_idx < 0 || stream_idx >= input_format_context->nb_streams){
+    if (stream_idx < 0 || stream_idx >= static_cast<int>(input_format_context->nb_streams)){
         time.tv_sec = 0;
         time.tv_usec = 0;
         LWARN("StreamUnwrap timestamp() received invalid streamindex");

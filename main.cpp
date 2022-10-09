@@ -202,7 +202,9 @@ bool fork_background(void){
         LFATAL("Failed to setsid()");
         return false;
     }
-    chdir("/");
+    if (chdir("/")){
+        LWARN("chdir / failed");
+    }
     //Close stdin. stdout and stderr
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
