@@ -696,7 +696,7 @@ void CFFUtil::load_opencl(void){
     clGetContextInfo(ocl_device_ctx->context, CL_CONTEXT_PROPERTIES, param_value_size, props.data(), NULL);
 
     //Find the platform prop
-    cl_platform_id platform;
+    cl_platform_id platform = 0;
     for (int i = 0; props[i] != 0; i = i + 2) {
         if (props[i] == CL_CONTEXT_PLATFORM) {
             platform = reinterpret_cast<cl_platform_id>(props[i + 1]);
