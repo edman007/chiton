@@ -107,9 +107,9 @@ const long MariaDBResult::get_field_long(unsigned int col){
     try {
         return std::stol(val);
     } catch (const std::invalid_argument& ia){
-        LWARN( "database  value " + std::to_string(col) + " ( " + val + " ) must be an integer");
+        LWARN( "database  value " + col_name(col) + " ( " + val + " ) must be an integer");
     } catch (const std::out_of_range& ia) {
-        LWARN( "database value " + std::to_string(col) + " ( " + val + " ) is out of range ");
+        LWARN( "database value " + col_name(col) + " ( " + val + " ) is out of range for long");
     }
     
     return 0;
@@ -126,9 +126,9 @@ const double MariaDBResult::get_field_double(unsigned int col){
     try {
         return std::stod(val);
     } catch (const std::invalid_argument& ia){
-        LWARN( "database value " + std::to_string(col) + " ( " + val + " ) must be a double");
+        LWARN( "database value " + col_name(col) + " ( " + val + " ) must be a double");
     } catch (const std::out_of_range& ia) {
-        LWARN( "database value " + std::to_string(col) + " ( " + val + " ) is out of range ");
+        LWARN( "database value " + col_name(col) + " ( " + val + " ) is out of range for double");
     }
     
     return 0;
