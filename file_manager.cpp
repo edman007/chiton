@@ -287,7 +287,7 @@ void FileManager::rmdir_r(const std::string &path){
             break;
         }
         closedir(dir);
-        if (dir_is_empty){
+        if (dir_is_empty && path != get_output_dir()){
             //dir is empty, delete it
             if (rmdir(path.c_str())){
                 LWARN("Failed to delete empty directory " + path + " (" + std::to_string(errno) + ")");
