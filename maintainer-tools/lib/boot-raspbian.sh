@@ -121,6 +121,9 @@ echo 'Updating OS'
 #mandb makes the system bog way down, don't need it updating
 sudo rm -fv /var/lib/man-db/auto-update  2>&1 | cmd_log || true
 echo 'man-db	man-db/auto-update	boolean	false' | sudo debconf-set-selections
+sudo sed -i 's/CONF_SWAPSIZE=100/CONF_SWAPSIZE=1024/' /etc/dphys-swapfile 2>&1 | cmd_log
+sudo systemctl stop dphys-swapfile 2>&1 | cmd_log
+sudo systemctl start dphys-swapfile 2>&1 | cmd_log
 sudo apt-get update -y 2>&1 | cmd_log
 sudo apt-get upgrade -y 2>&1 | cmd_log
 sudo apt-mark hold raspberrypi-kernel 2>&1 | cmd_log
