@@ -294,12 +294,14 @@ for HOST_STR in $HOSTS; do
             if [ $OS_TYPE = "debian" ]; then
                 ./lib/boot-deb.sh $OS_VERSION rebuild 2>&1 | tee $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
                 if [ "${PIPESTATUS[0]}" != "0" ]; then
+                    echo "boot-deb.sh: ${PIPESTATUS[0]}"
                     ret=1
                 fi
 
             elif [ $OS_TYPE = "raspbian" ]; then
                 ./lib/boot-raspbian.sh $OS_VERSION rebuild 2>&1 | tee $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
                 if [ "${PIPESTATUS[0]}" != "0" ]; then
+                    echo "boot-raspbian.sh: ${PIPESTATUS[0]}"
                     ret=1
                 fi
 
@@ -312,12 +314,14 @@ for HOST_STR in $HOSTS; do
             if [ $OS_TYPE = "debian" ]; then
                 ./lib/boot-deb.sh $OS_VERSION boot 2>&1 | tee -a $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
                 if [ "${PIPESTATUS[0]}" != "0" ]; then
+                    echo "boot-deb.sh: ${PIPESTATUS[0]}"
                     ret=1
                 fi
 
             elif [ $OS_TYPE = "raspbian" ]; then
                 ./lib/boot-raspbian.sh $OS_VERSION boot 2>&1 | tee -a $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
                 if [ "${PIPESTATUS[0]}" != "0" ]; then
+                    echo "boot-raspbian.sh: ${PIPESTATUS[0]}"
                     ret=1
                 fi
 
@@ -329,7 +333,8 @@ for HOST_STR in $HOSTS; do
             if [ $OS_TYPE = "debian" ] || [ $OS_TYPE = "raspbian" ] ; then
                 build_deb_pkg  | tee $OS_DIR/build.log 2>&1 | sed "s/^/$HOST_STR: /"
                 if [ "${PIPESTATUS[0]}" != "0" ]; then
-                    ret=1
+                   echo "build_deb_pkg: ${PIPESTATUS[0]}"
+                   ret=1
                 fi
 
             fi
@@ -339,6 +344,7 @@ for HOST_STR in $HOSTS; do
             echo "$HOST_STR Testing..."
             test_install | tee $OS_DIR/test.log 2>&1 | sed "s/^/$HOST_STR: /"
             if [ "${PIPESTATUS[0]}" != "0" ]; then
+                echo "test_install: ${PIPESTATUS[0]}"
                 ret=1
             fi
         fi
