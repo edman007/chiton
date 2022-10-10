@@ -17,7 +17,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2022 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -37,6 +37,7 @@ public:
     const std::string& col_name(unsigned int col);
     const std::string& get_field(unsigned int col);
     const long get_field_long(unsigned int col);//get the data from the specified column as a long
+    const long long get_field_ll(unsigned int col);//get the data from the specified column as a long long
     const double get_field_double(unsigned int col);//get the data from the specified column as a double
     
     bool next_row(void);

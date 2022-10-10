@@ -49,7 +49,7 @@ public:
     bool get_image_path(std::string &path, std::string &name, const std::string &extension, const struct timeval *start_time = NULL, long *file_id = NULL);
 
     //returns the real for the segments referenced as id and path name from the database
-    std::string get_path(long int name, const std::string &db_path, const std::string &ext);
+    std::string get_path(long long name, const std::string &db_path, const std::string &ext);
 
     //update metadata about the file
     bool update_file_metadata(long int file_id, struct timeval &end_time, long long end_byte, const StreamWriter &out_file, long long start_byte = 0, long long init_len = -1);
@@ -58,11 +58,12 @@ public:
 
     void delete_broken_segments(void);//looks for impossible segments and wipes them
 
-    long rm_file(const std::string &path, const std::string &base = std::string("NULL"));//delete specific file (not a segment), returns number of bytes removed (-1 if nothing deleted)
+    //delete specific file (not a segment), returns number of bytes removed (-1 if nothing deleted)
+    long long rm_file(const std::string &path, const std::string &base = std::string("NULL"));
 
-    bool reserve_bytes(long bytes, int camera);//reserve bytes for camera
+    bool reserve_bytes(long long bytes, int camera);//reserve bytes for camera
 
-    long get_filesize(const std::string &path);//return the filesize of the file at path
+    long long get_filesize(const std::string &path);//return the filesize of the file at path
 
     //open and return a fstream for name located in path, if there was a failure fstream.is_open() will fail, path must end in /
     std::ofstream get_fstream_write(const std::string &name, const std::string &path = "" , const std::string &base = "NULL");
@@ -70,28 +71,28 @@ public:
 private:
     Database &db;
     Config &cfg;
-    long bytes_per_segment;//estimate of segment size for our database to optimize our cleanup calls
-    long min_free_bytes;//the config setting min-free-space as computed for the output-dir
+    long long bytes_per_segment;//estimate of segment size for our database to optimize our cleanup calls
+    long long min_free_bytes;//the config setting min-free-space as computed for the output-dir
     std::string last_filename;//when extending files, holds the current filename
     std::string last_dir;//when extending files, holds the current directory
 
     //global variables for cleanup and space reseverations
     static std::mutex cleanup_mtx;//lock when cleanup is in progress, locks just the clean_disk()
-    static std::atomic<long> reserved_bytes;//total reserved bytes
+    static std::atomic<long long> reserved_bytes;//total reserved bytes
 
     bool mkdir_recursive(std::string path);
 
     void rmdir_r(const std::string &path);//delete directory and all empty parent directories
-    long get_target_free_bytes(void);//return the bytes that must be deleted
-    long get_free_bytes(void);//return the free bytes on the disk
-    long get_min_free_bytes(void);//return the miniumn free bytes on the disk
-    long rm_segment(const std::string &base, const std::string &path, const std::string &id, const std::string &ext);//deletes a target segment, returns number of bytes removed
-    long rm(const std::string &path);//delete a specific file and parent directories, returns negative if there was an error
+    long long get_target_free_bytes(void);//return the bytes that must be deleted
+    long long get_free_bytes(void);//return the free bytes on the disk
+    long long get_min_free_bytes(void);//return the miniumn free bytes on the disk
+    long long rm_segment(const std::string &base, const std::string &path, const std::string &id, const std::string &ext);//deletes a target segment, returns number of bytes removed
+    long long rm(const std::string &path);//delete a specific file and parent directories, returns negative if there was an error
     std::string get_date_path(int camera, const struct timeval &start_time);//returns a path in the form of <camera>/<YYYY>/<MM>/<DD>/<HH>
     std::string get_output_dir(void);//returns the output-dir cfg setting, with some fixups/sanity checks ensuring it always ends in a "/"
     std::string get_real_base(const std::string base);//given an input base, returns a real path that always ends in a /
-    long clean_images(unsigned long start_time);//deletes images older than start_time, returns bytes deleted
-    long clean_events(unsigned long start_time);//deletes events older than start_time, returns number deleted
+    long long clean_images(unsigned long long start_time);//deletes images older than start_time, returns bytes deleted
+    long clean_events(unsigned long long start_time);//deletes events older than start_time, returns number deleted
 };
 
 #endif

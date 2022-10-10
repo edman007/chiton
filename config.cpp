@@ -101,6 +101,24 @@ long Config::get_value_long(const std::string& key){
     } catch (const std::out_of_range& ia) {
         LWARN( "Config value " + key + " ( " + val + " ) is out of range ");
     }
+
+    return 0;
+}
+
+long long Config::get_value_ll(const std::string& key){
+    const std::string& val = get_value(key);
+    if (!val.compare("")){
+        //empty
+        return 0;
+    }
+
+    try {
+        return std::stoll(val);
+    } catch (const std::invalid_argument& ia){
+        LWARN( "Config value " + key + " ( " + val + " ) must be an integer");
+    } catch (const std::out_of_range& ia) {
+        LWARN( "Config value " + key + " ( " + val + " ) is out of range ");
+    }
     
     return 0;
 }

@@ -30,7 +30,7 @@
 
 //static globals
 std::mutex FileManager::cleanup_mtx;//lock when cleanup is in progress, locks just the clean_disk() to prevent iterating over the same database results twice
-std::atomic<long> FileManager::reserved_bytes(0);
+std::atomic<long long> FileManager::reserved_bytes(0);
 
 FileManager::FileManager(Database &db, Config &cfg) : db(db), cfg(cfg) {
     bytes_per_segment = 1024*1024;//1M is our default guess
@@ -85,7 +85,7 @@ std::string FileManager::get_export_path(long int export_id, int camera, const s
     return path + "/" + std::to_string(export_id) + EXPORT_EXT;
 }
 //returns the path for the file referenced as id
-std::string FileManager::get_path(long int name, const std::string &db_path, const std::string &ext){
+std::string FileManager::get_path(long long name, const std::string &db_path, const std::string &ext){
     std::string path;
     path = db_path + std::to_string(name) + ext;
     return get_output_dir() + path;
@@ -116,7 +116,7 @@ bool FileManager::mkdir_recursive(std::string path){
 
 void FileManager::clean_disk(void){
     cleanup_mtx.lock();
-    long target_clear = get_target_free_bytes();
+    long long target_clear = get_target_free_bytes();
     if (target_clear){
         LINFO("Cleaning the disk, removing " + std::to_string(target_clear));
 
@@ -126,12 +126,12 @@ void FileManager::clean_disk(void){
             " GROUP BY v.name, v.camera HAVING MAX(v.locked) = 0  ORDER BY starttime ASC LIMIT " + std::to_string(segment_count);
 
         segment_count = 0;
-        long actual_segment_bytes = 0;
-        unsigned long oldest_record = 0;
+        long long actual_segment_bytes = 0;
+        unsigned long long oldest_record = 0;
         DatabaseResult* res = db.query(sql);
         while (target_clear > 0 && res && res->next_row()){
             segment_count++;
-            long rm_size = 0;//size of file deleted
+            long long rm_size = 0;//size of file deleted
             const std::string &name = res->get_field(5);
             rm_size = rm_segment(res->get_field(2), res->get_field(1), name, res->get_field(4));
             if (rm_size > 0){
@@ -144,7 +144,7 @@ void FileManager::clean_disk(void){
             delete del_res;
 
             //record the starttime of this
-            oldest_record = res->get_field_long(3);
+            oldest_record = res->get_field_ll(3);
         }
         delete res;
 
@@ -172,8 +172,8 @@ void FileManager::clean_disk(void){
     cleanup_mtx.unlock();
 }
 
-long FileManager::rm_segment(const std::string &base, const std::string &path, const std::string &id, const std::string &ext){
-    long filesize = 0;
+long long FileManager::rm_segment(const std::string &base, const std::string &path, const std::string &id, const std::string &ext){
+    long long filesize = 0;
     std::string target_file = path;
 
     target_file += id + ext;
@@ -187,7 +187,7 @@ void FileManager::delete_broken_segments(void){
     //get the current time, plus some time
     struct timeval curtime;
     Util::get_videotime(curtime);
-    long broken_offset = cfg.get_value_long("broken-time-offset");
+    long long broken_offset = cfg.get_value_ll("broken-time-offset");
     if (broken_offset > 0){
         curtime.tv_sec += broken_offset;
     }
@@ -218,9 +218,9 @@ void FileManager::delete_broken_segments(void){
     delete res;
 }
 
-long FileManager::get_target_free_bytes(void){
-    long free_bytes = get_free_bytes();
-    long min_free = get_min_free_bytes();
+long long FileManager::get_target_free_bytes(void){
+    long long free_bytes = get_free_bytes();
+    long long min_free = get_min_free_bytes();
     min_free += reserved_bytes.exchange(0);
     if (free_bytes < min_free){
         return min_free - free_bytes;
@@ -228,11 +228,11 @@ long FileManager::get_target_free_bytes(void){
     return 0;
 }
 
-long FileManager::get_free_bytes(void){
+long long FileManager::get_free_bytes(void){
     std::string check_path = cfg.get_value("output-dir");
     struct statvfs info;
     if (!statvfs(check_path.c_str(), &info)){
-        long free_bytes = info.f_bsize * info.f_bavail;
+        long long free_bytes = info.f_bsize * info.f_bavail;
         return free_bytes;
     } else {
         LWARN("Failed to get filesystem info for " + check_path + " ( " +std::to_string(errno)+" ) will assume it is full");
@@ -240,12 +240,12 @@ long FileManager::get_free_bytes(void){
     return 0;
 }
 
-long FileManager::get_min_free_bytes(void){
+long long FileManager::get_min_free_bytes(void){
     if (min_free_bytes > 0){
         return min_free_bytes;
     }
     //we only perform this syscall on the first call
-    long min_free = cfg.get_value_long("min-free-space");
+    long long min_free = cfg.get_value_ll("min-free-space");
     if (cfg.get_value("min-free-space").find('%') != std::string::npos){
         std::string check_path = cfg.get_value("output-dir");
         struct statvfs info;
@@ -253,7 +253,7 @@ long FileManager::get_min_free_bytes(void){
 
             double min_freed = cfg.get_value_double("min-free-space");//absolute bytes are set
             min_freed /= 100;
-            long total_bytes = info.f_bsize * (info.f_blocks - info.f_bfree + info.f_bavail);//ignore root's space we can't use when calculating filesystem space
+            long long total_bytes = info.f_bsize * (info.f_blocks - info.f_bfree + info.f_bavail);//ignore root's space we can't use when calculating filesystem space
             min_free = total_bytes * min_freed;
             if (min_free < 0){
                 min_free = 0;//they set something wrong...I don't know, this will result in the defualt
@@ -353,7 +353,7 @@ bool FileManager::update_file_metadata(long int file_id, struct timeval &end_tim
     
 }
 
-long FileManager::rm(const std::string &path){
+long long FileManager::rm(const std::string &path){
     struct stat statbuf;
     if (!stat(path.c_str(), &statbuf)){
         //and delete it
@@ -369,7 +369,7 @@ long FileManager::rm(const std::string &path){
     }
 }
 
-long FileManager::get_filesize(const std::string &path){
+long long FileManager::get_filesize(const std::string &path){
     struct stat statbuf;
     if (!stat(path.c_str(), &statbuf)){
         return statbuf.st_size;
@@ -377,10 +377,10 @@ long FileManager::get_filesize(const std::string &path){
     return -1;
 }
 
-long FileManager::rm_file(const std::string &path, const std::string &base/* = std::string("NULL")*/){
+long long FileManager::rm_file(const std::string &path, const std::string &base/* = std::string("NULL")*/){
     std::string real_base = get_real_base(base);
 
-    long filesize = rm(real_base + path);
+    long long filesize = rm(real_base + path);
     std::string dir = real_base;
     dir += path.substr(0, path.find_last_of('/', path.length()));
     rmdir_r(dir);
@@ -412,9 +412,9 @@ std::string FileManager::get_output_dir(void){
     return modified_base;
 }
 
-bool FileManager::reserve_bytes(long bytes, int camera){
-    long free_space = get_free_bytes();
-    long min_space = get_min_free_bytes();
+bool FileManager::reserve_bytes(long long bytes, int camera){
+    auto free_space = get_free_bytes();
+    auto min_space = get_min_free_bytes();
     reserved_bytes += bytes;
     free_space -= min_space/2;
     free_space -= reserved_bytes;
@@ -485,12 +485,12 @@ bool FileManager::get_image_path(std::string &path, std::string &name, const std
     return true;
 }
 
-long FileManager::clean_images(unsigned long start_time){
+long long FileManager::clean_images(unsigned long long start_time){
     if (start_time == 0){
         return 0;//bail if it's invalid
     }
 
-    long bytes_deleted = 0;
+    long long  bytes_deleted = 0;
 
     std::string sql = "SELECT id, path, prefix, extension, c.value FROM images as i LEFT JOIN config AS c ON i.camera=c.camera AND c.name = 'output-dir' "
         " WHERE starttime < " + std::to_string(start_time);
@@ -500,7 +500,7 @@ long FileManager::clean_images(unsigned long start_time){
         std::string path = res->get_field(1);
         std::string name = res->get_field(2) + img_id + res->get_field(3);
         std::string base = res->get_field(4);
-        long del_bytes = rm_file(path + name, base);
+        long long del_bytes = rm_file(path + name, base);
         if (del_bytes > 0){
             bytes_deleted++;
         }
@@ -514,7 +514,7 @@ long FileManager::clean_images(unsigned long start_time){
     return bytes_deleted;
 }
 
-long FileManager::clean_events(unsigned long start_time){
+long FileManager::clean_events(unsigned long long  start_time){
     if (start_time == 0){
         return 0;//bail if it's invalid
     }

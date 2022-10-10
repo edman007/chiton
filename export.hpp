@@ -46,8 +46,8 @@ private:
 
     //details of current job:
     std::atomic<long> id;
-    long starttime;
-    long endtime;
+    long long starttime;
+    long long endtime;
     long camera;
     std::string path;
     long progress;

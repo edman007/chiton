@@ -48,6 +48,7 @@ public:
     const std::string& get_value(const std::string& key);
     int get_value_int(const std::string& key);//returns the value as an int
     long get_value_long(const std::string& key);//returns the value as a long
+    long long get_value_ll(const std::string& key);//returns the value as a long long
     double get_value_double(const std::string& key);//returns the value as an double
     
     void set_value(const std::string& key, const std::string& value);

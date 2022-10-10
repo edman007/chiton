@@ -54,7 +54,8 @@ function pre_configure_check () {
 function configure () {
     cat > expect_chiton_log <<EOF
 #!/usr/bin/env expect
-set timeout 90
+#Actual testing has shown that ARM on QEMU takes 22 minutes
+set timeout 1500
 log_user 1
 set cmd [lrange \$argv 0 end]
 eval spawn \$cmd

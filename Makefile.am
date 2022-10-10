@@ -20,7 +20,8 @@
  ########################################################################
 
 ACLOCAL_AMFLAGS = -I m4
-AM_CXXFLAGS = -std=gnu++11 -Wall -DSYSCFGPATH='"$(sysconfdir)/$(PACKAGE)/chiton.cfg"' -DDEFAULT_SOCKET_PATH='"$(defaultsocketpath)"'
+AM_CXXFLAGS = -std=gnu++11 -Wall -DSYSCFGPATH='"$(sysconfdir)/$(PACKAGE)/chiton.cfg"' -DDEFAULT_SOCKET_PATH='"$(defaultsocketpath)"' \
+	-D_FILE_OFFSET_BITS=64
 PRGM = chiton
 MAINTAINER=Ed Martin <edman007@edman007.com>
 DEBVERSION=$(shell echo -n $(VERSION) | sed s/pre/~pre/)

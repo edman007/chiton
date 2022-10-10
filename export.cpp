@@ -59,8 +59,8 @@ bool Export::check_for_jobs(void){
     DatabaseResult *res = db.query(sql);
     if (res && res->next_row()){
         id = res->get_field_long(0);
-        starttime = res->get_field_long(1);
-        endtime = res->get_field_long(2);
+        starttime = res->get_field_ll(1);
+        endtime = res->get_field_ll(2);
         camera = res->get_field_long(3);
         path = std::string(res->get_field(4));
         progress = res->get_field_long(5);
@@ -118,7 +118,7 @@ void Export::run_job(void){
     StreamWriter out = StreamWriter(*camera_cfg);
     out.change_path(path);
 
-    long total_time_target = endtime - starttime;
+    long long total_time_target = endtime - starttime;
     reserved_bytes = 0;
     bool output_opened = false;
     std::string prev_ext = "", prev_codec;

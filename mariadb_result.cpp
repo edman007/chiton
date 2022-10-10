@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2022 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -112,6 +112,26 @@ const long MariaDBResult::get_field_long(unsigned int col){
         LWARN( "database value " + col_name(col) + " ( " + val + " ) is out of range for long");
     }
     
+    return 0;
+
+}
+
+
+const long long MariaDBResult::get_field_ll(unsigned int col){
+    const std::string& val = get_field(col);
+    if (!val.compare("")){
+        //empty
+        return 0;
+    }
+
+    try {
+        return std::stoll(val);
+    } catch (const std::invalid_argument& ia){
+        LWARN( "database  value " + col_name(col) + " ( " + val + " ) must be an integer");
+    } catch (const std::out_of_range& ia) {
+        LWARN( "database value " + col_name(col) + " ( " + val + " ) is out of range for long");
+    }
+
     return 0;
 
 }
