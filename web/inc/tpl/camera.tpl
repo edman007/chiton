@@ -27,9 +27,7 @@ Scroll: Skip<br/>
 </form>
 </div><br/>
 
-{if !empty($events)}
 {include file="events.tpl" }
-{/if}
 {/if}
 
 </div>{* camera_sidebar *}
