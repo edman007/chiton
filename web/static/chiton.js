@@ -624,17 +624,6 @@ class CameraState {
         return hours +":" + min + ":" + ts;
     }
 
-    //Manages collapsable blocks
-    toggleBlock(caller, target, nextName){
-        document.getElementById(target).classList.toggle("hidden");
-        caller.classList.toggle("td_exp");
-        caller.classList.toggle("td_col");
-        var oldName = caller.innerHTML;
-        caller.innerHTML = nextName;
-        let cam = this;
-        caller.onclick=function(){cam.toggleBlock(caller, target, oldName);};
-    }
-
     jumpRealTime(wallTime){
         var target = this.convertTimeToTS(wallTime - this.start_ts);
         if (target < 0){
@@ -648,6 +637,16 @@ class CameraState {
             this.playVideo();
         }
     }
+}
+
+//Manages collapsable blocks
+function toggleBlock(caller, target, nextName){
+    document.getElementById(target).classList.toggle("hidden");
+    caller.classList.toggle("td_exp");
+    caller.classList.toggle("td_col");
+    var oldName = caller.innerHTML;
+    caller.innerHTML = nextName;
+    caller.onclick=function(){toggleBlock(caller, target, oldName);};
 }
 
 var event_start = -1;
