@@ -103,7 +103,7 @@ AX_PTHREAD([AS_VAR_APPEND([[CPPFLAGS]], [" $PTHREAD_CFLAGS"])
                              AC_DEFINE([HAVE_PTHREAD], [1], [Have pthread])])
 
 #On 32-bit we need libatomic to give us 64-bit atomics
-AC_SEARCH_LIBS([__atomic_load_8], [atomic])
+CHECK_ATOMIC()
 
 AC_ARG_ENABLE([vaapi],
   [AS_HELP_STRING([--enable-vaapi], [Enable VA-API, not strictly required to use vaapi])],
