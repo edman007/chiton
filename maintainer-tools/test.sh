@@ -349,10 +349,10 @@ for HOST_STR in $HOSTS; do
             fi
         fi
         if [ "$ret" = "0" ] ; then
-            echo "$HOST_STR Success"
+            echo -e "\033[1;32m$HOST_STR Success\033[0m"
             touch $OS_DIR/success
         else
-            echo "$HOST_STR Failed"
+            echo -e "\033[1;31m$HOST_STR Failed\033[0m"
         fi
     ) &
 done
@@ -360,11 +360,14 @@ wait
 
 echo 'All processes completed, results:'
 echo
+ret=0
 for HOST_STR in $HOSTS; do
     echo -en "\t$HOST_STR -- "
     if [[ -f $OS_BASE_DIR/$HOST_STR/success ]]; then
         echo 'Success!'
     else
+        ret=1
         echo 'Failed'
     fi
 done
+exit $ret
