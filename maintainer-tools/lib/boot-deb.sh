@@ -16,7 +16,7 @@
  #   You should have received a copy of the GNU General Public License
  #   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  #
- #   Copyright 2020 Ed Martin <edman007@edman007.com>
+ #   Copyright 2022 Ed Martin <edman007@edman007.com>
  #
  ##########################################################################
 
@@ -56,7 +56,7 @@ if [ "$2" = "clean" ] || [ "$2" = "rebuild" ] || [ "$2" = "freshen" ]; then
 fi
 
 if [ ! -f pkg.iso ] || [ "$2" = "clean" ]; then
-    rm -f pkg.iso clean.img drive.img initrd.gz vmlinuz
+    rm -f pkg.iso clean.img drive.img initrd.gz vmlinuz || true
     wget $PACKAGE_URL -O pkg.iso
 fi
 
