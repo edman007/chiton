@@ -69,6 +69,21 @@ if [ "$OS_TYPE" != "none" ]; then
             PACKAGE_URL=https://cdimage.debian.org/cdimage/daily-builds/daily/arch-latest/amd64/iso-cd/debian-testing-amd64-netinst.iso
 
         fi
+    elif [ "$OS_TYPE" = "slackware" ]; then
+        TARGET_GPG=gpg
+        if [ "$OS_VERSION" = "15" ]; then
+            #slackware 15
+            OS_NAME=slackware-15
+            OS_ID=4
+            PACKAGE_URL=https://mirrors.slackware.com/slackware/slackware-iso/slackware64-15.0-iso/slackware64-15.0-install-dvd.iso
+        elif [ "$OS_VERSION" = "current" ]; then
+            OS_NAME=slackware-current
+            OS_ID=5
+            #slackware current
+            PACKAGE_URL=https://mirrors.slackware.com/slackware/slackware64-current/usb-and-pxe-installers/usbboot.img
+
+        fi
+
     else
         echo "Unsupported OS - $OS_TYPE - $OS_VERSION"
     fi
