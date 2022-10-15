@@ -76,11 +76,13 @@ if [ "$OS_TYPE" != "none" ]; then
             OS_NAME=slackware-15
             OS_ID=4
             PACKAGE_URL=https://mirrors.slackware.com/slackware/slackware-iso/slackware64-15.0-iso/slackware64-15.0-install-dvd.iso
+            PACKAGE_MIRROR=http://mirrors.us.kernel.org/slackware/slackware64-15.0/
         elif [ "$OS_VERSION" = "current" ]; then
             OS_NAME=slackware-current
             OS_ID=5
             #slackware current
             PACKAGE_URL=https://mirrors.slackware.com/slackware/slackware64-current/usb-and-pxe-installers/usbboot.img
+            PACKAGE_MIRROR=http://mirrors.us.kernel.org/slackware/slackware64-current/
 
         fi
 

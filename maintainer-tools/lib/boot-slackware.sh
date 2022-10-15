@@ -77,6 +77,7 @@ if [ ! -f clean.img ] || [ "$2" = "rebuild" ]; then
     sed -i '/BOGUS_LOGIN/d' etc/rc.d/rc.S
     echo '/preseed.sh' >> etc/rc.d/rc.S
     echo 'reboot' >> etc/rc.d/rc.S
+    sed -i "s!##PACKAGE_MIRROR##!$PACKAGE_MIRROR!" preseed.sh
     chmod +x preseed.sh
     echo preseed.sh | cpio -H newc -o -A -F initrd.preseed
     echo id_rsa.pub | cpio -H newc -o -A -F initrd.preseed
@@ -87,7 +88,7 @@ if [ ! -f clean.img ] || [ "$2" = "rebuild" ]; then
     rmdir etc/
     rm -f drive.img clean.img || true
 
-    qemu-img create -f raw $OS_DIR/clean.img 8G
+    qemu-img create -f raw $OS_DIR/clean.img 16G
 
     #boot it
     qemu-system-x86_64 \
@@ -103,7 +104,6 @@ if [ ! -f clean.img ] || [ "$2" = "rebuild" ]; then
     #it just exits on completion
     rm -f initrd.preseed initrd.preseed.lzma initrd.xz kernel || true
     rm -f id_rsa.pub preseed.sh
-    exit 1
 fi
 
 if [ ! -f drive.img ] || [ "$2" = "freshen" ]; then
