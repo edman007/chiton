@@ -740,7 +740,7 @@ AVVAAPIDeviceContext *get_vaapi_ctx_from_frames(AVBufferRef *buf){
     AVHWFramesContext *frames = reinterpret_cast<AVHWFramesContext*>(buf->data);
     return get_vaapi_ctx_from_device(frames->device_ref);
 }
-
+#ifdef HAVE_OPENCL
 AVOpenCLDeviceContext *get_opencl_ctx_from_device(AVBufferRef *buf){
     if (!buf || !buf->data){
         return NULL;
@@ -751,7 +751,9 @@ AVOpenCLDeviceContext *get_opencl_ctx_from_device(AVBufferRef *buf){
     }
     return static_cast<AVOpenCLDeviceContext*>(device->hwctx);
 }
+#endif
 
+#ifdef HAVE_OPENCL
 AVOpenCLDeviceContext *get_opencl_ctx_from_frames(AVBufferRef *buf){
     if (!buf || !buf->data){
         return NULL;
@@ -759,3 +761,4 @@ AVOpenCLDeviceContext *get_opencl_ctx_from_frames(AVBufferRef *buf){
     AVHWFramesContext *frames = reinterpret_cast<AVHWFramesContext*>(buf->data);
     return get_opencl_ctx_from_device(frames->device_ref);
 }
+#endif
