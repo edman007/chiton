@@ -36,7 +36,7 @@ RUN_BUILD=0
 RUN_TEST=0
 
 HOSTS=debian-11
-ALL_HOSTS="debian-11 debian-testing raspbian-32 raspbian-64"
+ALL_HOSTS="debian-11 debian-testing raspbian-32 raspbian-64 slackware-15"
 
 show_help () {
     echo -e "$0 <arg> [addational args]\n"
@@ -131,16 +131,30 @@ push_signing_key () {
 
 }
 
-pull_build_files () {
+pull_deb_build_files () {
     rm -rf ../release/$OS_NAME || true
     mkdir -p ../release/$OS_NAME
     scp $SSH_OPTS chiton-build@localhost:pkg/*.{deb,build,changes,buildinfo} chiton-build@localhost:pkg/chiton_*.dsc ../release/$OS_NAME/
 }
+
+pull_slack_build_files () {
+    rm -rf ../release/$OS_NAME || true
+    mkdir -p ../release/$OS_NAME
+    scp $SSH_OPTS chiton-build@localhost:pkg/*.txz ../release/$OS_NAME/
+}
+
 #on debian based systems, builds the .deb, needs OS version info
 run_deb_build () {
     run_remote_cmd 'rm -rf /home/chiton-build/pkg/ ; mkdir -p /home/chiton-build/pkg/'
     scp $SSH_OPTS ../release/*.dsc ../release/*.tar.gz chiton-build@localhost:pkg/
     run_remote_script ./lib/build-deb-pkg.sh <<< $SIGN_KEY$'\n'$GPG_NEW_PASS
+}
+
+run_slack_build () {
+    run_remote_cmd 'rm -rf /home/chiton-build/pkg/ ; mkdir -p /home/chiton-build/pkg/'
+    scp $SSH_OPTS ../release/*.tar.xz chiton-build@localhost:pkg/
+    run_remote_cmd 'cd pkg ; tar -xvf chiton*.slackbuild.tar.xz ; mv *.tar.xz chiton'
+    run_remote_cmd 'sudo su - -c "cd /home/chiton-build/pkg/chiton ; OUTPUT=/home/chiton-build/pkg/ ./chiton.SlackBuild"'
 }
 
 build_arm () {
@@ -153,7 +167,20 @@ build_arm () {
 build_deb_pkg () {
     push_signing_key
     run_deb_build
-    pull_build_files
+    pull_deb_build_files
+}
+
+sign_slack_files () {
+    (
+        cd ../release/$OS_NAME/
+        $HOST_GPG  --homedir $OS_BASE_DIR/gpg/home --command-fd 0  --status-fd 1 --pinentry-mode loopback --armor --default-key $SIGN_KEY --sign *.txz <<< $GPG_NEW_PASS
+    )
+
+}
+build_slack_pkg () {
+    run_slack_build
+    pull_slack_build_files
+    sign_slack_files
 }
 
 test_install () {
@@ -164,13 +191,10 @@ test_install () {
         curl --output $OS_BASE_DIR/sample-videos/0.1-default.sql https://dev.edman007.com/~edman007/pub/chiton-dev/0.1-default.sql
     fi
 
-    if [ "$OS_TYPE" = "debian" ] || [ "$OS_TYPE" = "raspbian" ]; then
-        run_remote_cmd 'rm -rf install-test ; mkdir -p install-test/vids'
-        scp $SSH_OPTS ../release/$OS_NAME/*.deb chiton-build@localhost:install-test
-        scp $SSH_OPTS $OS_BASE_DIR/sample-videos/* chiton-build@localhost:install-test/vids
-        run_remote_script ./lib/deb-install-test.sh
-
-    fi
+    run_remote_cmd 'rm -rf install-test ; mkdir -p install-test/vids'
+    scp $SSH_OPTS ../release/$OS_NAME/* chiton-build@localhost:install-test
+    scp $SSH_OPTS $OS_BASE_DIR/sample-videos/* chiton-build@localhost:install-test/vids
+    run_remote_script ./lib/deb-install-test.sh
 }
 
 validate_hosts () {
@@ -336,7 +360,12 @@ for HOST_STR in $HOSTS; do
                    echo "build_deb_pkg: ${PIPESTATUS[0]}"
                    ret=1
                 fi
-
+            elif [ $OS_TYPE = "slackware" ]; then
+                build_slack_pkg  | tee $OS_DIR/build.log 2>&1 | sed "s/^/$HOST_STR: /"
+                if [ "${PIPESTATUS[0]}" != "0" ]; then
+                    echo "build_slack_pkg: ${PIPESTATUS[0]}"
+                    ret=1
+                fi
             fi
         fi
 
