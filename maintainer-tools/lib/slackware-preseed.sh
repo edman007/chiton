@@ -44,7 +44,8 @@ mount /dev/sr0 /cdrom
 
 INSTALL_LOCATION=/cdrom/slackware64
 #sets we need a ap d l n tcl x
-for PKG in a ap d l n tcl x ; do
+#xine-lib is linked against ffmpeg, so it's required
+for PKG in a ap d l n tcl x xap/xine-lib*; do
     installpkg --root /mnt --infobox --threads 4 $INSTALL_LOCATION/$PKG/*
 done
 
