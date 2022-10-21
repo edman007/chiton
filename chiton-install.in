@@ -52,11 +52,13 @@ STATE_DIR=@localstatedir@/@PKGNAME@
 APACHE_CFG_DIR=@apachecfgdir@
 CFGDIR=@cfgdir@
 SKIP_ALL=N
-WEBDIR=/
+WEBDIR=/@PKGNAME@
 VID_DIR=$STATE_DIR/vids
 
 #Packaging scripts might want to change this
 APACHE_USER=apache
+QUIET_MODE=N
+SKIP_DB=N
 
 #take a couple of guesses
 if ! getent passwd $APACHE_USER > /dev/null ; then
@@ -66,8 +68,16 @@ if ! getent passwd $APACHE_USER > /dev/null ; then
     fi
 fi
 
+#check for an old script, pull the DB info from the old config
+if [ -r "$CFGDIR/chiton.cfg" ]; then
+    MYSQL_USER=$(cat "$CFGDIR/chiton.cfg" | grep db-user | sed -e s/\'//g -e 's/ //g'  | cut -d = -f 2)
+    MYSQL_USER_PW=$(cat "$CFGDIR/chiton.cfg" | grep db-password | sed -e s/\'//g -e 's/ //g'  | cut -d = -f 2)
+    MYSQL_HOST=$(cat "$CFGDIR/chiton.cfg" | grep db-host | sed -e s/\'//g -e 's/ //g'  | cut -d = -f 2)
+    MYSQL_DB=$(cat "$CFGDIR/chiton.cfg" | grep db-database | sed -e s/\'//g -e 's/ //g'  | cut -d = -f 2)
+fi
+
 # Check all our options
-while getopts "hH:d:U:P:u:p:yv:" opt
+while getopts "hH:d:U:P:u:p:yv:qk" opt
 do
     case $opt in
         (h) #help
@@ -90,6 +100,11 @@ do
             echo -e "\tSelect the default answer to everything"
             echo "  -v <dir>"
             echo -e "\tSet the default location for saving videos"
+            echo "  -q"
+            echo -e "\tQuiet Output"
+            echo "  -k"
+            echo -e "\tSkip Database and user creation"
+
             ;;
 
         (H)
@@ -116,15 +131,27 @@ do
         (v)
             VID_DIR="$OPTARG"
             ;;
+        (q)
+            QUIET_MODE="Y"
+            ;;
+        (k)
+            SKIP_DB="Y"
+            ;;
 
     esac
 done
 
-echo "This will guide you through setting up chiton"
-echo
+function log_msg() {
+    if [ "$QUIET_MODE" = "N" ]; then
+        echo "$@"
+    fi
+}
+
+log_msg "This will guide you through setting up chiton"
+log_msg
 
 var=""
-echo "Database Host [$MYSQL_HOST]:"
+log_msg "Database Host [$MYSQL_HOST]:"
 if [ "$SKIP_ALL" != "Y" ]; then
     read -p '> ' var
 fi
@@ -132,7 +159,7 @@ if [[ -n $var ]]; then
     MYSQL_HOST="$var"
 fi
 
-echo "Database DB [$MYSQL_DB]:"
+log_msg "Database DB [$MYSQL_DB]:"
 if [ "$SKIP_ALL" != "Y" ]; then
     read -p '> ' var
 fi
@@ -140,7 +167,7 @@ if [[ -n $var ]]; then
     MYSQL_DB="$var"
 fi
 
-echo "Database Administrator User [$MYSQL_INSTALL_USER]:"
+log_msg "Database Administrator User [$MYSQL_INSTALL_USER]:"
 if [ "$SKIP_ALL" != "Y" ]; then
     read -p '> ' var
 fi
@@ -149,7 +176,7 @@ if [[ -n $var ]]; then
 fi
 
 
-echo "Database Administrator Password (Leave blank to be prompted later) [$MYSQL_INSTALL_PW]:"
+log_msg "Database Administrator Password []:"
 if [ "$SKIP_ALL" != "Y" ]; then
     read -s -p '> ' var
 fi
@@ -157,7 +184,13 @@ if [[ -n $var ]]; then
     MYSQL_INSTALL_PW="$var"
 fi
 
-echo "Database User [$MYSQL_USER]:"
+if [[ -n $MYSQL_INSTALL_PW ]]; then
+    MYSQL_INSTALL_PW_CLI="-p${MYSQL_INSTALL_PW}"
+else
+    MYSQL_INSTALL_PW_CLI=""
+fi
+
+log_msg "Database User [$MYSQL_USER]:"
 if [ "$SKIP_ALL" != "Y" ]; then
     read -p '> ' var
 fi
@@ -165,7 +198,7 @@ if [[ -n $var ]]; then
     MYSQL_USER="$var"
 fi
 
-echo "Database User's Password [$MYSQL_USER_PW]:"
+log_msg "Database User's Password []:"
 if [ "$SKIP_ALL" != "Y" ]; then
     read -s -p '> ' var
 fi
@@ -173,7 +206,7 @@ if [[ -n $var ]]; then
     MYSQL_USER_PW="$var"
 fi
 
-echo "Apache Configuration Directory [$APACHE_CFG_DIR]:"
+log_msg "Apache Configuration Directory [$APACHE_CFG_DIR]:"
 if [ "$SKIP_ALL" != "Y" ]; then
     read -p '> ' var
 fi
@@ -181,7 +214,7 @@ if [[ -n $var ]]; then
     APACHE_CFG_DIR="$var"
 fi
 
-echo "URL path on webserver (with leading slash) [$WEBDIR]:"
+log_msg "URL path on webserver (with leading slash) [$WEBDIR]:"
 if [ "$SKIP_ALL" != "Y" ]; then
     read -p '> ' var
 fi
@@ -190,7 +223,7 @@ if [[ -n $var ]]; then
 fi
 
 
-echo "Location for saving videos [$VID_DIR]:"
+log_msg "Location for saving videos [$VID_DIR]:"
 if [ "$SKIP_ALL" != "Y" ]; then
     read -p '> ' var
 fi
@@ -198,46 +231,53 @@ if [[ -n $var ]]; then
     VID_DIR="$var"
 fi
 
-echo "Should I create the database? [y/n]: "
-if [ "$SKIP_ALL" != "Y" ]; then
-    read -p '> ' var
-fi
-if [[ "$var" == "y" || "$var" == "" || "$SKIP_ALL" == "Y" ]]; then
-    mysql -u "$MYSQL_INSTALL_USER" -h "$MYSQL_HOST" "-p$MYSQL_INSTALL_PW" <<EOF
-          CREATE DATABASE \`${MYSQL_DB}\`;
-EOF
-fi
-
-echo "Should I create the database user '$MYSQL_USER'@'localhost' and grant all privs on $MYSQL_DB? [y/n]: "
-if [ "$SKIP_ALL" != "Y" ]; then
-    read -p '> ' var
-fi
-
+#escape all these variables
+MYSQL_HOST_ESC=${MYSQL_HOST//\'/\\\'}
+MYSQL_DB_ESC=${MYSQL_DB//\'/\\\'}
+MYSQL_USER_ESC=${MYSQL_USER//\'/\\\'}
 MYSQL_USER_PW_ESC=${MYSQL_USER_PW//\'/\\\'}
-if [[ "$var" == "y" || "$var" == "" || "$SKIP_ALL" == "Y" ]]; then
-    MYSQL_INSTALL_PW_ESC=${MYSQL_INSTALL_PW//\'/\\\'}
-    mysql -u "$MYSQL_INSTALL_USER" -h "$MYSQL_HOST" "-p${MYSQL_INSTALL_PW}" <<EOF
-          CREATE USER '${MYSQL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_PASS}';
-          GRANT ALL PRIVILEGES ON \`${MYSQL_DB}\`.* TO '${MYSQL_USER}'@'localhost';
+
+if [[ "SKIP_DB" = "Y" ]]; then
+    log_msg "Skipping DB & DB User creation"
+else
+    log_msg "Should I create the database? [y/n]: "
+    if [ "$SKIP_ALL" != "Y" ]; then
+        read -p '> ' var
+    fi
+    if [[ "$var" == "y" || "$var" == "" || "$SKIP_ALL" == "Y" ]]; then
+        mysql -u "$MYSQL_INSTALL_USER" -h "$MYSQL_HOST" "$MYSQL_INSTALL_PW_CLI" <<EOF
+          CREATE DATABASE IF NOT EXISTS \`${MYSQL_DB_ESC}\`;
+EOF
+    fi
+
+    log_msg "Should I create the database user '$MYSQL_USER'@'localhost' and grant all privs on $MYSQL_DB? [y/n]: "
+    if [ "$SKIP_ALL" != "Y" ]; then
+        read -p '> ' var
+    fi
+
+    if [[ "$var" == "y" || "$var" == "" || "$SKIP_ALL" == "Y" ]]; then
+        mysql -u "$MYSQL_INSTALL_USER" -h "$MYSQL_HOST" "$MYSQL_INSTALL_PW_CLI" <<EOF
+          CREATE USER IF NOT EXISTS '${MYSQL_USER_ESC}'@'localhost' IDENTIFIED BY '${MYSQL_USER_PW_ESC}';
+          GRANT ALL PRIVILEGES ON \`${MYSQL_DB_ESC}\`.* TO '${MYSQL_USER_ESC}'@'localhost';
           FLUSH PRIVILEGES;
 EOF
+    fi
 fi
 
-
 #create the user if they don't already exist
-echo "Should I create the system user \`$BACKEND_USER\`? [Y/n]: "
+log_msg "Should I create the system user \`$BACKEND_USER\`? [Y/n]: "
 if [ "$SKIP_ALL" != "Y" ]; then
     read -p '> ' var
 fi
 if [[ "$var" == "y" || "$SKIP_ALL" == "Y" ]]; then
     if getent passwd $BACKEND_USER > /dev/null ; then
-        echo "The user $BACKEND_USER already exists"
+        log_msg "The user $BACKEND_USER already exists"
     else
         useradd $BACKEND_USER -d $STATE_DIR -r -U
     fi
 fi
 
-echo "Should I add \`$APACHE_USER\` to the group $BACKEND_USER? [Y/n]: "
+log_msg "Should I add \`$APACHE_USER\` to the group $BACKEND_USER? [Y/n]: "
 if [ "$SKIP_ALL" != "Y" ]; then
     read -p '> ' var
 fi
@@ -245,15 +285,11 @@ if [[ "$var" == "y" || "$SKIP_ALL" == "Y" ]]; then
     if getent passwd $APACHE_USER > /dev/null ; then
         usermod -a -G $BACKEND_USER $APACHE_USER
     else
-        echo "The user $APACHE_USER does not exist"
+        log_msg "The user $APACHE_USER does not exist"
     fi
 fi
 
-echo "Creating the configs..."
-#escape all these variables (PW was escaped for single quotes eariler)
-MYSQL_HOST_ESC=${MYSQL_HOST//\'/\\\'}
-MYSQL_DB_ESC=${MYSQL_DB//\'/\\\'}
-MYSQL_USER_ESC=${MYSQL_USER//\'/\\\'}
+log_msg "Creating the configs..."
 
 #and for sed...
 MYSQL_HOST_SED=${MYSQL_HOST_ESC//,/\\,}
@@ -280,6 +316,7 @@ sed -e "s,[@]DB_HOST[@],'$MYSQL_HOST_SED',g" \
     -e "s,[@]DB_DB[@],'$MYSQL_DB_SED',g" \
     -e "s,[@]SMARTY_COMPILE_DIR[@],$STATE_DIR/compile,g" \
     -e "s,[@]SMARTY_CACHE_DIR[@],$STATE_DIR/cache,g" \
+    -e "s,[@]CFG_FILE[@],'$CFGDIR/chiton.cfg',g" \
     $CFGDIR/config.template.php > $CFGDIR/config.php
 
 #secure our passwords
@@ -295,7 +332,9 @@ chmod 770 $STATE_DIR/compile $STATE_DIR/cache $VID_DIR
 
 #and configure apache
 if [ -r $APACHE_CFG_DIR/apache-chiton.conf ]; then
-    mv $APACHE_CFG_DIR/apache-chiton.conf $APACHE_CFG_DIR/apache-chiton.conf.bak
+    APACHE_NEW_CFG=$APACHE_CFG_DIR/apache-chiton.conf.new
+else
+    APACHE_NEW_CFG=$APACHE_CFG_DIR/apache-chiton.conf
 fi
 
 sed -e "s,[@]root_path[@],\"$WEBDIR\",g" \
@@ -303,25 +342,25 @@ sed -e "s,[@]root_path[@],\"$WEBDIR\",g" \
     -e "s,[@]webdir[@],\"@pkgdatadir@/web\",g" \
     -e "s,[@]cfgdir[@],\"$CFGDIR\",g" \
     -e "s,[@]viddir[@],\"$VID_DIR\",g" \
-    @pkgdatadir@/apache/apache-chiton.conf > $APACHE_CFG_DIR/apache-chiton.conf
+    @pkgdatadir@/apache/apache-chiton.conf > $APACHE_NEW_CFG
 
 if [ "x@apacheappendconf@" != "zno" ]; then
     #append an include line to @apacheappendconf@
-    if [ -f "@apacheappendconf@" && ! grep "$APACHE_CFG_DIR/apache-chiton.conf" "@apacheappendconf@" ]; then
-        echo '# Enable Chiton NVR' >> @apacheappendconf@
-        echo "Include $APACHE_CFG_DIR/apache-chiton.conf" >> @apacheappendconf@
+    if [ -f "@apacheappendconf@" ] && ! grep "$APACHE_CFG_DIR/apache-chiton.conf" "@apacheappendconf@" ; then
+        log_msg '# Enable Chiton NVR' >> @apacheappendconf@
+        log_msg "Include $APACHE_CFG_DIR/apache-chiton.conf" >> @apacheappendconf@
     fi
 fi
 
 if [ "x@apachesymlinkdir@" != "xno" ]; then
-    if [ -d @apachesymlinkdir@ && ! -f @apachesymlinkdir@/apache-chiton.conf ]; then
+    if [ -d @apachesymlinkdir@ ] && [ ! -f @apachesymlinkdir@/apache-chiton.conf ] ; then
         ln -s $APACHE_CFG_DIR/apache-chiton.conf @apachesymlinkdir@
     fi
 fi
 
-echo "$APACHE_CFG_DIR/apache-chiton.conf has been created, you may need to put:"
-echo -e "\n\n\tInclude \"$APACHE_CFG_DIR/apache-chiton.conf\"\n\n"
-echo "into your httpd.conf if your distro does not automatically include it"
+log_msg "$APACHE_CFG_DIR/apache-chiton.conf has been created, you may need to put:"
+log_msg -e "\n\n\tInclude \"$APACHE_CFG_DIR/apache-chiton.conf\"\n\n"
+log_msg "into your httpd.conf if your distro does not automatically include it"
 
-echo "You may now start the backend and restart apache, the URL for your server is:"
-echo "http://localhost$WEBDIR"
+log_msg "You may now start the backend and restart apache, the URL for your server is:"
+log_msg "http://localhost$WEBDIR"
