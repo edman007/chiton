@@ -34,6 +34,7 @@ RUN_BOOT=0
 RUN_SOURCE=0
 RUN_BUILD=0
 RUN_TEST=0
+GOLD_RUN=0
 
 HOSTS=debian-11
 ALL_HOSTS="debian-11 debian-testing raspbian-32 raspbian-64 slackware-15"
@@ -70,8 +71,11 @@ build_source () {
     (
         #build the golden packages
         cd ..
-        make maintainer-clean
-        ./configure
+        if [ "$GOLD_RUN" = 1 ]; then
+            make maintainer-clean
+            ./configure
+            make dist-check
+        fi
         make -j15 release
         if [ "x$SIGN_KEY" != "x" ]; then
             cd release
@@ -262,6 +266,7 @@ do
             "gold")
                 HOSTS="$ALL_HOSTS"
                 RUN_TEST=1
+                GOLD_RUN=1
                 rm -rf $OS_BASE_DIR || true
                 rm -rf ../release/ || true
                 ;;
