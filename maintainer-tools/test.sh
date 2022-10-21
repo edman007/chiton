@@ -75,6 +75,8 @@ build_source () {
             make maintainer-clean
             ./configure
             make dist-check
+        else
+            rm -rf release
         fi
         make -j15 release
         if [ "x$SIGN_KEY" != "x" ]; then
