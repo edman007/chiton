@@ -251,6 +251,7 @@ if [ $ON_DEBIAN = 1 ] ; then
     echo "chiton	chiton/purge	boolean	true" | sudo debconf-set-selections
     sudo DEBIAN_FRONTEND=noninteractive apt-get purge chiton -y
 else
+    sudo chiton-install -Gy
     sudo removepkg chiton
 fi
 
