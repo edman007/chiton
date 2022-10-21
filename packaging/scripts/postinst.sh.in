@@ -82,7 +82,7 @@ if [ -f /usr/share/dbconfig-common/dpkg/postinst.mysql ]; then
     MYSQL_DB="$dbc_dbname"
     MYSQL_USER="$dbc_dbuser"
     MYSQL_USER_PW="$dbc_dbpass"
-    chiton-install -yqk -H "$MYSQL_HOST" -d "$MYSQL_DB" -U "$MYSQL_USER" -p "$MYSQL_USER_PW"
+    chiton-install -yqk -H "$MYSQL_HOST" -d "$MYSQL_DB" -u "$MYSQL_USER" -p "$MYSQL_USER_PW"
 fi
 
 
