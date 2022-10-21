@@ -27,10 +27,13 @@ sudo dpkg -i chiton_0.4.0~pre-1_amd64.deb
 For Slackware that would look something like this:
 
 ```bash
-tar -xvf chiton-0.1.0git.slackbuild.tar.xz
-mv chiton-0.1.0git.tar.xz chiton
+tar -xvf chiton-0.4.0pre.slackbuild.tar.xz
+mv chiton-0.4.0pre.tar.xz chiton
 ./chiton.SlackBuild
-sudo upgradepkg --install-new /tmp/chiton-0.1.0git*.txz
+sudo upgradepkg --install-new /tmp/chiton-0.4.0pre*.txz
+chiton-install
+chmod +x /etc/rc.d/rc.chiton
+/etc/rc.d/rc.chiton start
 ```
 
 Alternativitly you can install directly from source:
@@ -40,6 +43,8 @@ Alternativitly you can install directly from source:
 ./configure --help #read the options, you do want to set your system directories
 make
 make install
+chiton-install
+systemctl start chiton
 ```
 
 ## Usage
