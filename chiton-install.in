@@ -30,6 +30,7 @@ MYSQL_DB=@PKGNAME@
 MYSQL_INSTALL_USER="root"
 MYSQL_INSTALL_PW=""
 MYSQL_USER=@PKGNAME@
+MYSQL_USER_HOST="localhost"
 BACKEND_USER=@PKGNAME@
 
 #make a decent default PW
@@ -59,6 +60,7 @@ VID_DIR=$STATE_DIR/vids
 APACHE_USER=apache
 QUIET_MODE=N
 SKIP_DB=N
+PURGE=N
 
 #take a couple of guesses
 if ! getent passwd $APACHE_USER > /dev/null ; then
@@ -70,14 +72,18 @@ fi
 
 #check for an old script, pull the DB info from the old config
 if [ -r "$CFGDIR/chiton.cfg" ]; then
-    MYSQL_USER=$(cat "$CFGDIR/chiton.cfg" | grep db-user | sed -e s/\'//g -e 's/ //g'  | cut -d = -f 2)
-    MYSQL_USER_PW=$(cat "$CFGDIR/chiton.cfg" | grep db-password | sed -e s/\'//g -e 's/ //g'  | cut -d = -f 2)
-    MYSQL_HOST=$(cat "$CFGDIR/chiton.cfg" | grep db-host | sed -e s/\'//g -e 's/ //g'  | cut -d = -f 2)
-    MYSQL_DB=$(cat "$CFGDIR/chiton.cfg" | grep db-database | sed -e s/\'//g -e 's/ //g'  | cut -d = -f 2)
+    MYSQL_USER=$(cat "$CFGDIR/chiton.cfg" | grep db-user | sed -E -e 's!^\s*.*?\s*=\s*(['\''"]?)(.+)(\1)(\s*|\s*#.*)$!\2!' -e 's!\\(["'\''\\])!\1!g')
+    MYSQL_USER_PW=$(cat "$CFGDIR/chiton.cfg" | grep db-password | sed -E -e 's!^\s*.*?\s*=\s*(['\''"]?)(.+)(\1)(\s*|\s*#.*)$!\2!' -e 's!\\(["'\''\\])!\1!g')
+    MYSQL_HOST=$(cat "$CFGDIR/chiton.cfg" | grep db-host | sed -E -e 's!^\s*.*?\s*=\s*(['\''"]?)(.+)(\1)(\s*|\s*#.*)$!\2!' -e 's!\\(["'\''\\])!\1!g')
+    MYSQL_DB=$(cat "$CFGDIR/chiton.cfg" | grep db-database | sed -E -e 's!^\s*.*?\s*=\s*(['\''"]?)(.+)(\1)(\s*|\s*#.*)$!\2!' -e 's!\\(["'\''\\])!\1!g')
+    VID_DIR_TMP=$(cat "$CFGDIR/chiton.cfg" | grep output-dir | sed -E -e 's!^\s*.*?\s*=\s*(['\''"]?)(.+)(\1)(\s*|\s*#.*)$!\2!' -e 's!\\(["'\''\\])!\1!g')
+    if [[ -n $VID_DIR_TMP ]]; then
+        VID_DIR="$VID_DIR_TMP"
+    fi
 fi
 
 # Check all our options
-while getopts "hH:d:U:P:u:p:yv:qk" opt
+while getopts "hH:d:U:P:u:p:yv:qkG" opt
 do
     case $opt in
         (h) #help
@@ -104,7 +110,9 @@ do
             echo -e "\tQuiet Output"
             echo "  -k"
             echo -e "\tSkip Database and user creation"
-
+            echo "  -G"
+            echo -e "\tPruge Database (Delete all configs and recordings)"
+            exit 0
             ;;
 
         (H)
@@ -137,7 +145,9 @@ do
         (k)
             SKIP_DB="Y"
             ;;
-
+        (G)
+            PURGE="Y"
+            ;;
     esac
 done
 
@@ -146,17 +156,40 @@ function log_msg() {
         echo "$@"
     fi
 }
-
-log_msg "This will guide you through setting up chiton"
-log_msg
-
 var=""
+if [[ "$PURGE" = "Y" ]]; then
+    log_msg "================================================================================"
+    log_msg "=                                   WARNING!!!                                 ="
+    log_msg "=                      Purging will delete all recordings!                     ="
+    log_msg "================================================================================"
+    if [ "$SKIP_ALL" != "Y" ]; then
+        log_msg "Do you want to continue? [y/N]: "
+        read -p '> ' var
+        if [[ "$var" != "Y" ]] && [[ "$var" != "y" ]]; then
+            log_msg "You must enter 'Y' to continue"
+            exit 1
+        fi
+    fi
+    if ! [ -r "$CFGDIR/chiton.cfg" ]; then
+        log_msg "$CFGDIR/chiton.cfg not found, refusing to continue"
+        exit 1
+    fi
+else
+    log_msg "This will guide you through setting up chiton"
+    log_msg
+fi
+
 log_msg "Database Host [$MYSQL_HOST]:"
 if [ "$SKIP_ALL" != "Y" ]; then
     read -p '> ' var
 fi
 if [[ -n $var ]]; then
     MYSQL_HOST="$var"
+fi
+
+#pick our real hostname if not connecting to localhost
+if [[ "$MYSQL_HOST" != "localhost" ]]; then
+    MYSQL_USER_HOST=$(hostname)
 fi
 
 log_msg "Database DB [$MYSQL_DB]:"
@@ -206,6 +239,14 @@ if [[ -n $var ]]; then
     MYSQL_USER_PW="$var"
 fi
 
+log_msg "Database User's Host [$MYSQL_USER_HOST]:"
+if [ "$SKIP_ALL" != "Y" ]; then
+    read -s -p '> ' var
+fi
+if [[ -n $var ]]; then
+    MYSQL_USER_HOST="$var"
+fi
+
 log_msg "Apache Configuration Directory [$APACHE_CFG_DIR]:"
 if [ "$SKIP_ALL" != "Y" ]; then
     read -p '> ' var
@@ -214,14 +255,15 @@ if [[ -n $var ]]; then
     APACHE_CFG_DIR="$var"
 fi
 
-log_msg "URL path on webserver (with leading slash) [$WEBDIR]:"
-if [ "$SKIP_ALL" != "Y" ]; then
-    read -p '> ' var
+if [[ "$PURGE" = "N" ]]; then
+    log_msg "URL path on webserver (with leading slash) [$WEBDIR]:"
+    if [ "$SKIP_ALL" != "Y" ]; then
+        read -p '> ' var
+    fi
+    if [[ -n $var ]]; then
+        WEBDIR="$var"
+    fi
 fi
-if [[ -n $var ]]; then
-    WEBDIR="$var"
-fi
-
 
 log_msg "Location for saving videos [$VID_DIR]:"
 if [ "$SKIP_ALL" != "Y" ]; then
@@ -236,6 +278,47 @@ MYSQL_HOST_ESC=${MYSQL_HOST//\'/\\\'}
 MYSQL_DB_ESC=${MYSQL_DB//\'/\\\'}
 MYSQL_USER_ESC=${MYSQL_USER//\'/\\\'}
 MYSQL_USER_PW_ESC=${MYSQL_USER_PW//\'/\\\'}
+MYSQL_USER_HOST_ESC=${MYSQL_USER_HOST//\'/\\\'}
+
+if [[ "$PURGE" = "Y" ]]; then
+    if [[ "SKIP_DB" = "Y" ]]; then
+        log_msg "Skipping DB & DB user delete"
+    else
+        log_msg "Should I Delete the Database and User? [y/n]: "
+        if [ "$SKIP_ALL" != "Y" ]; then
+            read -p '> ' var
+        fi
+        if [[ "$var" == "y" || "$var" == "" || "$SKIP_ALL" == "Y" ]]; then
+            mysql -u "$MYSQL_INSTALL_USER" -h "$MYSQL_HOST" "$MYSQL_INSTALL_PW_CLI" <<EOF
+DROP DATABASE \`${MYSQL_DB_ESC}\`;
+DROP USER '${MYSQL_USER_ESC}'@'${MYSQL_USER_HOST_ESC}'  ;
+FLUSH PRIVILEGES;
+EOF
+        fi
+    fi
+    log_msg "Deleting all videos, this may take a while.."
+    rm -rf "$VID_DIR/"
+    log_msg "Deleting all configs"
+    rm -rf @localstatedir@/@PKGNAME@/cache/* || true
+    rm -rf @localstatedir@/@PKGNAME@/compile/* || true
+    rm -f $CFGDIR/chiton.cfg{,.orig} $CFGDIR/config.php{,.orig} || true
+
+    if [ "x@apacheappendconf@" != "zno" ]; then
+        #append an include line to @apacheappendconf@
+        if [ -f "@apacheappendconf@" ] && ! grep "$APACHE_CFG_DIR/apache-chiton.conf" "@apacheappendconf@" ; then
+            sed -i -e '/# Enable Chiton NVR/d' -e '!Include $APACHE_CFG_DIR/apache-chiton.conf!d' @apacheappendconf@
+        fi
+    fi
+
+    if [ "x@apachesymlinkdir@" != "xno" ]; then
+        if [ -d @apachesymlinkdir@ ] && [ ! -f @apachesymlinkdir@/apache-chiton.conf ] ; then
+            rm -f @apachesymlinkdir@/apache-chiton.conf || true
+        fi
+    fi
+
+    rm -f "$APACHE_CFG_DIR/apache-chiton.conf"
+    exit 0
+fi
 
 if [[ "SKIP_DB" = "Y" ]]; then
     log_msg "Skipping DB & DB User creation"
@@ -250,15 +333,15 @@ else
 EOF
     fi
 
-    log_msg "Should I create the database user '$MYSQL_USER'@'localhost' and grant all privs on $MYSQL_DB? [y/n]: "
+    log_msg "Should I create the database user '$MYSQL_USER'@'${MYSQL_USER_HOST}' and grant all privs on $MYSQL_DB? [y/n]: "
     if [ "$SKIP_ALL" != "Y" ]; then
         read -p '> ' var
     fi
 
     if [[ "$var" == "y" || "$var" == "" || "$SKIP_ALL" == "Y" ]]; then
         mysql -u "$MYSQL_INSTALL_USER" -h "$MYSQL_HOST" "$MYSQL_INSTALL_PW_CLI" <<EOF
-          CREATE USER IF NOT EXISTS '${MYSQL_USER_ESC}'@'localhost' IDENTIFIED BY '${MYSQL_USER_PW_ESC}';
-          GRANT ALL PRIVILEGES ON \`${MYSQL_DB_ESC}\`.* TO '${MYSQL_USER_ESC}'@'localhost';
+          CREATE USER IF NOT EXISTS '${MYSQL_USER_ESC}'@'${MYSQL_USER_HOST_ESC}' IDENTIFIED BY '${MYSQL_USER_PW_ESC}';
+          GRANT ALL PRIVILEGES ON \`${MYSQL_DB_ESC}\`.* TO '${MYSQL_USER_ESC}'@'${MYSQL_USER_HOST_ESC}';
           FLUSH PRIVILEGES;
 EOF
     fi
@@ -298,7 +381,7 @@ MYSQL_USER_SED=${MYSQL_USER_ESC//,/\\,}
 MYSQL_USER_PW_SED=${MYSQL_USER_PW_ESC//,/\\,}
 
 if [ -r $CFGDIR/chiton.cfg ]; then
-    mv $CFGDIR/chiton.cfg $CFGDIR/chiton.cfg.bak
+    mv $CFGDIR/chiton.cfg $CFGDIR/chiton.cfg.orig
 fi
 sed -e "s,[@]DB_HOST[@],'$MYSQL_HOST_SED',g" \
     -e "s,[@]DB_USER[@],'$MYSQL_USER_SED',g" \
@@ -308,7 +391,7 @@ sed -e "s,[@]DB_HOST[@],'$MYSQL_HOST_SED',g" \
     $CFGDIR/chiton.cfg.template > $CFGDIR/chiton.cfg
 
 if [ -r $CFGDIR/config.php ]; then
-    mv $CFGDIR/config.php $CFGDIR/config.php.bak
+    mv $CFGDIR/config.php $CFGDIR/config.php.orig
 fi
 sed -e "s,[@]DB_HOST[@],'$MYSQL_HOST_SED',g" \
     -e "s,[@]DB_USER[@],'$MYSQL_USER_SED',g" \
@@ -347,8 +430,8 @@ sed -e "s,[@]root_path[@],\"$WEBDIR\",g" \
 if [ "x@apacheappendconf@" != "zno" ]; then
     #append an include line to @apacheappendconf@
     if [ -f "@apacheappendconf@" ] && ! grep "$APACHE_CFG_DIR/apache-chiton.conf" "@apacheappendconf@" ; then
-        log_msg '# Enable Chiton NVR' >> @apacheappendconf@
-        log_msg "Include $APACHE_CFG_DIR/apache-chiton.conf" >> @apacheappendconf@
+        echo '# Enable Chiton NVR' >> @apacheappendconf@
+        echo "Include $APACHE_CFG_DIR/apache-chiton.conf" >> @apacheappendconf@
     fi
 fi
 
