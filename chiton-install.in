@@ -320,7 +320,7 @@ EOF
     exit 0
 fi
 
-if [[ "SKIP_DB" = "Y" ]]; then
+if [[ "$SKIP_DB" = "Y" ]]; then
     log_msg "Skipping DB & DB User creation"
 else
     log_msg "Should I create the database? [y/n]: "
