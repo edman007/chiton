@@ -47,6 +47,7 @@ if [[ "$1" == "purge" || "$1" == "db_purge" ]]; then
 
     rm -f @apachecfgdir@/apache-chiton.conf || true
     rm -f @cfgdir@/chiton.cfg @cfgdir@/config.php || true
+    rm -f @cfgdir@/chiton.cfg.orig @cfgdir@/config.php.orig || true
     rmdir @cfgdir@ || true
 fi
 
