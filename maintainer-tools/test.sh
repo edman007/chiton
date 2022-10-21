@@ -198,7 +198,7 @@ test_install () {
     run_remote_cmd 'rm -rf install-test ; mkdir -p install-test/vids'
     scp $SSH_OPTS ../release/$OS_NAME/* chiton-build@localhost:install-test
     scp $SSH_OPTS $OS_BASE_DIR/sample-videos/* chiton-build@localhost:install-test/vids
-    run_remote_script ./lib/deb-install-test.sh
+    run_remote_script ./lib/install-test.sh
 }
 
 validate_hosts () {
