@@ -105,6 +105,8 @@ cat build/packaging/slackware/douninst.sh > $PKG/install/douninst.sh
 cat $CWD/slack-desc > $PKG/install/slack-desc
 chmod +x $PKG/install/doinst.sh $PKG/install/douninst.sh
 
+mv $PKG/etc/rc.d/rc.chiton $PKG/etc/rc.d/rc.chiton.new
+
 REV=""
 if [ -r dist-version ] && echo $VERSION | grep 'pre' > /dev/null ; then
     REV=_$(cat dist-version)

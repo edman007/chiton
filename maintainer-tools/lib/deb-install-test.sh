@@ -24,19 +24,66 @@ set -x
 cd install-test
 #answer questions
 
-
-if dpkg -l | grep chiton ; then
-    echo "chiton	chiton/dbconfig-remove	boolean	true" | sudo debconf-set-selections
-    echo "chiton	chiton/purge	boolean	true" | sudo debconf-set-selections
-    sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y chiton || true
-    sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y chiton-dbgsym || true
+if which dpkg 2> /dev/null ; then
+    ON_DEBIAN=1
+else
+    ON_DEBIAN=0
 fi
-#install curl and expect, needed for our scripts
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl expect
-#install mariadb
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ./chiton_*.deb
 
+if [[ $ON_DEBIAN = 1 ]] ; then
+    if dpkg -l | grep chiton ; then
+        echo "chiton	chiton/dbconfig-remove	boolean	true" | sudo debconf-set-selections
+        echo "chiton	chiton/purge	boolean	true" | sudo debconf-set-selections
+        sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y chiton || true
+        sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y chiton-dbgsym || true
+    fi
+    #install curl and expect, needed for our scripts
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl expect
+    #install mariadb
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ./chiton_*.deb
+else
+    export PATH=/sbin:/usr/sbin:/bin:/usr/bin
+    sudo /etc/rc.d/rc.chiton stop || true
+    sudo removepkg chiton || true
+    LASTUPDATE=0
+    if [ -r /var/lib/slackpkg/LASTUPDATE ]; then
+        LASTUPDATE=$(cat /var/lib/slackpkg/LASTUPDATE)
+    fi
+    FREQ=$(expr 60 \* 60 \* 24)
+    CUR_TIME=$(date +%s)
+    UPDATE_DIFF=$(expr $CUR_TIME - $LASTUPDATE - $FREQ)
+    if [[ $UPDATE_DIFF > 0 ]]; then
+        sudo slackpkg -batch=on -default_answer=y update
+        sudo slackpkg -batch=on -default_answer=y upgrade-all || true
+        sudo lilo
+    fi
+
+    #and install
+    sudo installpkg ./chiton*.txz
+    sudo chiton-install -y
+    sudo chmod +x /etc/rc.d/rc.chiton
+    sudo /etc/rc.d/rc.chiton start
+    sudo /etc/rc.d/rc.httpd restart
+
+fi
+
+function start_chiton () {
+    if [ $ON_DEBIAN = 1 ] ; then
+        sudo systemctl start chiton
+    else
+        sudo /etc/rc.d/rc.chiton start
+    fi
+
+}
+
+function stop_chiton () {
+    if [ $ON_DEBIAN = 1 ] ; then
+        sudo systemctl stop chiton
+    else
+        sudo /etc/rc.d/rc.chiton stop
+    fi
+}
 function pre_configure_check () {
     if curl -s http://localhost/chiton/ | grep Error ; then
         echo 'Error, Does not appear to work after first install'
@@ -84,7 +131,11 @@ EOF
 
     #record stuff for 60 seconds
     echo 'Waiting for video to be processed'
-    sudo ./expect_chiton_log journalctl -u chiton -f --no-pager -n0
+    if [ $ON_DEBIAN = 1 ] ; then
+        sudo ./expect_chiton_log journalctl -u chiton -f --no-pager -n0
+    else
+        sudo ./expect_chiton_log tail -f /var/log/syslog -n0
+    fi
     echo "Stopping Record"
     #and shutdown
     curl -s -d 'name[0]=active&value[0]=0&camera[0]=0' \
@@ -156,7 +207,7 @@ function deconfigure_check (){
 
 
 function upgrade_test() {
-    sudo systemctl stop chiton
+    stop_chiton
     #load the DB with a very old config
     DB_USER=$(sudo cat /etc/chiton/chiton.cfg | grep db-user | sed -e s/\'//g -e 's/ //g'  | cut -d = -f 2)
     DB_PASS=$(sudo cat /etc/chiton/chiton.cfg | grep db-password | sed -e s/\'//g -e 's/ //g'  | cut -d = -f 2)
@@ -164,10 +215,10 @@ function upgrade_test() {
         mysql -u$DB_USER -p"$DB_PASS" | tail -n +2 > db_update.sql
     cat /home/chiton-build/install-test/vids/0.1-default.sql >> db_update.sql
     mysql -u$DB_USER -p"$DB_PASS" chiton < db_update.sql
-    sudo systemctl start chiton
+    start_chiton
     #verify that the config has a new version
     sleep 10
-    sudo systemctl stop chiton
+    stop_chiton
     UPDATED_DB_VERSION=$(echo "SELECT value FROM config WHERE name = 'database-version' AND camera = -1;" |     mysql -u$DB_USER -p"$DB_PASS" chiton | tail -n1)
     echo "DB Version is $UPDATED_DB_VERSION"
     if [[ "$UPDATED_DB_VERSION" = "1.0" ]]; then
@@ -180,18 +231,42 @@ pre_configure_check
 configure
 post_configure_check
 
-#remove and reinstall
-echo "chiton chiton/dbconfig-remove	boolean	false" | sudo debconf-set-selections
-echo "chiton	chiton/purge	boolean	false" | sudo debconf-set-selections
-sudo DEBIAN_FRONTEND=noninteractive apt-get remove chiton -y
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ./chiton_*.deb
+#reinstall
+if [ $ON_DEBIAN = 1 ] ; then
+    echo "chiton chiton/dbconfig-remove	boolean	false" | sudo debconf-set-selections
+    echo "chiton	chiton/purge	boolean	false" | sudo debconf-set-selections
+    sudo DEBIAN_FRONTEND=noninteractive apt-get remove chiton -y
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ./chiton_*.deb
+else
+    sudo upgradepkg --reinstall ./chiton*.txz
+    sudo /etc/rc.d/rc.chiton restart
+fi
 echo 'Checking reinstalled'
 post_configure_check
-echo "chiton chiton/dbconfig-remove	boolean	true" | sudo debconf-set-selections
-echo "chiton	chiton/purge	boolean	true" | sudo debconf-set-selections
-sudo DEBIAN_FRONTEND=noninteractive apt-get purge chiton -y
+
+stop_chiton
+#remove
+if [ $ON_DEBIAN = 1 ] ; then
+    echo "chiton chiton/dbconfig-remove	boolean	true" | sudo debconf-set-selections
+    echo "chiton	chiton/purge	boolean	true" | sudo debconf-set-selections
+    sudo DEBIAN_FRONTEND=noninteractive apt-get purge chiton -y
+else
+    sudo removepkg chiton
+fi
+
+
 deconfigure_check
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ./chiton_*.deb
+
+#install again
+if [ $ON_DEBIAN = 1 ] ; then
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ./chiton_*.deb
+else
+    sudo installpkg ./chiton*.txz
+    sudo chiton-install -y
+    sudo chmod +x /etc/rc.d/rc.chiton
+    sudo /etc/rc.d/rc.httpd restart
+fi
+start_chiton
 upgrade_test
 
 echo "All Good!"

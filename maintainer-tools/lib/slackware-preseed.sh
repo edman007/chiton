@@ -156,7 +156,9 @@ echo '##PACKAGE_MIRROR##' >> /etc/slackpkg/mirrors
 #update
 echo YES | slackpkg update gpg
 slackpkg -batch=on -default_answer=y update
+slackpkg -batch=on -default_answer=y upgrade-all
 lilo
+mysql_install_db --user=mysql
 EOF
 chmod +x /mnt/tmp/chroot-setup.sh
 
