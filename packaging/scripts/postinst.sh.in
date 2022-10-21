@@ -92,12 +92,12 @@ if [ "@inittype@" == "systemd" ]; then
     deb-systemd-helper enable chiton.service || true
     deb-systemd-invoke start chiton.service || true
     deb-systemd-invoke restart apache2.service || true
-else
+elif [[ "$PRE_INSTALL_PASS" != "true" ]]; then #slackware runs the script twice, first with PRE_INSTALL_PASS set to true
     #we always overwrite it, but keep the execute bit
-    if [ -e etc/rc.d/rc.chiton ] && [ -r etc/rc.d/rc.chiton.new ]; then
-        mv etc/rc.d/rc.chiton.new etc/rc.d/rc.chiton
-        chmod +x etc/rc.d/rc.chiton
+    if [ -e @initscript@ ] && [ -r @initscript@.new ]; then
+        mv @initscript@.new @initscript@
+        chmod +x @initscript@
     else
-        mv etc/rc.d/rc.chiton.new etc/rc.d/rc.chiton
+        mv @initscript@.new @initscript@
     fi
 fi

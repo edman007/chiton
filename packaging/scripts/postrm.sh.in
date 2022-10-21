@@ -6,12 +6,10 @@ set -e
 #init for debian
 #DEBHELPER#
 if [ -f /usr/share/debconf/confmodule ]; then
+    . /usr/share/debconf/confmodule
     if [[ "$1" == "purge" || "$1" == "db_purge" ]]; then
-        . /usr/share/debconf/confmodule
         db_purge
-    else
-        . /usr/share/debconf/confmodule
-    fi
+fi
 fi
 
 if [ -f /usr/share/dbconfig-common/dpkg/postrm.mysql ]; then
@@ -21,6 +19,8 @@ fi
 
 rm -rf @localstatedir@/@PKGNAME@/cache/* || true
 rm -rf @localstatedir@/@PKGNAME@/compile/* || true
+rmdir @localstatedir@/@PKGNAME@/cache/ || true
+rmdir @localstatedir@/@PKGNAME@/compile/ || true
 
 if [[ "$1" == "purge" || "$1" == "db_purge" ]]; then
     # We are deleting all our files
@@ -48,4 +48,17 @@ if [[ "$1" == "purge" || "$1" == "db_purge" ]]; then
     rm -f @apachecfgdir@/apache-chiton.conf || true
     rm -f @cfgdir@/chiton.cfg @cfgdir@/config.php || true
     rmdir @cfgdir@ || true
+fi
+
+#we install it as a .new so we need to delete the main file too
+if [[ "@inittype@" = "sysv" ]]; then
+    if ! [ -r @initscript@.new ]; then #if the .new still exists, it's because this is an upgrade
+        rm -f @initscript@ || true
+    fi
+fi
+
+rmdir @localstatedir@/@PKGNAME@/ || true
+if ! fuser @runstatedir@/@PKGNAME@.sock 2>&1 > /dev/null ; then
+    rm -f @runstatedir@/@PKGNAME@.sock
+    rmdir @runstatedir@ || true
 fi
