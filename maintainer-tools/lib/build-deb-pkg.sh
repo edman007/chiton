@@ -5,9 +5,9 @@ set -e
 read -s GPG_SIGN_KEY
 read -s GPG_SIGN_PASS
 cd ~/pkg
-sudo apt-get update
-sudo apt-get upgrade -y
-sudo apt-get install -y build-essential fakeroot devscripts
+sudo DEBIAN_FRONTEND=noninteractive apt-get update
+sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential fakeroot devscripts
 dpkg-source -x chiton-*.dsc
 cd chiton-*/
 if [ "x$GPG_SIGN_KEY" = "x" ]; then
@@ -26,5 +26,5 @@ EOF
     chmod +x ../gpg-cmd
     SIGN_PARAMS="-k$GPG_SIGN_KEY -p/home/chiton-build/pkg/gpg-cmd"
 fi
-sudo apt-get build-dep -y .
+sudo DEBIAN_FRONTEND=noninteractive apt-get build-dep -y .
 debuild  -i $SIGN_PARAMS
