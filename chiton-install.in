@@ -305,8 +305,8 @@ EOF
 
     if [ "x@apacheappendconf@" != "zno" ]; then
         #append an include line to @apacheappendconf@
-        if [ -f "@apacheappendconf@" ] && ! grep "$APACHE_CFG_DIR/apache-chiton.conf" "@apacheappendconf@" ; then
-            sed -i -e '/# Enable Chiton NVR/d' -e '!Include $APACHE_CFG_DIR/apache-chiton.conf!d' @apacheappendconf@
+        if [ -f "@apacheappendconf@" ] && grep "apache-chiton.conf" "@apacheappendconf@" ; then
+            sed -i -e '/# Enable Chiton NVR/d' -e '/Include.*apache-chiton.conf/d' @apacheappendconf@
         fi
     fi
 
