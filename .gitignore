@@ -71,3 +71,4 @@ external/npm/debian.license.in
 external/npm/license-meta.csv
 external/npm/node_modules
 maintainer-tools/os-images
+maintainer-tools/lib/settings_local.sh

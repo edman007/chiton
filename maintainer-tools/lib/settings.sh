@@ -22,6 +22,7 @@
 
 set -e
 #This is the key we pull and preconfigure all VMs to accept
+#if you want local settings for the above variables, put them in maintainer-tools/lib/settings_local.sh
 SSH_KEY_PATH=~/.ssh/id_rsa.pub
 MAINTAINER_DIR=$(pwd)/$(dirname -- "${BASH_SOURCE[0]}")/..
 OS_BASE_DIR=$MAINTAINER_DIR/os-images
@@ -38,6 +39,11 @@ HTTPS_OFFSET=2
 #offset per VM
 VM_OFFSET=5
 HOST_GPG=$(command -v gpg2 || echo gpg)
+
+
+if [ -r ./settings_local.sh ]; then
+    . ./settings_local.sh
+fi
 if [ "$OS_TYPE" != "none" ]; then
     echo "Setting up $OS_TYPE/$OS_VERSION"
     #Settings for each VM kind
