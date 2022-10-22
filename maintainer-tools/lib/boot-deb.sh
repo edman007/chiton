@@ -31,6 +31,7 @@ if [ $# -lt 1 ]; then
     echo -e "\t\trebuild - reconfigure the OS image"
     echo -e "\t\tfreshen - reset the OS image to last configured"
     echo -e "\t\tboot - boot the OS"
+    echo -e "\t\tshutdown - shutdown the OS"
     exit 1
 fi
 
@@ -41,6 +42,18 @@ OS_VERSION="$1"
 
 mkdir -p $OS_DIR
 cd $OS_DIR
+
+if [ "$2" = "shutdown" ]; then
+    if [ -r $OS_DIR/run.pid ]; then
+        PID=$(cat $OS_DIR/run.pid)
+        if ps -p $PID > /dev/null; then
+            ssh $SSH_OPTS chiton-build@localhost 'sudo halt -p'
+            exit 0
+        fi
+    fi
+    echo 'Host appears to already be off'
+    exit 0
+fi
 
 #Don't wait for it to shutdown if we are rebuilding the image, just kill it
 if [ "$2" = "clean" ] || [ "$2" = "rebuild" ] || [ "$2" = "freshen" ]; then
@@ -80,7 +93,7 @@ if [ ! -f clean.img ] || [ "$2" = "rebuild" ]; then
     qemu-system-x86_64 \
         -machine accel=kvm \
         -drive format=raw,file=$OS_DIR/clean.img,discard=unmap \
-        -m 6G \
+        -m 6G -name "Debian Installer $1" \
         -smp 12 \
         -device e1000,netdev=$OS_NAME -netdev user,id=$OS_NAME,hostfwd=tcp::$SSH_PORT-:22,hostfwd=tcp::$HTTP_PORT-:80 \
         -pidfile $OS_DIR/run.pid \
@@ -108,7 +121,7 @@ fi
 qemu-system-x86_64 \
     -machine accel=kvm \
     -drive format=raw,file=$OS_DIR/drive.img,discard=unmap \
-    -m 6G \
+    -m 6G -name "Debian $1" \
     -smp 12 \
     -device e1000,netdev=$OS_NAME -netdev user,id=$OS_NAME,hostfwd=tcp::$SSH_PORT-:22,hostfwd=tcp::$HTTP_PORT-:80 \
     -pidfile $OS_DIR/run.pid -daemonize

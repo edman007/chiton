@@ -35,6 +35,7 @@ RUN_SOURCE=0
 RUN_BUILD=0
 RUN_TEST=0
 GOLD_RUN=0
+RUN_SHUTDOWN=0
 
 HOSTS=debian-11
 ALL_HOSTS="debian-11 debian-testing raspbian-32 raspbian-64 slackware-15"
@@ -49,6 +50,7 @@ show_help () {
     echo -e "\tbuild - Build packages"
     echo -e "\ttest - Run tests"
     echo -e "\tssh - Open a console to the first specified host"
+    echo -e "\tshutdown - shutdown hosts when complete (implied by -a)"
     echo -e "\tgold - Build and test golden packages (includes full OS rebuilds)"
     echo -e "\t-a - Run desired command for all supported systems"
     echo -e "\t-s - Build Source"
@@ -62,6 +64,17 @@ show_help () {
 #gets the version number
 get_version () {
     VERSION=$(grep PACKAGE_VERSION ../config_build.hpp | cut -d ' ' -f 3 | tr -d '"')
+}
+
+shutdown_host () {
+    if [ $OS_TYPE = "debian" ]; then
+        ./lib/boot-deb.sh $OS_VERSION shutdown
+    elif [ $OS_TYPE = "raspbian" ]; then
+        ./lib/boot-raspbian.sh $OS_VERSION shutdown
+    else
+        #slackware
+        ./lib/boot-slackware.sh $OS_VERSION shutdown
+    fi
 }
 
 #Creates the official source tarball in release/
@@ -164,12 +177,6 @@ run_slack_build () {
     run_remote_cmd 'sudo su - -c "cd /home/chiton-build/pkg/chiton ; OUTPUT=/home/chiton-build/pkg/ ./chiton.SlackBuild"'
 }
 
-build_arm () {
-    ./lib/boot-raspbian.sh 32 freshen
-    ./lib/boot-raspbian.sh 64 freshen
-}
-
-
 #must be called with OS_TYPE & OS_VERSION set and setting.sh already called
 build_deb_pkg () {
     push_signing_key
@@ -267,10 +274,14 @@ do
             "test")
                 RUN_TEST=1
                 ;;
+            "shutdown")
+                RUN_SHUTDOWN=1
+                ;;
             "gold")
                 HOSTS="$ALL_HOSTS"
                 RUN_TEST=1
                 GOLD_RUN=1
+                RUN_SHUTDOWN=1
                 rm -rf $OS_BASE_DIR || true
                 rm -rf ../release/ || true
                 ;;
@@ -282,6 +293,7 @@ do
                 ;;
             "-a")
                 HOSTS="$ALL_HOSTS"
+                RUN_SHUTDOWN=1
                 ;;
             "-r")
                 RUN_BUILD=1
@@ -350,7 +362,12 @@ for HOST_STR in $HOSTS; do
                     echo "boot-raspbian.sh: ${PIPESTATUS[0]}"
                     ret=1
                 fi
-
+            else
+                ./lib/boot-slackware.sh $OS_VERSION rebuild 2>&1 | tee $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
+                if [ "${PIPESTATUS[0]}" != "0" ]; then
+                    echo "boot-slackware.sh: ${PIPESTATUS[0]}"
+                    ret=1
+                fi
             fi
         fi
 
@@ -370,7 +387,12 @@ for HOST_STR in $HOSTS; do
                     echo "boot-raspbian.sh: ${PIPESTATUS[0]}"
                     ret=1
                 fi
-
+            else
+                ./lib/boot-slackware.sh $OS_VERSION boot 2>&1 | tee -a $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
+                if [ "${PIPESTATUS[0]}" != "0" ]; then
+                    echo "boot-slackware.sh: ${PIPESTATUS[0]}"
+                    ret=1
+                fi
             fi
         fi
 
@@ -399,6 +421,16 @@ for HOST_STR in $HOSTS; do
                 ret=1
             fi
         fi
+
+        if [ $RUN_SHUTDOWN = 1 ]; then
+            echo "$HOST_STR Shutting Down..."
+            shutdown_host | tee $OS_DIR/shutdown.log 2>&1 | sed "s/^/$HOST_STR: /"
+            if [ "${PIPESTATUS[0]}" != "0" ]; then
+                echo "shutdown_host: ${PIPESTATUS[0]}"
+                #failure of shutdown doesn't impact test results
+            fi
+        fi
+
         if [ "$ret" = "0" ] ; then
             echo -e "\033[1;32m$HOST_STR Success\033[0m"
             touch $OS_DIR/success

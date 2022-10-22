@@ -13,6 +13,7 @@ if [ $# -lt 1 ] || [ "$VALID_VERSION" = "0" ]; then
     echo -e "\t\trebuild - reconfigure the OS image"
     echo -e "\t\tfreshen - reset the OS image to last configured"
     echo -e "\t\tboot - boot the OS"
+    echo -e "\t\tshutdown - shutdown the OS"
     exit 1
 fi
 
@@ -23,6 +24,18 @@ OS_VERSION="$1"
 
 mkdir -p $OS_DIR
 cd $OS_DIR
+
+if [ "$2" = "shutdown" ]; then
+    if [ -r $OS_DIR/run.pid ]; then
+        PID=$(cat $OS_DIR/run.pid)
+        if ps -p $PID > /dev/null; then
+            ssh $SSH_OPTS chiton-build@localhost 'sudo halt -p'
+            exit 0
+        fi
+    fi
+    echo 'Host appears to already be off'
+    exit 0
+fi
 
 #Don't wait for it to shutdown if we are rebuilding the image, just kill it
 if [ "$2" = "clean" ] || [ "$2" = "rebuild" ] || [ "$2" = "freshen" ]; then
@@ -79,7 +92,7 @@ if [ ! -f clean.img ] || [ "$2" = "rebuild" ]; then
     #the dwg_otg stuff is because the RPI USB driver sucks and somehow QEMU makes it pop up even more
     #https://www.osadl.org/Single-View.111+M5c03315dc57.0.html
     $QEMU_CMD \
-        $CPU \
+        $CPU  -name "Raspbian Installer $1" \
         -append "$APPEND" \
         -dtb $OS_DIR/system.dtb -kernel $OS_DIR/kernel -no-reboot \
         -drive if=sd,file=$OS_DIR/clean.img,format=raw \
@@ -201,7 +214,7 @@ if [ -r $OS_DIR/run.pid ]; then
 fi
 
 $QEMU_CMD \
-    $CPU \
+    $CPU  -name "Raspbian $1" \
     -append "$APPEND" \
     -dtb $OS_DIR/system.dtb -kernel $OS_DIR/kernel -no-reboot \
     -drive if=sd,file=$OS_DIR/drive.img,format=raw \
