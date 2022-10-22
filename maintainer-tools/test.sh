@@ -48,6 +48,7 @@ show_help () {
     echo -e "\tsource - Package Source"
     echo -e "\tbuild - Build packages"
     echo -e "\ttest - Run tests"
+    echo -e "\tssh - Open a console to the first specified host"
     echo -e "\tgold - Build and test golden packages (includes full OS rebuilds)"
     echo -e "\t-a - Run desired command for all supported systems"
     echo -e "\t-s - Build Source"
@@ -229,6 +230,7 @@ if [ $# = 0 ]; then
 fi
 
 LOAD_HOST_LIST=0
+RUN_SSH=0
 for arg in "$@"
 do
     if [ "$LOAD_HOST_LIST" != "0" ]; then
@@ -272,6 +274,9 @@ do
                 rm -rf $OS_BASE_DIR || true
                 rm -rf ../release/ || true
                 ;;
+            "ssh")
+                RUN_SSH=1
+                ;;
             "-s")
                 rm -rf ../release/ || true
                 ;;
@@ -291,6 +296,16 @@ do
         esac
     fi
 done
+
+if [ $RUN_SSH = 1 ]; then
+    for HOST_STR in $HOSTS; do
+        OS_TYPE=$(echo $HOST_STR | cut -d - -f 1)
+        OS_VERSION=$(echo $HOST_STR | cut -d - -f 2)
+        . ./lib/settings.sh
+        ssh $SSH_OPTS  chiton-build@localhost
+        exit
+    done
+fi
 
 #determine if rebuild is required
 if [ $RUN_TEST = 1 ]; then
