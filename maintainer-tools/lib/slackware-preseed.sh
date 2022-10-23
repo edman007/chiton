@@ -199,6 +199,8 @@ slackpkg -batch=on -default_answer=y update
 slackpkg -batch=on -default_answer=y upgrade-all
 lilo
 mysql_install_db --user=mysql
+#turn on PHP
+sed -i 's!#Include /etc/httpd/mod_php.conf!Include /etc/httpd/mod_php.conf!' /etc/httpd/httpd.conf
 EOF
 chmod +x /mnt/tmp/chroot-setup.sh
 
