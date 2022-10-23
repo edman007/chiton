@@ -41,8 +41,8 @@ VM_OFFSET=5
 HOST_GPG=$(command -v gpg2 || echo gpg)
 
 
-if [ -r ./settings_local.sh ]; then
-    . ./settings_local.sh
+if [ -r `dirname "${BASH_SOURCE[0]}"`/settings_local.sh ]; then
+    . `dirname "${BASH_SOURCE[0]}"`/settings_local.sh
 fi
 if [ "$OS_TYPE" != "none" ]; then
     echo "Setting up $OS_TYPE/$OS_VERSION"
