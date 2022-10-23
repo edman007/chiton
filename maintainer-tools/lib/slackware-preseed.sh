@@ -43,12 +43,49 @@ mount /dev/sr0 /cdrom
 
 
 INSTALL_LOCATION=/cdrom/slackware64
+PKG_LIST='a ap d l n tcl x xap/xine-lib*'
+#set to 1 when installing -current
+CURRENT_INSTALL=0
+#for -current, we need to download all the packages off the mirror first
+if ! [ -d "$INSTALL_LOCATION" ]; then
+    CURRENT_INSTALL=1
+    mkdir /mnt/pkg
+    INSTALL_LOCATION=/mnt/pkg/slackware64
+    ( cd /mnt/pkg
+      wget ##PACKAGE_MIRROR##/CHECKSUMS.md5
+
+      #generate the list of packages
+      for PKG in $PKG_LIST; do
+          if [ "${PKG:0-1}" = "*" ]; then
+              PKG=$(echo "$PKG" | tr -d '*')
+          else
+              PKG="$PKG/"
+          fi
+          tail +13 CHECKSUMS.md5 | grep -E "slackware64/$PKG" | grep -E "\.t[xg]z$" >> SHORT_CHECKSUMS.md5
+          tail +13 CHECKSUMS.md5 | sed -E 's/.{36}//' | grep -E "^slackware64/$PKG" | grep -E "\.t[xg]z$" >> FILES
+      done
+
+      #download all the packages
+      while read PKG; do
+          mkdir -p $(dirname $PKG)
+          wget "##PACKAGE_MIRROR##/$PKG" -P $(dirname $PKG)
+      done < FILES
+      md5sum -c SHORT_CHECKSUMS.md5
+    )
+fi
+
 #sets we need a ap d l n tcl x
 #xine-lib is linked against ffmpeg, so it's required
-for PKG in a ap d l n tcl x xap/xine-lib*; do
-    installpkg --root /mnt --infobox --threads 4 $INSTALL_LOCATION/$PKG/*
-done
+for PKG in $PKG_LIST; do
+    if [ "${PKG:0-1}" != "*" ]; then
+        PKG="$PKG/*"
+    fi
 
+    installpkg --root /mnt --infobox --threads 4 $INSTALL_LOCATION/$PKG
+done
+if [ -d /mnt/pkg ]; then
+   rm -rf /mnt/pkg
+fi
 #generate
 geninitrd
 #the installer runs these, I don't think we need it, not sure what parameters are passed during install to it
@@ -154,6 +191,9 @@ echo '%adm ALL=(ALL:ALL) NOPASSWD: ALL' > /etc/sudoers.d/nopass
 chmod 440 /etc/sudoers.d/nopass
 echo '##PACKAGE_MIRROR##' >> /etc/slackpkg/mirrors
 #update
+if [ $CURRENT_INSTALL = 1 ]; then
+   touch /var/lib/slackpkg/current
+fi
 echo YES | slackpkg update gpg
 slackpkg -batch=on -default_answer=y update
 slackpkg -batch=on -default_answer=y upgrade-all

@@ -83,10 +83,18 @@ if [ ! -f clean.img ] || [ "$2" = "rebuild" ]; then
     #unpack the initrd
     cp -v $MAINTAINER_DIR/lib/slackware-preseed.sh preseed.sh
     cp $SSH_KEY_PATH id_rsa.pub
-    isoinfo -i pkg.iso -x '/ISOLINUX/INITRD.IMG' > initrd.xz
-    isoinfo -i pkg.iso -x '/KERNELS/HUGE.S/BZIMAGE' > kernel
+    if [ "$OS_VERSION" = "current" ]; then
+        7z e pkg.iso -y huge.s
+        mv huge.s kernel
+        7z e pkg.iso -y initrd.img
+        mv initrd.img initrd.xz
+    else
+        isoinfo -i pkg.iso -x '/ISOLINUX/INITRD.IMG' > initrd.xz
+        isoinfo -i pkg.iso -x '/KERNELS/HUGE.S/BZIMAGE' > kernel
+
+    fi
     xz -dc < initrd.xz > initrd.preseed
-    cpio -i -d -F initrd.preeseed etc/rc.d/rc.S
+    cpio -i -d -F initrd.preseed etc/rc.d/rc.S
     sed -i '/BOGUS_LOGIN/d' etc/rc.d/rc.S
     echo '/preseed.sh' >> etc/rc.d/rc.S
     echo 'reboot' >> etc/rc.d/rc.S

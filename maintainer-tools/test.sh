@@ -38,7 +38,7 @@ GOLD_RUN=0
 RUN_SHUTDOWN=0
 
 HOSTS=debian-11
-ALL_HOSTS="debian-11 debian-testing raspbian-32 raspbian-64 slackware-15"
+ALL_HOSTS="debian-11 debian-testing raspbian-32 raspbian-64 slackware-15 slackware-current"
 
 show_help () {
     echo -e "$0 <arg> [addational args]\n"
