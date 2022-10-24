@@ -88,7 +88,7 @@ build_source () {
         if [ "$GOLD_RUN" = 1 ]; then
             make maintainer-clean
             ./configure
-            make dist-check
+            make distcheck
         else
             rm -rf release
         fi
@@ -163,6 +163,27 @@ pull_slack_build_files () {
     scp $SSH_OPTS chiton-build@localhost:pkg/*.txz ../release/$OS_NAME/
 }
 
+boot_os () {
+    if [ $OS_TYPE = "debian" ]; then
+        ./lib/boot-deb.sh $OS_VERSION boot
+    elif [ $OS_TYPE = "raspbian" ]; then
+        ./lib/boot-raspbian.sh $OS_VERSION boot
+    else
+        ./lib/boot-slackware.sh $OS_VERSION boot
+    fi
+
+}
+
+
+freshen_os () {
+    if [ $OS_TYPE = "debian" ]; then
+        ./lib/boot-deb.sh $OS_VERSION freshen
+    elif [ $OS_TYPE = "raspbian" ]; then
+        ./lib/boot-raspbian.sh $OS_VERSION freshen
+    else
+        ./lib/boot-slackware.sh $OS_VERSION freshen
+    fi
+}
 #on debian based systems, builds the .deb, needs OS version info
 run_deb_build () {
     run_remote_cmd 'rm -rf /home/chiton-build/pkg/ ; mkdir -p /home/chiton-build/pkg/'
@@ -282,7 +303,6 @@ do
                 RUN_TEST=1
                 GOLD_RUN=1
                 RUN_SHUTDOWN=1
-                rm -rf $OS_BASE_DIR || true
                 rm -rf ../release/ || true
                 ;;
             "ssh")
@@ -374,25 +394,10 @@ for HOST_STR in $HOSTS; do
         #boots for all configs that need the working VM
         if [ $RUN_BOOT = 1 ] || [ $RUN_SOURCE = 1 ] || [ $RUN_BUILD = 1 ] || [ $RUN_TEST = 1 ]; then
             echo "$HOST_STR Booting..."
-            if [ $OS_TYPE = "debian" ]; then
-                ./lib/boot-deb.sh $OS_VERSION boot 2>&1 | tee -a $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
-                if [ "${PIPESTATUS[0]}" != "0" ]; then
-                    echo "boot-deb.sh: ${PIPESTATUS[0]}"
-                    ret=1
-                fi
-
-            elif [ $OS_TYPE = "raspbian" ]; then
-                ./lib/boot-raspbian.sh $OS_VERSION boot 2>&1 | tee -a $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
-                if [ "${PIPESTATUS[0]}" != "0" ]; then
-                    echo "boot-raspbian.sh: ${PIPESTATUS[0]}"
-                    ret=1
-                fi
-            else
-                ./lib/boot-slackware.sh $OS_VERSION boot 2>&1 | tee -a $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
-                if [ "${PIPESTATUS[0]}" != "0" ]; then
-                    echo "boot-slackware.sh: ${PIPESTATUS[0]}"
-                    ret=1
-                fi
+            boot_os | tee -a $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
+            if [ "${PIPESTATUS[0]}" != "0" ]; then
+                echo "boot: ${PIPESTATUS[0]}"
+                ret=1
             fi
         fi
 
@@ -411,6 +416,16 @@ for HOST_STR in $HOSTS; do
                     ret=1
                 fi
             fi
+        fi
+
+        if [ $RUN_TEST = 1 ] && [ $GOLD_RUN = 1 ]; then
+            echo "$HOST_STR Booting Fresh..."
+            freshen | tee -a $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
+            if [ "${PIPESTATUS[0]}" != "0" ]; then
+                echo "freshen: ${PIPESTATUS[0]}"
+                ret=1
+            fi
+
         fi
 
         if [ $RUN_TEST = 1 ]; then
