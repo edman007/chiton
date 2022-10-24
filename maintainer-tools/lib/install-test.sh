@@ -99,6 +99,20 @@ function pre_configure_check () {
 
 #get database login
 function configure () {
+    #wait for the socket to be listening
+    SOCK_CLOSED=1
+    for time in {0..60}; do
+        if sudo fuser /var/run/chiton/chiton.sock ; then
+            SOCK_CLOSED=0
+            break
+        fi
+        sleep 1
+    done
+    if [ 1 = $SOCK_CLOSED ] ; then
+        echo 'Socket not open'
+        exit 1
+    fi
+
     cat > expect_chiton_log <<EOF
 #!/usr/bin/env expect
 #Actual testing has shown that ARM on QEMU takes 22 minutes
@@ -269,5 +283,8 @@ else
 fi
 start_chiton
 upgrade_test
-
+start_chiton
+configure
+post_configure_check
+stop_chiton
 echo "All Good!"
