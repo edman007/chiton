@@ -81,7 +81,7 @@ bool MotionController::set_video_stream(const AVStream *stream, const AVCodecCon
     if (!stream){
         return false;//there is no video stream
     }
-    video_idx = stream->id;
+    video_idx = stream->index;
     bool ret = true;
     for (auto &ma : mods){
         ret &= ma->set_video_stream(stream, codec);
@@ -94,7 +94,7 @@ bool MotionController::set_audio_stream(const AVStream *stream, const AVCodecCon
     if (!stream){
         return false;//there is no audio stream
     }
-    audio_idx = stream->id;
+    audio_idx = stream->index;
     bool ret = true;
     for (auto &ma : mods){
         ret &= ma->set_audio_stream(stream, codec);
