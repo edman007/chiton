@@ -113,10 +113,15 @@ function configure () {
         exit 1
     fi
 
+    #should be done within 10 minutes
+    TIMEOUT=600
+    if uname -m | grep -E '(arm|aarch64)' ; then
+        #arm is really slow...so give it an hour to finish
+        TIMEOUT=3600
+    fi
     cat > expect_chiton_log <<EOF
 #!/usr/bin/env expect
-#Actual testing has shown that ARM on QEMU takes 22 minutes
-set timeout 1500
+set timeout $TIMEOUT
 log_user 1
 set cmd [lrange \$argv 0 end]
 eval spawn \$cmd
