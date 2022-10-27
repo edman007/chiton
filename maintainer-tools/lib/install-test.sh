@@ -124,9 +124,11 @@ function configure () {
 
     #should be done within 10 minutes
     TIMEOUT=600
+    SUPERSLOW=0
     if uname -m | grep -E '(arm|aarch64)' ; then
         #arm is really slow...so give it an hour to finish
         TIMEOUT=3600
+        SUPERSLOW=1
     fi
     cat > expect_chiton_log <<EOF
 #!/usr/bin/env expect
@@ -155,6 +157,11 @@ EOF
          -X POST 'http://localhost/chiton/settings.php?camera=0' | grep -A 1 statusmsg
     curl -s -d 'name[0]=active&value[0]=1&camera[0]=0' \
          -X POST 'http://localhost/chiton/settings.php?camera=0' | grep -A 1 statusmsg
+    if [ $SUPERSLOW = 1 ]; then
+        #disable motion detection on RPI, it's too slow
+        curl -s -d 'name[0]=motion-mods&value[0]=none&camera[0]=0' \
+             -X POST 'http://localhost/chiton/settings.php?camera=0' | grep -A 1 statusmsg
+    fi
     curl -s -d reload_backend=1 -X POST http://localhost/chiton/settings.php | grep -A 1 statusmsg
 
     #record stuff for 60 seconds
@@ -169,6 +176,12 @@ EOF
     curl -s -d 'name[0]=active&value[0]=0&camera[0]=0' \
          -X POST 'http://localhost/chiton/settings.php?camera=0' | grep -A 1 statusmsg
     curl -s -d reload_backend=1 -X POST http://localhost/chiton/settings.php | grep -A 1 statusmsg
+
+    EVCOUNT=$(curl 'http://localhost/chiton/settings.php?camera=0' | wc -l)
+    if [ $SUPERSLOW = 0 ] && [ $EVCOUNT -lt 10 ]; then
+        echo 'Event count is too low'
+        exit 1
+    fi
 
 }
 
