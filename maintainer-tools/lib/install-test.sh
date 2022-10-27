@@ -71,6 +71,12 @@ else
 
 fi
 
+#/home/chiton-build may be non-readable by the daemon, so lets put vids/ into tmp/
+rm -rf /tmp/vids || true
+cp -r /home/chiton-build/install-test/vids/ /tmp/vids
+chmod 755 /tmp/vids
+chmod 644 /tmp/vids/*
+
 function start_chiton () {
     if [ $ON_DEBIAN = 1 ] ; then
         sudo systemctl start chiton
@@ -145,7 +151,7 @@ EOF
 
     #setup a server with the config
     curl -s -d create_camera=1 -X POST http://localhost/chiton/settings.php | grep -A 1 statusmsg
-    curl -s -d 'name[0]=video-url&value[0]=/home/chiton-build/install-test/vids/front-1440p-h264-aac.mpg&camera[0]=0' \
+    curl -s -d 'name[0]=video-url&value[0]=/tmp/vids/front-1440p-h264-aac.mpg&camera[0]=0' \
          -X POST 'http://localhost/chiton/settings.php?camera=0' | grep -A 1 statusmsg
     curl -s -d 'name[0]=active&value[0]=1&camera[0]=0' \
          -X POST 'http://localhost/chiton/settings.php?camera=0' | grep -A 1 statusmsg
