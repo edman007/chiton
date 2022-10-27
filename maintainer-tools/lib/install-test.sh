@@ -37,6 +37,9 @@ if [[ $ON_DEBIAN = 1 ]] ; then
         sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y chiton || true
         sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y chiton-dbgsym || true
     fi
+    #update the os
+    sudo DEBIAN_FRONTEND=noninteractive apt-get update -y
+    sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
     #install curl and expect, needed for our scripts
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl expect
     #install mariadb
