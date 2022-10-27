@@ -254,6 +254,7 @@ void process_args(Config& arg_cfg, int argc, char **argv){
     //any system wide defaults...these are build-time defaults
     arg_cfg.set_value("cfg-path", SYSCFGPATH);
     arg_cfg.set_value("log-color-enabled", "0");//CLI option is disabled by default, against the default setting
+    arg_cfg.set_value("verbosity", "");//we set it to this to suppress the default value, the default is taken after loading the cfg
 
     char options[] = "c:vVdqsp:fP:l";//update man/chiton.1 if you touch this!
     int opt;
