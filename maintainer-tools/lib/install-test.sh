@@ -202,7 +202,7 @@ function post_configure_check () {
     STREAM_URL=$(curl -s -L  'http://localhost/chiton/stream.php?stream=-1&id=0' | tail -n1 )
     STREAM_CNT=$(curl -s -L  "http://localhost/chiton/$STREAM_URL" | wc -l )
 
-    if [[ "$STREAM_CNT" -lt "30" ]]; then
+    if [[ "$STREAM_CNT" -lt "76" ]]; then
         echo "Stream packet count unreasonably low, $STREAM_CNT"
         exit 1
     fi
