@@ -157,6 +157,8 @@ EOF
          -X POST 'http://localhost/chiton/settings.php?camera=0' | grep -A 1 statusmsg
     curl -s -d 'name[0]=active&value[0]=1&camera[0]=0' \
          -X POST 'http://localhost/chiton/settings.php?camera=0' | grep -A 1 statusmsg
+    curl -s -d 'name[0]=motioncontroller-skip-ratio&value[0]=0&camera[0]=0' \
+         -X POST 'http://localhost/chiton/settings.php?camera=0' | grep -A 1 statusmsg
     if [ $SUPERSLOW = 1 ]; then
         #disable motion detection on RPI, it's too slow
         curl -s -d 'name[0]=motion-mods&value[0]=none&camera[0]=0' \
