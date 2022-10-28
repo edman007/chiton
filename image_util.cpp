@@ -81,13 +81,14 @@ bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const s
     c->time_base = (AVRational){1,1};
     c->pix_fmt = static_cast<enum AVPixelFormat>(cropped_frame->format);
     c->sample_aspect_ratio = frame->sample_aspect_ratio;
+    c->strict_std_compliance = FF_COMPLIANCE_UNOFFICIAL;//new ffmpeg complains about our YUV range, this makes it happy enough
     LINFO("Exporting JPEG " + std::to_string(c->width) + "x" + std::to_string(c->height));
 
     gcff_util.lock();
     if (avcodec_open2(c, codec, NULL) < 0){
         gcff_util.unlock();
         avcodec_free_context(&c);
-        LWARN("Failed to open codec");
+        LWARN("Failed to open MJPEG codec");
         return false;
     }
     gcff_util.unlock();
