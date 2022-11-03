@@ -34,7 +34,7 @@ class MotionAlgo : public Module<MotionAlgo, MotionController> {
 public:
     MotionAlgo(Config &cfg, Database &db, MotionController &controller, const std::string &name) : Module<MotionAlgo, MotionController>(cfg, db, controller, name) {};
     virtual ~MotionAlgo() {};
-    virtual bool process_frame(const AVFrame *frame, bool video) = 0;//process the frame, return false on error, video is true if video frame i6s supplied
+    virtual bool process_frame(const AVFrame *frame, bool video) = 0;//process the frame, return false on error, video is true if video frame is supplied
     virtual bool set_video_stream(const AVStream *stream, const AVCodecContext *codec) {return true;};//identify the video stream
     virtual bool set_audio_stream(const AVStream *stream, const AVCodecContext *codec) {return true;};//identify the audio stream
 };
