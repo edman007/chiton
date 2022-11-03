@@ -266,11 +266,11 @@ packaging/debian/postinst:  packaging/scripts/postinst.sh.in
 	$(do_subst) < $< > $@
 packaging/debian/prerm: packaging/scripts/prerm.sh.in
 	$(do_subst) < $< > $@
-packaging/debian/postrm packaging/slackware/douninst.sh: packaging/scripts/postrm.sh.in | $(abs_builddir)/packaging/slackware
-	$(do_subst) < $< > $@
+packaging/debian/postrm packaging/slackware/douninst.sh: packaging/scripts/prerm.sh.in packaging/scripts/postrm.sh.in | $(abs_builddir)/packaging/slackware
+	cat $^ | $(do_subst) > $@
 packaging/debian/chiton.config:  packaging/scripts/config.sh.in
 	$(do_subst) < $< > $@
-packaging/slackware/doinst.sh: packaging/scripts/postinst.sh.in packaging/scripts/config.sh.in | $(abs_builddir)/packaging/slackware
+packaging/slackware/doinst.sh: packaging/scripts/preinst.sh.in packaging/scripts/postinst.sh.in packaging/scripts/config.sh.in | $(abs_builddir)/packaging/slackware
 	cat $^ | $(do_subst) > $@
 packaging/slackware/chiton.SlackBuild: packaging/slackware/chiton.SlackBuild.in | $(abs_builddir)/packaging/slackware
 	$(do_subst) < $< > $@
