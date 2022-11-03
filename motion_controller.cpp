@@ -103,7 +103,7 @@ bool MotionController::set_audio_stream(const AVStream *stream, const AVCodecCon
 }
 
 bool MotionController::decode_video(void){
-    return true;
+    return !mods.empty();//need something better
 }
 
 bool MotionController::decode_audio(void){
