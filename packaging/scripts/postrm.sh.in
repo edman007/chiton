@@ -17,18 +17,18 @@ if [ -f /usr/share/dbconfig-common/dpkg/postrm.mysql ]; then
     dbc_go @PKGNAME@ "$@" || true
 fi
 
-rm -rf @localstatedir@/@PKGNAME@/cache/* || true
-rm -rf @localstatedir@/@PKGNAME@/compile/* || true
-rmdir @localstatedir@/@PKGNAME@/cache/ || true
+rm -rf @localstatedir@/@PKGNAME@/cache/* 2>&1 > /dev/null || true
+rm -rf @localstatedir@/@PKGNAME@/compile/* 2>&1 > /dev/null || true
+rmdir @localstatedir@/@PKGNAME@/cache/ 2>&1 > /dev/null || true
 rmdir @localstatedir@/@PKGNAME@/compile/ || true
 
 if [[ "$1" == "purge" || "$1" == "db_purge" ]]; then
     # We are deleting all our files
     rm -f @runstatedir@/@PKGNAME@.pid 2>&1 > /dev/null || true
-    rm -f @runstatedir@/@PKGNAME@.sock 2>&1 > /dev/null || true
+    rm -f @runstatedir@/@PKGNAME@.sok 2>&1 > /dev/null || true
     rmdir @runstatedir@ 2>&1 > /dev/null || true
-    rmdir @localstatedir@/@PKGNAME@/cache/ || true
-    rmdir @localstatedir@/@PKGNAME@/compile/ || true
+    rmdir @localstatedir@/@PKGNAME@/cache/ 2>&1 > /dev/null || true
+    rmdir @localstatedir@/@PKGNAME@/compile/ 2>&1 > /dev/null || true
     rm -rf @localstatedir@/@PKGNAME@/vids/ || true
     rmdir @localstatedir@/@PKGNAME@ || true
 
@@ -51,6 +51,9 @@ if [[ "$1" == "purge" || "$1" == "db_purge" ]]; then
     rmdir @cfgdir@ || true
 fi
 
+if [ -d @localstatedir@/@PKGNAME@/ ]; then
+    rmdir @localstatedir@/@PKGNAME@/ 2>&1 >/dev/null || true
+fi
 #we install it as a .new so we need to delete the main file too
 if [[ "@inittype@" = "sysv" ]]; then
     if ! [ -r @initscript@.new ]; then #if the .new still exists, it's because this is an upgrade

@@ -3,6 +3,20 @@
 set -e
 #set -x
 #export DEBCONF_DEBUG=developer
+
+
+STATE_DIR=@localstatedir@/@PKGNAME@
+RUN_DIR=@runstatedir@
+WEBUSER=@webuser@
+VID_DIR=$STATE_DIR/vids
+BACKEND_USER=@PKGNAME@
+HTML_SRC_DIR=@pkgdatadir@/web
+APACHE_CFG_DIR=@apachecfgdir@
+CFGDIR=@cfgdir@
+WEBDIR=/chiton
+VIDEOGROUP=video
+RENDERGROUP=render
+
 #init for debian
 #DEBHELPER#
 if [ -f /usr/share/debconf/confmodule ]; then
@@ -10,15 +24,59 @@ if [ -f /usr/share/debconf/confmodule ]; then
 fi
 
 #stop the service if it's running
-if [ "@inittype" == "sysv" ]; then
-    if [ -x @initscript@ ]; then
-        @initscript@ stop
-    fi
-else
+if [ "@inittype" == "systemd" ]; then
     if [ -f @initscript@ ]; then
         deb-systemd-invoke stop chiton.service
     fi
 fi
+
+#setup the directories
+if [ ! -d $STATE_DIR/compile ]; then
+    mkdir -p $STATE_DIR/compile
+fi
+
+if [ ! -d $STATE_DIR/cache ]; then
+    mkdir -p $STATE_DIR/cache
+fi
+
+if [ ! -d $VID_DIR ]; then
+    mkdir -p $VID_DIR
+fi
+
+if [ ! -d $RUN_DIR ]; then
+    mkdir -p $RUN_DIR
+fi
+
+#add our user
+if ! getent passwd $BACKEND_USER > /dev/null ; then
+    echo "Adding the user $BACKEND_USER"
+    useradd $BACKEND_USER -d $STATE_DIR -r -U
+fi
+
+#add the webserver to our group
+if ! id -Gn $BACKEND_USER | grep -wqE "\b$WEBUSER\b" > /dev/null ; then
+    usermod -a -G $BACKEND_USER $WEBUSER
+fi
+
+#and the render user
+if getent group $RENDERGROUP > /dev/null ; then
+    if ! id -Gn $BACKEND_USER | grep -wqE "\b$RENDERGROUP\b" > /dev/null ; then
+        usermod -a -G $RENDERGROUP  $BACKEND_USER
+    fi
+fi
+
+if getent group $VIDEOGROUP > /dev/null ; then
+    if ! id -Gn $BACKEND_USER | grep -wqE "\b$VIDEOGROUP\b" > /dev/null ; then
+        usermod -a -G $VIDEOGROUP $BACKEND_USER
+    fi
+fi
+
+chown $BACKEND_USER:$BACKEND_USER  $STATE_DIR $VID_DIR $STATE_DIR/compile $STATE_DIR/cache $RUN_DIR
+chmod 770 $STATE_DIR/compile $STATE_DIR/cache $VID_DIR
+chmod 755 $RUN_DIR
+
+rm -f @localstatedir@/@PKGNAME@/cache/*.php @localstatedir@/@PKGNAME@/compile/*.php 2>&1 > /dev/null || true
+
 # Apperently this is deprecated
 #if [ -f /usr/share/dbconfig-common/dpkg/preinst.mysql ]; then
 #    . /usr/share/dbconfig-common/dpkg/preinst.mysql

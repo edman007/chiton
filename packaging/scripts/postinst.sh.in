@@ -40,15 +40,15 @@ APACHE_CFG_DIR=@apachecfgdir@
 CFGDIR=@cfgdir@
 WEBDIR=/chiton
 
-#add our user
-if ! getent passwd $BACKEND_USER > /dev/null ; then
-    echo "Adding the user $BACKEND_USER"
-    useradd $BACKEND_USER -d $STATE_DIR -r -U
-fi
-
-#add the webserver to our group
-if ! id -Gn $BACKEND_USER | grep -wqE "\b$WEBUSER\b" > /dev/null ; then
-    usermod -a -G $BACKEND_USER $WEBUSER
+if [ -f /usr/share/dbconfig-common/dpkg/postinst.mysql ]; then
+    . /usr/share/dbconfig-common/dpkg/postinst.mysql
+    dbc_go @PKGNAME@ "$@" || true
+    echo "postinst: $@ $dbc_dbserver"
+    MYSQL_HOST="$dbc_dbserver"
+    MYSQL_DB="$dbc_dbname"
+    MYSQL_USER="$dbc_dbuser"
+    MYSQL_USER_PW="$dbc_dbpass"
+    chiton-install -yqk -H "$MYSQL_HOST" -d "$MYSQL_DB" -u "$MYSQL_USER" -p "$MYSQL_USER_PW"
 fi
 
 #setup the directories
@@ -71,19 +71,6 @@ fi
 chown $BACKEND_USER:$BACKEND_USER  $STATE_DIR $VID_DIR $STATE_DIR/compile $STATE_DIR/cache $RUN_DIR
 chmod 770 $STATE_DIR/compile $STATE_DIR/cache $VID_DIR
 chmod 755 $RUN_DIR
-
-rm -f @localstatedir@/@PKGNAME@/cache/*.php @localstatedir@/@PKGNAME@/compile/*.php || true
-
-if [ -f /usr/share/dbconfig-common/dpkg/postinst.mysql ]; then
-    . /usr/share/dbconfig-common/dpkg/postinst.mysql
-    dbc_go @PKGNAME@ "$@" || true
-    echo "postinst: $@ $dbc_dbserver"
-    MYSQL_HOST="$dbc_dbserver"
-    MYSQL_DB="$dbc_dbname"
-    MYSQL_USER="$dbc_dbuser"
-    MYSQL_USER_PW="$dbc_dbpass"
-    chiton-install -yqk -H "$MYSQL_HOST" -d "$MYSQL_DB" -u "$MYSQL_USER" -p "$MYSQL_USER_PW"
-fi
 
 
 #restart everything...on debian
