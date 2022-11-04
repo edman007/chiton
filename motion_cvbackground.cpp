@@ -48,16 +48,21 @@ bool MotionCVBackground::process_frame(const AVFrame *frame, bool video){
         return false;
     }
 
-    //always do the math in CV_16U for extra precision
-    if (avg.empty()){
-        ocv->get_UMat().convertTo(avg, CV_16U, 256.0);
-        ocv->get_UMat().copyTo(low_res);
-    } else {
-        //compute the frame average
-        cv::UMat buf16;
-        ocv->get_UMat().convertTo(buf16, CV_16U, 256.0);
-        cv::addWeighted(avg, 1-tau, buf16, tau, 0, avg);
-        avg.convertTo(low_res, CV_8U, 1.0/256.0);
+    try {
+        //always do the math in CV_16U for extra precision
+        if (avg.empty()){
+            ocv->get_UMat().convertTo(avg, CV_16U, 256.0);
+            ocv->get_UMat().copyTo(low_res);
+        } else {
+            //compute the frame average
+            cv::UMat buf16;
+            ocv->get_UMat().convertTo(buf16, CV_16U, 256.0);
+            cv::addWeighted(avg, 1-tau, buf16, tau, 0, avg);
+            avg.convertTo(low_res, CV_8U, 1.0/256.0);
+        }
+    } catch (cv::Exception &e){
+        LWARN("MotionCVBackground::process_frame failed, error: " + e.msg);
+        return false;
     }
     return true;
 }

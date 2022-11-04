@@ -68,28 +68,32 @@ bool MotionCVMask::process_frame(const AVFrame *frame, bool video){
     if (!ocv || !background){
         return false;
     }
-    auto sensitivity_prev_it = sensitivity_it;
-    sensitivity_it++;
-    if (sensitivity_it == sensitivity_db.end()){
-        sensitivity_it = sensitivity_db.begin();
-    }
-
-    cv::UMat diff;
-    cv::absdiff(ocv->get_UMat(), background->get_background(), diff);//difference between the background
-
-    if ((*sensitivity_it).empty()){
-        *sensitivity_it = cv::UMat(diff.size(), CV_32FC1);
-        diff.convertTo(*sensitivity_it, CV_32FC1);
-        if ((*sensitivity_prev_it).empty()){
-            (*sensitivity_it).copyTo(*sensitivity_prev_it);
+    try {
+        auto sensitivity_prev_it = sensitivity_it;
+        sensitivity_it++;
+        if (sensitivity_it == sensitivity_db.end()){
+            sensitivity_it = sensitivity_db.begin();
         }
+
+        cv::UMat diff;
+        cv::absdiff(ocv->get_UMat(), background->get_background(), diff);//difference between the background
+
+        if ((*sensitivity_it).empty()){
+            *sensitivity_it = cv::UMat(diff.size(), CV_32FC1);
+            diff.convertTo(*sensitivity_it, CV_32FC1);
+            if ((*sensitivity_prev_it).empty()){
+                (*sensitivity_it).copyTo(*sensitivity_prev_it);
+            }
+        }
+
+        cv::subtract(diff, *sensitivity_it, masked, cv::noArray(), CV_8U);//compare to current
+        cv::threshold(masked, masked, thresh, 255, cv::THRESH_BINARY);
+        cv::addWeighted(*sensitivity_prev_it, 1-tau, diff, beta*tau, 0, *sensitivity_it, CV_32FC1);//add to previous and make that the new current
+        cv::medianBlur(masked, masked, 5);//this will despeckle the image
+    } catch (cv::Exception &e){
+        LWARN("MotionCVMask::process_frame failed, error: " + e.msg);
+        return false;
     }
-
-    cv::subtract(diff, *sensitivity_it, masked, cv::noArray(), CV_8U);//compare to current
-    cv::threshold(masked, masked, thresh, 255, cv::THRESH_BINARY);
-    cv::addWeighted(*sensitivity_prev_it, 1-tau, diff, beta*tau, 0, *sensitivity_it, CV_32FC1);//add to previous and make that the new current
-    cv::medianBlur(masked, masked, 5);//this will despeckle the image
-
     return true;
 }
 

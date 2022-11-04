@@ -57,12 +57,16 @@ bool MotionCVDetect::process_frame(const AVFrame *frame, bool video){
     if (!video || !masked_objects){
         return true;
     }
-
-    //find contours
-    //float thresh = 150.0;
-    //cv::Canny(masked_objects->get_masked(), canny, thresh, thresh*2 );
-    //cv::findContours(canny, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
-    cv::findContours(masked_objects->get_masked(), contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
+    try {
+        //find contours
+        //float thresh = 150.0;
+        //cv::Canny(masked_objects->get_masked(), canny, thresh, thresh*2 );
+        //cv::findContours(canny, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
+        cv::findContours(masked_objects->get_masked(), contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
+    } catch (cv::Exception &e){
+        LWARN("MotionCVDetect::process_frame failed, error: " + e.msg);
+        return false;
+    }
 
     std::vector<TargetRect> new_targets;
     //compute the bounding rect for all
