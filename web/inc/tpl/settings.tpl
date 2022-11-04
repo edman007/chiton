@@ -1,4 +1,4 @@
-{config_load file="main.conf" section="setup"}
+{config_load file="main.conf" section="settings"}
 {include file="header.tpl" title=Home}
 <script>var cfgDB = "{$cfg_json|escape:'javascript'}";</script>
 {if $camera_id < 0}
@@ -15,7 +15,7 @@
 {if $camera_id < 0 || !$cfg_values[$set_key]['read_only']}
    <li>
     <div class="setting_parameter">{$cfg_values[$set_key]['short_desc']|escape}
-    <input type="hidden" name="name[{$smarty.foreach.CFGOPT.index}]" value="{$set_key}"/>
+    <input type="hidden" name="name[{$smarty.foreach.CFGOPT.index}]" value="{$set_key}" id="setting_key_{$smarty.foreach.CFGOPT.index}" />
     </div>
     <div class="setting_value
     {if $cfg_values[$set_key]['set'] == 'default'}setting_default{/if}
@@ -24,21 +24,22 @@
     ">
     {if $set_key == 'timezone'}
        {*Special restriction for timezones*}
-       <select name="value[{$smarty.foreach.CFGOPT.index}]">
+       <select name="value[{$smarty.foreach.CFGOPT.index}]" onchange="clearSystemCheckbox(this, {$smarty.foreach.CFGOPT.index})" id="setting_input_{$smarty.foreach.CFGOPT.index}" >
        {foreach from=$timezones name=TIMEZN item=tz}
           <option value="{$tz|escape}" {if $tz == $cfg_values[$set_key]['value']}selected{/if}>{$tz|escape}</option>
        {/foreach}
        </select>
     {else}
       <input type="text" name="value[{$smarty.foreach.CFGOPT.index}]" value="{if $set_key == 'db-password'}********{else}{$cfg_values[$set_key]['value']|escape}{/if}"
-             {if $cfg_values[$set_key]['read_only']}readonly{/if}/>
+             {if $cfg_values[$set_key]['read_only']}readonly{/if} oninput="clearSystemCheckbox(this, {$smarty.foreach.CFGOPT.index})" id="setting_input_{$smarty.foreach.CFGOPT.index}" />
     {/if}</div>
     <div class="setting_delete">
-      <input type="hidden" name="camera[{$smarty.foreach.CFGOPT.index}]" value="{$camera_id}"/>
+      <input type="hidden" name="camera[{$smarty.foreach.CFGOPT.index}]" id="settings_id_{$smarty.foreach.CFGOPT.index}" value="{$camera_id}"/>
       {if !$cfg_values[$set_key]['read_only'] && !$cfg_values[$set_key]['required']}{* Read Only and required cannot be deleted *}
          {if $camera_id < 0}Use Default Value{else}Use System Value{/if}
-         <input type="checkbox" value="1" name="delete[{$smarty.foreach.CFGOPT.index}]"
-           {if ($camera_id < 0 && $cfg_values[$set_key]['set'] == 'default') || ($camera_id >= 0 && $cfg_values[$set_key]['set'] != 'camera')} checked{/if}/>
+         <input type="checkbox" value="1" name="delete[{$smarty.foreach.CFGOPT.index}]" id="settings_delete_{$smarty.foreach.CFGOPT.index}"
+           {if ($camera_id < 0 && $cfg_values[$set_key]['set'] == 'default') || ($camera_id >= 0 && $cfg_values[$set_key]['set'] != 'camera')} checked{/if}
+           onchange="applyDefaultSetting(this, {$smarty.foreach.CFGOPT.index})" />
       {elseif $cfg_values[$set_key]['read_only']}
       Read Only
       {else}
@@ -48,7 +49,8 @@
    </li>
 {/if}
 {/foreach}
-<li><div class="setting_parameter"><select name="name[{$smarty.foreach.CFGOPT.total}]">
+<li><div class="setting_parameter">
+<select name="name[{$smarty.foreach.CFGOPT.total}]" id="select_opt_{$smarty.foreach.CFGOPT.total}" onchange="setDefaultOpt({$smarty.foreach.CFGOPT.total})">
 <option value="">Add New Option</option>
 {foreach from=$unset_keys item=unset_key name=UNSETOPT}
 {if !$cfg_values[$unset_key]['read_only']}
@@ -56,7 +58,7 @@
 {/if}
 {/foreach}
 </select></div>
-<div class="setting_value"><input type="text" name="value[{$smarty.foreach.CFGOPT.total}]" value=""/><input type="hidden" name="camera[{$smarty.foreach.CFGOPT.total}]" value="{$camera_id}"/></div>
+<div class="setting_value"><input type="text" id="select_txt_{$smarty.foreach.CFGOPT.total}" name="value[{$smarty.foreach.CFGOPT.total}]" value=""/><input type="hidden" name="camera[{$smarty.foreach.CFGOPT.total}]" value="{$camera_id}"/></div>
  </li>
 </ul>
 <input type="submit" value="Update Camera"/>

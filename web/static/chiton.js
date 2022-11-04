@@ -68,6 +68,9 @@ function loadSite(page){
     if (page == "camera"){
         initEventScroll(cameraList[0].camera);
     }
+    if (page == "settings"){
+        loadCfgDB();
+    }
 }
 
 function loadPlayer(){
@@ -681,4 +684,76 @@ function scrollEvents(camera,  cam_start, ev_start, last_ev_id){
     xmlhttp.send();
 
 
+}
+
+//for the settings page
+var settings = Array();
+function loadCfgDB(){
+    settings = JSON.parse(cfgDB);
+    //console.log(settings);
+}
+
+function setDefaultOpt(id){
+    let select = document.getElementById("select_opt_" + id);
+    let textVal = document.getElementById("select_txt_" + id);
+    if (select.value == ""){
+        textVal.value = "";
+    } else {
+        textVal.value = settings[select.value].value;
+    }
+}
+
+function clearSystemCheckbox(caller, id){
+    let checkbox = document.getElementById("settings_delete_" + id);
+    if (checkbox != null){
+        checkbox.checked = false;
+        let parentDiv = caller.parentElement;
+        let camera = document.getElementById("settings_id_" + id);
+        let cameraID = -1;
+        if (camera != null){
+            cameraID = camera.value;
+        }
+        if (cameraID == -1){
+            parentDiv.classList.remove('setting_default');
+            parentDiv.classList.add('setting_system');
+        } else {
+            parentDiv.classList.remove('setting_system');
+            parentDiv.classList.add('setting_camera');
+        }
+    }
+}
+
+function applyDefaultSetting(caller, id){
+    //we are pushing in the default
+    let inputElem = document.getElementById("setting_input_" + id);
+    let parentDiv = inputElem.parentElement;
+    let camera = document.getElementById("settings_id_" + id);
+    let cameraID = -1;
+    if (camera != null){
+        cameraID = camera.value;
+    }
+    let key = document.getElementById("setting_key_" + id).value;
+
+    if (caller.checked){
+        //update text boxes to show the current default/system value
+        if (cameraID == -1){
+            parentDiv.classList.remove('setting_system');
+            parentDiv.classList.add('setting_default');
+            inputElem.value = settings[key].default
+        } else {
+            parentDiv.classList.remove('setting_camera');
+            parentDiv.classList.add('setting_system');
+            inputElem.value = settings[key].system
+        }
+    } else {
+        //do NOT update fields, but change the color
+        if (cameraID == -1){
+            parentDiv.classList.add('setting_system');
+            parentDiv.classList.remove('setting_default');
+        } else {
+            parentDiv.classList.add('setting_camera');
+            parentDiv.classList.remove('setting_system');
+        }
+
+    }
 }
