@@ -48,8 +48,9 @@ static const std::string algo_name = "opencv";
 
 MotionOpenCV::MotionOpenCV(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller, algo_name), fmt_filter(Filter(cfg)) {
     input = av_frame_alloc();
-    map_indirect = cfg.get_value("motion-opencv-map-indirect") == "true";//if true will use libva to copy the brighness
-    map_cl = cfg.get_value("motion-opencv-map-cl") == "true";//use ffmpeg to convert to opencl and then map that into opencv
+    map_indirect = cfg.get_value("motion-opencv-map-indirect") != "false";//if true will use libva to copy the brighness
+    map_cl = cfg.get_value("motion-opencv-map-cl") != "false";//use ffmpeg to convert to opencl and then map that into opencv
+    map_vaapi = cfg.get_value("motion-opencv-map-vaapi") != "false";//use OpenCV's VA-API mapping implementation
 }
 
 MotionOpenCV::~MotionOpenCV(){
@@ -61,32 +62,10 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
     }
     buf_mat.release();
     input_mat.release();
-#ifdef HAVE_VAAPI
-    //this is a higher speed indirect (no-interopt) version for non-intel HW
-    if (map_indirect && frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx){
-        indirect_vaapi_map(frame);
-    } else
-#endif
-#ifdef HAVE_OPENCL
-    if (map_cl && frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx){
-        //map it to openCL
-        if (!fmt_filter.send_frame(frame)){
-            LWARN("OpenCV Failed to Send Frame");
-            return false;
-        }
-        av_frame_unref(input);
-        if (!fmt_filter.get_frame(input)){
-            LWARN("OpenCV Failed to Get Frame");
-            return false;
-        }
-        map_ocl_frame(input);
-    } else
-#endif
     //opencv libva is HAVE_VA, our libva is HAVE_VAAPI
-#ifdef HAVE_VAAPI
-    //OPENCV has VA support
+    //while it might be built without va-api, we can detect is runtime, so map_vaapi will be false if support is missing
     //check if the incoming frame is VAAPI
-    if (frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx){
+    if (map_vaapi && frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx){
         AVVAAPIDeviceContext *hwctx = get_vaapi_ctx_from_frames(frame->hw_frames_ctx);;
         if (!hwctx){
             LERROR("VAAPI frame does not have VAAPI device");
@@ -114,6 +93,26 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
             return false;
         }
     } else
+#ifdef HAVE_VAAPI
+    //this is a higher speed indirect (no-interopt) version for non-intel HW
+    if (map_indirect && frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx){
+        indirect_vaapi_map(frame);
+    } else
+#endif
+#ifdef HAVE_OPENCL
+    if (map_cl && frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx){
+        //map it to openCL
+        if (!fmt_filter.send_frame(frame)){
+            LWARN("OpenCV Failed to Send Frame");
+            return false;
+        }
+        av_frame_unref(input);
+        if (!fmt_filter.get_frame(input)){
+            LWARN("OpenCV Failed to Get Frame");
+            return false;
+        }
+        map_ocl_frame(input);
+    } else
 #endif
     {
         //direct VAAPI conversion not possible
@@ -138,19 +137,27 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
 
 bool MotionOpenCV::set_video_stream(const AVStream *stream, const AVCodecContext *codec) {
     //if the codec does not have VA-API then we need to not use opencl
-#ifdef HAVE_VAAPI
-    if (codec && codec->hw_frames_ctx){
+    if (codec && codec->hw_device_ctx){
         //find the VAAPI Display
-        AVVAAPIDeviceContext* hw_ctx = get_vaapi_ctx_from_frames(codec->hw_frames_ctx);
-        if (hw_ctx){
+        AVVAAPIDeviceContext* hw_ctx = get_vaapi_ctx_from_device(codec->hw_device_ctx);
+        if (map_vaapi && hw_ctx){
             //bind this display to this thread
-            cv::va_intel::ocl::initializeContextFromVA(hw_ctx->display, true);
-        } else {
+            try {
+                cv::va_intel::ocl::initializeContextFromVA(hw_ctx->display, true);
+            } catch (cv::Exception &e){
+                //if we actually don't have va-api, this will fail
+                LWARN("cv::va_intel::ocl::initializeContextFromVA failed, disable this by setting motion-opencv-map-vaapi to false, error: " + e.msg);
+                map_vaapi = false;
+            }
+        } else if (!hw_ctx){
+            LINFO("No VA-API Context");
             map_cl = false;
         }
-    } else
-#endif
-    {
+    } else {
+        LINFO("No HW Context");
+        if (!codec){
+            LWARN("No decode codec passed to MotionOpenCV!");
+        }
         map_cl = false;
     }
 
