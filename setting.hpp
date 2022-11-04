@@ -117,9 +117,10 @@ const std::vector<Setting> setting_options {
  {"motion-cvdetect-area", "1000.0", "Motion CVDetect Miniumn Area <0->", "Miniumn area of an object to send motion events", SETTING_OPTIONAL_CAMERA},
  {"motion-cvdetect-tracking", "10", "Motion CVDetect Tracking Time <0->", "Number of frames that an object must be tracked to trigger an event", SETTING_OPTIONAL_CAMERA},
  {"motion-cvbackground-tau", "0.001", "Motion CVBackground Tau <0-1>", "Tau parameter for CVBackground Algorithm", SETTING_OPTIONAL_CAMERA},
- {"motion-opencv-map-indirect", "false", "Motion OpenCV Indirect Mapping <true|false>", "Use libva to map the image and copy the brightness, "
+ {"motion-opencv-map-indirect", "true", "Motion OpenCV Indirect Mapping <true|false>", "Use libva to map the image and copy the brightness, "
   "recommended for AMD GPUs", SETTING_OPTIONAL_CAMERA},
- {"motion-opencv-map-cl", "false", "Motion OpenCV OpenCL Mapping <true|false>", "Use ffmpeg to map it to opencl, and map that buffer directly to opencv", SETTING_OPTIONAL_CAMERA},
+ {"motion-opencv-map-cl", "true", "Motion OpenCV OpenCL Mapping <true|false>", "Use ffmpeg to map it to opencl, and map that buffer directly to opencv", SETTING_OPTIONAL_CAMERA},
+ {"motion-opencv-map-vaapi", "true", "Motion OpenCV's VA-API Mapping <true|false>", "Use OpenCV to map the direct VA-API buffer", SETTING_OPTIONAL_CAMERA},
  {"motioncontroller-skip-ratio", "0.05", "Motion Controller Skip Ratio <0-1>", "The ratio of time that should be spent blocking waiting for packets, 0 disables motion controller "
   "skipping, 1 will cause all frames to skip motion processing", SETTING_OPTIONAL_CAMERA},
 };
