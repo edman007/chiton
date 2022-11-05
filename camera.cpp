@@ -90,7 +90,8 @@ void Camera::run(void){
     bool decode_video = encode_video || motion.decode_video();
     bool decode_audio = encode_audio || motion.decode_audio();
 
-    LDEBUG("Encode/Decode: " + std::to_string(encode_video)+ std::to_string(encode_audio)+ std::to_string(decode_video)+ std::to_string(decode_audio));
+    LINFO("Decode <A/V> [" + std::to_string(decode_audio) + "/" + std::to_string(decode_video) +
+          "] - Encode<A/V> [" + std::to_string(encode_audio) + "/" + std::to_string(encode_video) + "]");
 
     //allocate a frame (we only allocate when we want to decode, an unallocated frame means we skip decoding)
     AVFrame *frame = NULL, *filtered_frame = NULL;
