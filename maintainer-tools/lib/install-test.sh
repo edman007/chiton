@@ -32,8 +32,8 @@ fi
 
 if [[ $ON_DEBIAN = 1 ]] ; then
     if dpkg -l | grep chiton ; then
-        echo "chiton	chiton/dbconfig-remove	boolean	true" | sudo debconf-set-selections
-        echo "chiton	chiton/purge	boolean	true" | sudo debconf-set-selections
+        echo "chiton	chiton/dbconfig-remove	boolean	true" | sudo debconf-set-selections || true
+        echo "chiton	chiton/purge	boolean	true" | sudo debconf-set-selections || true
         sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y chiton || true
         sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y chiton-dbgsym || true
     fi
