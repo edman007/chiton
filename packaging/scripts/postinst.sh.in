@@ -5,30 +5,27 @@ set -e
 #dbc_debug=1
 
 export PATH="/sbin:/usr/sbin:$PATH"
-POSTINST=true
-CONFIGURE=true
-HAVEDBCONF=false
-
-
-MYSQL_HOST="localhost"
-MYSQL_DB=@PKGNAME@
-MYSQL_INSTALL_USER="root"
-MYSQL_INSTALL_PW=""
-MYSQL_USER=@PKGNAME@
-MYSQL_USER_PW=changeme
 
 #init for debian
 #DEBHELPER#
 if [ -f /usr/share/debconf/confmodule ]; then
     . /usr/share/debconf/confmodule
-    HAVEDBCONF=true
-    if [ "$1" == "configure" ] || [ "$1" == "reconfigure" ]; then
-        CONFIGURE=true
-    else
-        CONFIGURE=false
+fi
+
+if [ -f /usr/share/dbconfig-common/dpkg/postinst.mysql ]; then
+    . /usr/share/dbconfig-common/dpkg/postinst.mysql
+    dbc_go @PKGNAME@ "$@" || true
+    MYSQL_HOST="$dbc_dbserver"
+    MYSQL_DB="$dbc_dbname"
+    MYSQL_USER="$dbc_dbuser"
+    MYSQL_USER_PW="$dbc_dbpass"
+
+    if [ ! -f $CFGDIR/chiton.cfg ]; then
+        chiton-install -yqk -H "$MYSQL_HOST" -d "$MYSQL_DB" -u "$MYSQL_USER" -p "$MYSQL_USER_PW"
     fi
 
 fi
+
 
 STATE_DIR=@localstatedir@/@PKGNAME@
 RUN_DIR=@runstatedir@
@@ -40,37 +37,6 @@ APACHE_CFG_DIR=@apachecfgdir@
 CFGDIR=@cfgdir@
 WEBDIR=/chiton
 
-if [ -f /usr/share/dbconfig-common/dpkg/postinst.mysql ]; then
-    . /usr/share/dbconfig-common/dpkg/postinst.mysql
-    dbc_go @PKGNAME@ "$@" || true
-    echo "postinst: $@ $dbc_dbserver"
-    MYSQL_HOST="$dbc_dbserver"
-    MYSQL_DB="$dbc_dbname"
-    MYSQL_USER="$dbc_dbuser"
-    MYSQL_USER_PW="$dbc_dbpass"
-    chiton-install -yqk -H "$MYSQL_HOST" -d "$MYSQL_DB" -u "$MYSQL_USER" -p "$MYSQL_USER_PW"
-fi
-
-#setup the directories
-if [ ! -d $STATE_DIR/compile ]; then
-    mkdir -p $STATE_DIR/compile
-fi
-
-if [ ! -d $STATE_DIR/cache ]; then
-    mkdir -p $STATE_DIR/cache
-fi
-
-if [ ! -d $VID_DIR ]; then
-    mkdir -p $VID_DIR
-fi
-
-if [ ! -d $RUN_DIR ]; then
-    mkdir -p $RUN_DIR
-fi
-
-chown $BACKEND_USER:$BACKEND_USER  $STATE_DIR $VID_DIR $STATE_DIR/compile $STATE_DIR/cache $RUN_DIR
-chmod 770 $STATE_DIR/compile $STATE_DIR/cache $VID_DIR
-chmod 755 $RUN_DIR
 
 
 #restart everything...on debian

@@ -1,11 +1,12 @@
 #!/bin/bash
 #On Non-debian systems, this is appended to the install script
-
+#echo "config: $@"
 # config maintainer script for chiton
 set -e
 #set -x
 #export DEBCONF_DEBUG=developer
 
+#DEBHELPER#
 #dbc_debug=1
 HTML_SRC_DIR=@pkgdatadir@/web
 STATE_DIR=@localstatedir@/@PKGNAME@
@@ -15,6 +16,7 @@ CFGDIR=@cfgdir@
 WEBDIR=/chiton
 VID_DIR=$STATE_DIR/vids
 BACKEND_USER=@PKGNAME@
+RUN_DIR=@runstatedir@
 
 
 # source debconf stuff
@@ -25,10 +27,11 @@ if [ -f /usr/share/debconf/confmodule ]; then
         db_input high chiton/webdir || true
         dbc_go chiton "$@" || true
     fi
-
 fi
 
 #this will force postinst to reconfigure...should we make backups?
 if [ "$1" == "reconfigure" ]; then
-    rm -f $CFGDIR/chiton.cfg CFGDIR/config.php $APACHE_CFG_DIR/apache-chiton.conf || true
+    mv $CFGDIR/chiton.cfg $CFGDIR/chiton.cfg.bak &> /dev/null || true
+    mv $CFGDIR/config.php $CFGDIR/config.php.bak &> /dev/null || true
+    mv $APACHE_CFG_DIR/apache-chiton.conf $APACHE_CFG_DIR/apache-chiton.conf.bak &> /dev/null || true
 fi

@@ -5,11 +5,12 @@ set -e
 #dbc_debug=1
 #init for debian
 #DEBHELPER#
+
 if [ -f /usr/share/debconf/confmodule ]; then
     . /usr/share/debconf/confmodule
     if [[ "$1" == "purge" || "$1" == "db_purge" ]]; then
-        db_purge
-fi
+        db_purge || true
+    fi
 fi
 
 if [ -f /usr/share/dbconfig-common/dpkg/postrm.mysql ]; then
@@ -21,8 +22,9 @@ rm -rf @localstatedir@/@PKGNAME@/cache/* 2>&1 > /dev/null || true
 rm -rf @localstatedir@/@PKGNAME@/compile/* 2>&1 > /dev/null || true
 rmdir @localstatedir@/@PKGNAME@/cache/ 2>&1 > /dev/null || true
 rmdir @localstatedir@/@PKGNAME@/compile/ || true
-
+echo "Postrm - p=$1"
 if [[ "$1" == "purge" || "$1" == "db_purge" ]]; then
+    echo 'Purging Data!'
     # We are deleting all our files
     rm -f @runstatedir@/@PKGNAME@.pid 2>&1 > /dev/null || true
     rm -f @runstatedir@/@PKGNAME@.sok 2>&1 > /dev/null || true
@@ -54,15 +56,16 @@ fi
 if [ -d @localstatedir@/@PKGNAME@/ ]; then
     rmdir @localstatedir@/@PKGNAME@/ 2>&1 >/dev/null || true
 fi
+
+if [ -r @runstatedir@/@PKGNAME@.sock ]; then
+    if ! fuser @runstatedir@/@PKGNAME@.sock 2>&1 > /dev/null ; then
+        rm -f @runstatedir@/@PKGNAME@.sock
+    fi
+fi
+
 #we install it as a .new so we need to delete the main file too
 if [[ "@inittype@" = "sysv" ]]; then
     if ! [ -r @initscript@.new ]; then #if the .new still exists, it's because this is an upgrade
         rm -f @initscript@ || true
     fi
-fi
-
-rmdir @localstatedir@/@PKGNAME@/ || true
-if ! fuser @runstatedir@/@PKGNAME@.sock 2>&1 > /dev/null ; then
-    rm -f @runstatedir@/@PKGNAME@.sock
-    rmdir @runstatedir@ || true
 fi

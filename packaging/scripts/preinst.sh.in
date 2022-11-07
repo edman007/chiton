@@ -4,7 +4,6 @@ set -e
 #set -x
 #export DEBCONF_DEBUG=developer
 
-
 STATE_DIR=@localstatedir@/@PKGNAME@
 RUN_DIR=@runstatedir@
 WEBUSER=@webuser@
@@ -22,7 +21,7 @@ RENDERGROUP=render
 if [ -f /usr/share/debconf/confmodule ]; then
     . /usr/share/debconf/confmodule
 fi
-
+#no dbconfig in preinst
 #stop the service if it's running
 if [ "@inittype" == "systemd" ]; then
     if [ -f @initscript@ ]; then
