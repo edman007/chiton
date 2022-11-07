@@ -5,6 +5,13 @@ set -e
 read -s GPG_SIGN_KEY
 read -s GPG_SIGN_PASS
 cd ~/pkg
+if dpkg -l | grep chiton ; then
+    echo "chiton	chiton/dbconfig-remove	boolean	true" | sudo debconf-set-selections
+    echo "chiton	chiton/purge	boolean	true" | sudo debconf-set-selections
+    sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y chiton || true
+    sudo DEBIAN_FRONTEND=noninteractive apt-get purge -y chiton-dbgsym || true
+fi
+
 sudo DEBIAN_FRONTEND=noninteractive apt-get update
 sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential fakeroot devscripts
