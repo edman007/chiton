@@ -226,6 +226,66 @@ function post_configure_check () {
         echo "End of video chunk appears invalid";
         exit 1
     fi
+
+    echo "Checking Locking"
+    STARTTIME=$(curl -L  'http://localhost/chiton/info.php?id=0' | grep --color -E -o 'starttime":([0-9]+)'|cut -d : -f 2)
+    FIRST_GAP=$(curl -L  'http://localhost/chiton/info.php?id=0' | grep --color -E -o '"len":([0-9]+)'|cut -d : -f 2|head -1)
+    TZERO_SEC=$(expr $FIRST_GAP + $STARTTIME)
+    THIRTY_SEC=$(expr $TZERO_SEC + 30)
+    FORTYFIVE_SEC=$(expr $TZERO_SEC + 45)
+    NINTEY_SEC=$(expr $TZERO_SEC + 90)
+
+    #compute start time
+    for start_end in $TZERO_SEC:$THIRTY_SEC $FORTYFIVE_SEC:$NINTEY_SEC ; do
+        START=$(echo $start_end | cut -d : -f 1)
+        END=$(echo $start_end | cut -d : -f 2)
+        echo "S: $START, E: $END"
+        START_DAY=$STARTTIME
+        START_HOUR=$(date --date=@$START +%k)
+        START_MIN=$(date --date=@$START +%M)
+        START_SEC=$(date --date=@$START +%S)
+
+        END_DAY=$STARTTIME
+        END_HOUR=$(date --date=@$END +%k)
+        END_MIN=$(date --date=@$END +%M)
+        END_SEC=$(date --date=@$END +%S)
+        echo "from_d=$START_DAY&from_h=$START_HOUR&from_m=$START_MIN&from_s=$START_SEC&to_d=$END_DAY&to_h=$END_HOUR&to_m=$END_MIN&to_s=$END_SEC"
+        curl -s -d "from_d=$START_DAY&from_h=$START_HOUR&from_m=$START_MIN&from_s=$START_SEC&to_d=$END_DAY&to_h=$END_HOUR&to_m=$END_MIN&to_s=$END_SEC" \
+             -X POST 'http://localhost/chiton/camera.php?id=0'  | grep -A 1 statusmsg | grep Locked
+        echo "export=1&start_day_ts=$START_DAY&start_h=$START_HOUR&start_m=$START_MIN&start_s=$START_SEC&end_day_ts=$END_DAY&end_h=$END_HOUR&end_m=$END_MIN&end_s=$END_SEC"
+        curl -s -d "export=1&start_day_ts=$START_DAY&start_h=$START_HOUR&start_m=$START_MIN&start_s=$START_SEC&end_day_ts=$END_DAY&end_h=$END_HOUR&end_m=$END_MIN&end_s=$END_SEC" \
+             -X POST 'http://localhost/chiton/camera.php?id=0'  | grep -A 1 statusmsg | grep 'Job Started'
+
+    done
+
+    #now wait for them to show up
+    EXPORT_COMPLETE=0
+    for t in {0..120}; do
+        sleep 1
+        COMPLETE=$(curl -L  'http://localhost/chiton/camera.php?id=0' | grep download | wc -l)
+        if [[ "x$COMPLETE" = "x2" ]]; then
+            EXPORT_COMPLETE=1
+            break;
+        fi
+    done
+
+    if [[ "$EXPORT_COMPLETE" = 0 ]]; then
+        echo 'Export Failed'
+        exit 1
+    fi
+
+    for t in {0..1}; do
+        EXPORT_ID=$(curl -L  'http://localhost/chiton/camera.php?id=0' | grep export_id | grep -o -E 'value="[0-9]+' | cut -d \" -f 2 | head -1)
+        curl -s -d "delete_export=1&export_id=$EXPORT_ID" \
+             -X POST 'http://localhost/chiton/camera.php?id=0'  | grep -A 1 statusmsg | grep 'Job Deleted'
+    done
+
+    EXPORT_COMPLETE=$(curl -L  'http://localhost/chiton/camera.php?id=0' | grep download | wc -l)
+    if [[ "x$EXPORT_COMPLETE" != "x0" ]]; then
+        echo 'Export show after deleting both'
+        exit 1
+    fi
+
 }
 
 function deconfigure_check (){
