@@ -22,12 +22,11 @@ rm -rf @localstatedir@/@PKGNAME@/cache/* 2>&1 > /dev/null || true
 rm -rf @localstatedir@/@PKGNAME@/compile/* 2>&1 > /dev/null || true
 rmdir @localstatedir@/@PKGNAME@/cache/ 2>&1 > /dev/null || true
 rmdir @localstatedir@/@PKGNAME@/compile/ || true
-echo "Postrm - p=$1"
+
 if [[ "$1" == "purge" || "$1" == "db_purge" ]]; then
-    echo 'Purging Data!'
     # We are deleting all our files
     rm -f @runstatedir@/@PKGNAME@.pid 2>&1 > /dev/null || true
-    rm -f @runstatedir@/@PKGNAME@.sok 2>&1 > /dev/null || true
+    rm -f @runstatedir@/@PKGNAME@.sock 2>&1 > /dev/null || true
     rmdir @runstatedir@ 2>&1 > /dev/null || true
     rmdir @localstatedir@/@PKGNAME@/cache/ 2>&1 > /dev/null || true
     rmdir @localstatedir@/@PKGNAME@/compile/ 2>&1 > /dev/null || true
@@ -54,11 +53,11 @@ if [[ "$1" == "purge" || "$1" == "db_purge" ]]; then
 fi
 
 if [ -d @localstatedir@/@PKGNAME@/ ]; then
-    rmdir @localstatedir@/@PKGNAME@/ 2>&1 >/dev/null || true
+    rmdir @localstatedir@/@PKGNAME@/ &> /dev/null || true
 fi
 
 if [ -r @runstatedir@/@PKGNAME@.sock ]; then
-    if ! fuser @runstatedir@/@PKGNAME@.sock 2>&1 > /dev/null ; then
+    if ! fuser @runstatedir@/@PKGNAME@.sock  &> /dev/null ; then
         rm -f @runstatedir@/@PKGNAME@.sock
     fi
 fi

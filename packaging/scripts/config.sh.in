@@ -31,6 +31,7 @@ fi
 
 #this will force postinst to reconfigure...should we make backups?
 if [ "$1" == "reconfigure" ]; then
+    echo 'reconfig'
     mv $CFGDIR/chiton.cfg $CFGDIR/chiton.cfg.bak &> /dev/null || true
     mv $CFGDIR/config.php $CFGDIR/config.php.bak &> /dev/null || true
     mv $APACHE_CFG_DIR/apache-chiton.conf $APACHE_CFG_DIR/apache-chiton.conf.bak &> /dev/null || true
