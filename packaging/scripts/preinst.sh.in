@@ -29,22 +29,6 @@ if [ "@inittype" == "systemd" ]; then
     fi
 fi
 
-#setup the directories
-if [ ! -d $STATE_DIR/compile ]; then
-    mkdir -p $STATE_DIR/compile
-fi
-
-if [ ! -d $STATE_DIR/cache ]; then
-    mkdir -p $STATE_DIR/cache
-fi
-
-if [ ! -d $VID_DIR ]; then
-    mkdir -p $VID_DIR
-fi
-
-if [ ! -d $RUN_DIR ]; then
-    mkdir -p $RUN_DIR
-fi
 
 #add our user
 if ! getent passwd $BACKEND_USER > /dev/null ; then
@@ -69,10 +53,6 @@ if getent group $VIDEOGROUP > /dev/null ; then
         usermod -a -G $VIDEOGROUP $BACKEND_USER
     fi
 fi
-
-chown $BACKEND_USER:$BACKEND_USER  $STATE_DIR $VID_DIR $STATE_DIR/compile $STATE_DIR/cache $RUN_DIR
-chmod 770 $STATE_DIR/compile $STATE_DIR/cache $VID_DIR
-chmod 755 $RUN_DIR
 
 rm -f @localstatedir@/@PKGNAME@/cache/*.php @localstatedir@/@PKGNAME@/compile/*.php 2>&1 > /dev/null || true
 

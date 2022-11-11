@@ -37,6 +37,23 @@ if [ -f /usr/share/dbconfig-common/dpkg/postinst.mysql ]; then
 
 fi
 
+#setup the directories
+if [ ! -d $STATE_DIR/compile ]; then
+    mkdir -p $STATE_DIR/compile
+fi
+
+if [ ! -d $STATE_DIR/cache ]; then
+    mkdir -p $STATE_DIR/cache
+fi
+
+if [ ! -d $VID_DIR ]; then
+    mkdir -p $VID_DIR
+fi
+
+chown $BACKEND_USER:$BACKEND_USER  $STATE_DIR $VID_DIR $STATE_DIR/compile $STATE_DIR/cache
+chmod 770 $STATE_DIR/compile $STATE_DIR/cache $VID_DIR
+
+
 #restart everything...on debian
 if [ "@inittype@" == "systemd" ]; then
     systemctl daemon-reload || true

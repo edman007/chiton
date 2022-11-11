@@ -12,6 +12,7 @@ KillSignal=SIGINT
 SendSIGKILL=yes
 TimeoutStopSec=15
 Restart=on-failure
+RuntimeDirectory=@PKGNAME@
 
 [Install]
 WantedBy=multi-user.target

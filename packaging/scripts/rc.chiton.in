@@ -6,8 +6,10 @@
  
 @PKGNAME@_start() {
   if [ -x @bindir@/@PKGNAME@ ]; then
-    echo "Starting @PKGNAME@:  @bindir@/@PKGNAME@"
-    @bindir@/@PKGNAME@ -P @runuser@ -f -p @runstatedir@/@PKGNAME@.pid
+      echo "Starting @PKGNAME@:  @bindir@/@PKGNAME@"
+      mkdir -p @runstatedir@ || true
+      chown @runuser@:@runuser@ @runstatedir@ || true
+      @bindir@/@PKGNAME@ -P @runuser@ -f -p @runstatedir@/@PKGNAME@.pid
   fi
 }
 
