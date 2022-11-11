@@ -123,10 +123,11 @@ EventController& MotionController::get_event_controller(void){
 }
 
 bool MotionController::should_skip(void){
+    //LINFO("Current Ratio is " + std::to_string(stream.get_mean_delay()/stream.get_mean_duration()));
     if (stream.get_mean_duration() <= 0 || skip_ratio == 0){
         return false;//disabled if the duration or skip ratio is unreasonable.
     } else if (skip_ratio == 1){
         return true;
     }
-    return stream.get_mean_delay() <  skip_ratio*stream.get_mean_duration();
+    return stream.get_mean_delay()/stream.get_mean_duration() < skip_ratio;
 }

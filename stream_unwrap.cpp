@@ -575,7 +575,7 @@ void StreamUnwrap::record_delay(const struct timeval &start, const struct timeva
         timeshift_mean_duration = duration;
 
     }
-    //LDEBUG("Delay: " + std::to_string(timeshift_mean_delay) + " Duration: " + std::to_string(timeshift_mean_duration));
+    //LINFO("Delay: " + std::to_string(timeshift_mean_delay) + " Duration: " + std::to_string(timeshift_mean_duration));
 }
 
 
