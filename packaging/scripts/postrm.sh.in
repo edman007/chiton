@@ -61,6 +61,7 @@ if [ -r @runstatedir@/@PKGNAME@.sock ]; then
         rm -f @runstatedir@/@PKGNAME@.sock
     fi
 fi
+rmdir @runstatedir@ &> /dev/null || true
 
 #we install it as a .new so we need to delete the main file too
 if [[ "@inittype@" = "sysv" ]]; then
