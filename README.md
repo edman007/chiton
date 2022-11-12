@@ -10,27 +10,53 @@ whenever possible to maximize performance
 
 It is recommended to use a binary package for your distribition. Then start it with `systemctl enable chiton` (on a systemd based system) or executing `/etc/rc.d/rc.chiton start` on a SysV based system (like Slackware).
 
+A binary repository is available at https:://repo.edman007.com/ and the GPG key is at https://repo.edman007.com/repo-key.pgp
+
+For debian/raspbian put the correct line into /etc/apt/sources.list.d/chiton.list
+```
+  #debian bullseye amd64
+  deb https://repo.edman007.com/deb/debian/bullseye/ bullseye main
+
+  #debian bookworm amd64
+  deb https://repo.edman007.com/deb/debian/bookworm/ bookworm main
+
+  #raspbian bullseye 32-bit
+  deb https://repo.edman007.com/deb/rpi/bookworm/ bullseye main
+
+  #raspbian 64-bit
+  deb https://repo.edman007.com/deb/rpi/bullseye/ bullseye main
+```
+
+For Slackware, point slackpkg to the correct mirror:
+```
+  #Slackware 15.0
+  https://repo.edman007.com/slack/slackware-15.0/
+
+  #Slackware -current
+  https://repo.edman007.com/slack/slackware-current/
+```
+
 If you would like to build from source, it is recommended to run the packaging script in the packaging directory to generate a binary for your distribution. If you downloaded this via git you will need to run `./autogen.sh` first. Note, when building from git node-license-checker is a build time dependency
 
 For debian that would look something like this:
 
 ```bash
 sudo apt-get install build-essential fakeroot devscripts
-dpkg-source -x chiton-0.4.0~pre.dsc
-cd chiton-0.4.0pre
+dpkg-source -x chiton-0.4.0.dsc
+cd chiton-0.4.0
 sudo apt-get build-dep .
 debuild -uc -us -i -b
 cd ..
-sudo dpkg -i chiton_0.4.0~pre-1_amd64.deb
+sudo dpkg -i chiton_0.4.0-1_amd64.deb
 ```
 
 For Slackware that would look something like this:
 
 ```bash
-tar -xvf chiton-0.4.0pre.slackbuild.tar.xz
-mv chiton-0.4.0pre.tar.xz chiton
+tar -xvf chiton-0.4.0.slackbuild.tar.xz
+mv chiton-0.4.0.tar.xz chiton
 ./chiton.SlackBuild
-sudo upgradepkg --install-new /tmp/chiton-0.4.0pre*.txz
+sudo upgradepkg --install-new /tmp/chiton-0.4.0*.txz
 chiton-install
 chmod +x /etc/rc.d/rc.chiton
 /etc/rc.d/rc.chiton start
