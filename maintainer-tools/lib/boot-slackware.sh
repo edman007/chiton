@@ -22,7 +22,7 @@
 
 
 cd `dirname $0`
-set -x
+#set -x
 if [ $# -lt 1 ]; then
     echo "Usage: $0 <version> [action]"
     echo -e "\tversion: 15, current"

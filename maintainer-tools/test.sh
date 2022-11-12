@@ -86,7 +86,7 @@ build_source () {
         #build the golden packages
         cd ..
         if [ "$GOLD_RUN" = 1 ]; then
-            make maintainer-clean
+            make maintainer-clean || true
             ./configure
             make distcheck
         else
@@ -420,7 +420,7 @@ for HOST_STR in $HOSTS; do
 
         if [ $RUN_TEST = 1 ] && [ $GOLD_RUN = 1 ]; then
             echo "$HOST_STR Booting Fresh..."
-            freshen | tee -a $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
+            freshen_os | tee -a $OS_DIR/boot.log | sed "s/^/$HOST_STR: /"
             if [ "${PIPESTATUS[0]}" != "0" ]; then
                 echo "freshen: ${PIPESTATUS[0]}"
                 ret=1
