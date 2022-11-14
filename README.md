@@ -42,21 +42,21 @@ For debian that would look something like this:
 
 ```bash
 sudo apt-get install build-essential fakeroot devscripts
-dpkg-source -x chiton-0.4.0.dsc
-cd chiton-0.4.0
+dpkg-source -x chiton-0.5.0~pre.dsc
+cd chiton-0.5.0pre
 sudo apt-get build-dep .
 debuild -uc -us -i -b
 cd ..
-sudo dpkg -i chiton_0.4.0-1_amd64.deb
+sudo dpkg -i chiton_0.5.0~pre-1_amd64.deb
 ```
 
 For Slackware that would look something like this:
 
 ```bash
-tar -xvf chiton-0.4.0.slackbuild.tar.xz
-mv chiton-0.4.0.tar.xz chiton
+tar -xvf chiton-0.5.0pre.slackbuild.tar.xz
+mv chiton-0.5.0pre.tar.xz chiton
 ./chiton.SlackBuild
-sudo upgradepkg --install-new /tmp/chiton-0.4.0*.txz
+sudo upgradepkg --install-new /tmp/chiton-0.5.0pre*.txz
 chiton-install
 chmod +x /etc/rc.d/rc.chiton
 /etc/rc.d/rc.chiton start
