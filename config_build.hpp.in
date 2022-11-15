@@ -3,6 +3,9 @@
 /* Build Date */
 #undef BUILD_DATE
 
+/* Build Version */
+#undef BUILD_VERSION
+
 /* Debugging enabled */
 #undef DEBUG
 

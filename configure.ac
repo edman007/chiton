@@ -15,7 +15,7 @@
  #   You should have received a copy of the GNU General Public License
  #   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  #
- #   Copyright 2020 Ed Martin <edman007@edman007.com>
+ #   Copyright 2020-2022 Ed Martin <edman007@edman007.com>
  #
  ##########################################################################
 
@@ -37,10 +37,14 @@ AS_IF([test "x$git_version" == "xUnknown"],
        [])
 
 git_version_str=$(echo '"'git_$git_version'"')
-define([GITVERSION], [$git_version_str])
+define([GITVERSION], $git_version_str)
 AC_SUBST([DIST_VERSION], [$git_version])
 
 AC_DEFINE_UNQUOTED([GIT_VER], GITVERSION, [Git version])
+AS_IF([echo BUILDVER | grep pre],
+  AC_DEFINE_UNQUOTED([BUILD_VERSION], ["]BUILDVER[_$git_version"], [Build Version]),
+  AC_DEFINE([BUILD_VERSION], ["]BUILDVER["], [Build Version])
+)
 
 AS_IF([test "x$git_version" != "xUnknown"],
             AC_SUBST([VER_GITVER], [_$git_version]),

@@ -320,7 +320,7 @@ int main (int argc, char **argv){
         Util::set_log_level(args.get_value_int("verbosity"));
     }
     LWARN("Starting Chiton...");
-    LWARN(std::string("\tVersion ") + GIT_VER);
+    LWARN(std::string("\tVersion ") + BUILD_VERSION);
     LWARN(std::string("\tBuilt ") + BUILD_DATE);
     Util::set_thread_name("System", args);
     gcff_util.load_ffmpeg();
