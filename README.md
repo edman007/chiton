@@ -12,6 +12,12 @@ It is recommended to use a binary package for your distribition. Then start it w
 
 A binary repository is available at https:://repo.edman007.com/ and the GPG key is at https://repo.edman007.com/repo-key.pgp
 
+On Debian based OS the gpg key can be added with
+
+```
+wget -qO - https://repo.edman007.com/repo-key.pgp | sudo apt-key add -
+```
+
 For debian/raspbian put the correct line into /etc/apt/sources.list.d/chiton.list
 ```
   #debian bullseye amd64
