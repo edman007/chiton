@@ -191,6 +191,9 @@ void CFFUtil::load_ffmpeg(void){
 
     //init vaapi
     vaapi_ctx = NULL;
+    //we need to always try to load to avoid calling them avcodec_open2() which will cause a deadlock
+    load_vaapi();
+    load_vdpau();
 }
 
 void CFFUtil::load_vaapi(void){
