@@ -834,7 +834,7 @@ bool CFFUtil::have_v4l2_dev(int dev, AVCodecID codec_id, int codec_profile, int 
     struct v4l2_fmtdesc pixfmt;
     for (int pix_idx = 0;; pix_idx++){
         pixfmt.index = pix_idx;
-        pixfmt.type = splane ? V4L2_CAP_VIDEO_OUTPUT : V4L2_CAP_VIDEO_OUTPUT_MPLANE;
+        pixfmt.type = splane ? V4L2_BUF_TYPE_VIDEO_OUTPUT : V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
         if (!vioctl(dev, VIDIOC_ENUM_FMT, &pixfmt)){
             if (splane && mplane){
                 //not sure if anyone supports both on the same driver, but we do!
