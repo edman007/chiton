@@ -30,7 +30,8 @@ extern "C" {
 const AVPixelFormat hw_formats[] = {
     AV_PIX_FMT_VAAPI,
     AV_PIX_FMT_VDPAU,
-    AV_PIX_FMT_OPENCL
+    AV_PIX_FMT_OPENCL,
+    AV_PIX_FMT_DRM_PRIME
 };
 
 Filter::Filter(Config& cfg) : cfg(cfg) {
