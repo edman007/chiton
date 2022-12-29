@@ -152,6 +152,19 @@ AS_IF([test "X$no_cl" == "Xyes" || test "x$enable_opencl" == "xno"], [AC_MSG_NOT
              AS_VAR_APPEND([[LIBS]], [" $CL_LIBS "])
              AC_DEFINE([HAVE_OPENCL], [1], [Have OpenCL])])
 
+AC_ARG_ENABLE([v4l2],
+  [AS_HELP_STRING([--enable-v4l2], [Enable V4L2 and associated components])],
+  [],
+  [enable_v4l2=auto])
+AS_IF([test "x$enable_v4l2" != "xno"],[AC_CHECK_HEADER([libv4l2.h],
+            [AC_CHECK_LIB([v4l2], [v4l2_open], [no_v4l2=no], [no_v4l2=yes])],
+            [no_v4l2=yes])])
+AC_CHECK_HEADER([linux/videodev2.h], [], [no_v4l2=yes])
+AS_IF([test "x$enable_v4l2" == "xyes" && test "X$no_v4l2" == "Xyes"], [AC_MSG_ERROR([Could not find V4L2])])
+AS_IF([test "X$no_v4l2" == "Xyes" || test "x$enable_v4l2" == "xno"], [AC_MSG_NOTICE([V4L2 Support Disabled])], [AS_VAR_APPEND([[CPPFLAGS]], [" $V4L2_CFLAGS "])
+             AS_VAR_APPEND([[LIBS]], [" -lv4l2 "])
+             AC_DEFINE([HAVE_V4L2], [1], [Have V4L2])])
+
 
 
 AC_ARG_WITH([apacheconfigdir],

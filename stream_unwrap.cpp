@@ -156,11 +156,40 @@ bool StreamUnwrap::alloc_decode_context(unsigned int stream){
         return false;
     }
 
+    AVCodecParameters *stream_codecpar = input_format_context->streams[stream]->codecpar;
+    bool using_v4l2 = false;
+    //check if we need to do V4L2
+    if ((cfg.get_value("video-decode-method") == "auto" &&
+        !gcff_util.have_vaapi(stream_codecpar->codec_id, stream_codecpar->profile, stream_codecpar->height, stream_codecpar->width) &&
+         !gcff_util.have_vdpau(stream_codecpar->codec_id, stream_codecpar->profile, stream_codecpar->height, stream_codecpar->width)) ||
+        cfg.get_value("video-decode-method") == "v4l2"){
+        LDEBUG("Attempting V4L2");
+        //use v4l2
+        using_v4l2 = gcff_util.have_v4l2(stream_codecpar->codec_id, stream_codecpar->profile, stream_codecpar->height, stream_codecpar->width);
+    }
+
     //locate a decoder for the codec
     input_codec = avcodec_find_decoder(input_format_context->streams[stream]->codecpar->codec_id);
     if (!input_codec){
         LWARN("Could not find decoder");
         return false;
+    }
+
+    if (using_v4l2){
+        //check if this codec has a v4l2 version
+        std::string v4l2_name = std::string(input_codec->name) + std::string("_v4l2m2m");
+        const AVCodec *v4l_codec = avcodec_find_decoder_by_name(v4l2_name.c_str());
+        if (v4l_codec){
+            LINFO("Using ffmpeg " + std::string(v4l_codec->long_name) + " for decoding");
+            input_codec = v4l_codec;
+        } else {
+            using_v4l2 = false;
+            LINFO("You seem to have V4L2 support for " + std::string(input_codec->long_name) + " but ffmpeg was not compiled with the associated support");
+        }
+    }
+
+    if (!using_v4l2 && cfg.get_value("video-decode-method") == "v4l2"){
+        LWARN("V4L2 decoding was requested but is not available, falling back to SW");
     }
 
     /* Allocate a new decoding context. */
@@ -179,7 +208,7 @@ bool StreamUnwrap::alloc_decode_context(unsigned int stream){
 
     if (avctx->codec_type == AVMEDIA_TYPE_VIDEO){
         //connect decoder
-        if (!avctx->hw_device_ctx &&
+        if (!using_v4l2 && !avctx->hw_device_ctx &&
             (cfg.get_value("video-decode-method") == "auto" || cfg.get_value("video-decode-method") == "vaapi")){
             avctx->hw_device_ctx  = gcff_util.get_vaapi_ctx(avctx->codec_id, avctx->profile, avctx->height, avctx->width);
             if (avctx->hw_device_ctx){
@@ -187,7 +216,7 @@ bool StreamUnwrap::alloc_decode_context(unsigned int stream){
                 LINFO("Using VA-API for decoding");
             }
         }
-        if (!avctx->hw_device_ctx &&
+        if (!using_v4l2 && !avctx->hw_device_ctx &&
             (cfg.get_value("video-decode-method") == "auto" || cfg.get_value("video-decode-method") == "vdpau")){
             avctx->hw_device_ctx  = gcff_util.get_vdpau_ctx(avctx->codec_id, avctx->profile, avctx->height, avctx->width);
             if (avctx->hw_device_ctx){
@@ -199,7 +228,9 @@ bool StreamUnwrap::alloc_decode_context(unsigned int stream){
         if (!avctx->hw_device_ctx){
             avctx->opaque = this;
             avctx->get_format = get_frame_format;//do any format, but prefer VAAPI compatible formats
-            LINFO("Using SW Decoding");
+            if (!using_v4l2){
+                LINFO("Using SW Decoding");
+            }
         }
     }
 

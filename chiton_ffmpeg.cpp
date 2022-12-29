@@ -43,6 +43,16 @@
 #ifdef HAVE_OPENCV
 #include <opencv2/core/ocl.hpp>
 #endif
+
+#ifdef HAVE_V4L2
+#include <sys/types.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <linux/videodev2.h>
+#include <libv4l2.h>
+
+#endif
+
 thread_local std::string last_line;//contains the continuation of any line that doesn't have a \n
 
 CFFUtil gcff_util;//global instance of our util class
@@ -760,5 +770,161 @@ AVOpenCLDeviceContext *get_opencl_ctx_from_frames(AVBufferRef *buf){
     }
     AVHWFramesContext *frames = reinterpret_cast<AVHWFramesContext*>(buf->data);
     return get_opencl_ctx_from_device(frames->device_ref);
+}
+#endif
+
+
+bool CFFUtil::have_v4l2(AVCodecID codec_id, int codec_profile, int width, int height){
+#ifdef HAVE_V4L2
+    //we need to check all devices
+    DIR *dirp = opendir("/dev");
+    if (!dirp){
+        LWARN("Can't open /dev");
+        return false;
+    }
+
+    bool ret = false;
+    struct dirent *entry;
+    while (!ret && (entry = readdir(dirp))){
+        std::string dev_name = std::string(entry->d_name);
+        if (dev_name.find("video") != 0){
+            continue;
+        }
+        int fd = v4l2_open(std::string("/dev/" + dev_name).c_str(), O_RDWR | O_NONBLOCK, 0);
+        if (fd < 0){
+            LWARN("Cannot open /dev/" + dev_name + " (" + std::to_string(errno) + ")");
+            continue;
+        }
+        ret = have_v4l2_dev(fd, codec_id, codec_profile, width, height);
+        if (v4l2_close(fd)){
+            LWARN("close() failed (" + std::to_string(errno) + ")");
+        }
+    }
+    closedir(dirp);
+    LDEBUG("Completed dev check");
+    return ret;
+    //query pixel formats first
+#else
+    return false;//no v4l2 enabled
+#endif
+}
+
+#ifdef HAVE_V4L2
+bool CFFUtil::have_v4l2_dev(int dev, AVCodecID codec_id, int codec_profile, int width, int height){
+    bool ret = false;
+
+    //check if it supports M2M
+    struct v4l2_capability caps;
+    if (!vioctl(dev, VIDIOC_QUERYCAP, &caps)){
+        return false;
+    }
+
+    LDEBUG("Found V4L2 device " + std::string(reinterpret_cast<char*>(caps.card)) + "[" + std::string(reinterpret_cast<char*>(caps.bus_info)) + "]");
+
+    bool splane = caps.device_caps & V4L2_CAP_VIDEO_M2M;
+    bool mplane = caps.device_caps & V4L2_CAP_VIDEO_M2M_MPLANE;
+    if (!splane && !mplane){
+        LDEBUG("...Does not support M2M");
+        return false;
+    }
+
+    struct v4l2_fmtdesc pixfmt;
+    for (int pix_idx = 0;; pix_idx++){
+        pixfmt.index = pix_idx;
+        pixfmt.type = splane ? V4L2_CAP_VIDEO_OUTPUT : V4L2_CAP_VIDEO_OUTPUT_MPLANE;
+        if (!vioctl(dev, VIDIOC_ENUM_FMT, &pixfmt)){
+            if (splane && mplane){
+                //not sure if anyone supports both on the same driver, but we do!
+                //this repeates the loop for mplane
+                splane = false;
+                pix_idx = -1;
+                continue;
+            }
+            break;//hit the end
+        }
+
+        if (pixfmt.flags & V4L2_FMT_FLAG_EMULATED){
+            continue;//we don't care about SW formats
+        }
+
+        if (!is_v4l2_hw_codec(codec_id, pixfmt.pixelformat)){
+            continue;//now the requested codec, irrelevant
+        }
+        struct v4l2_frmsizeenum frsize;
+        for (int fr_idx = 0; ; fr_idx++){
+            frsize.index = fr_idx;
+            frsize.pixel_format = pixfmt.pixelformat;
+            if (!vioctl(dev, VIDIOC_ENUM_FRAMESIZES, &frsize)){
+                break;
+            }
+            if (frsize.type == V4L2_FRMSIZE_TYPE_DISCRETE){
+                if (width == frsize.discrete.width && height == frsize.discrete.height){
+                    return true;
+                }
+                break;//DISCRETE is only one
+            } else if (frsize.type == V4L2_FRMSIZE_TYPE_STEPWISE || frsize.type == V4L2_FRMSIZE_TYPE_CONTINUOUS) {
+                if (width >= frsize.stepwise.min_width &&
+                    width <= frsize.stepwise.max_width &&
+                    width % frsize.stepwise.step_width == 0 &&
+                    height >= frsize.stepwise.min_height &&
+                    height <= frsize.stepwise.max_height &&
+                    height % frsize.stepwise.step_height == 0){
+                    return true;
+                }
+            } else {
+                LWARN("Unknown V4L2 Type - " + std::to_string(frsize.type));
+                return false;
+            }
+        }
+    }
+    return ret;
+}
+#endif
+
+#ifdef HAVE_V4L2
+bool CFFUtil::vioctl(int fh, int request, void *arg){
+    int r;
+
+    do {
+        r = v4l2_ioctl(fh, request, arg);
+    } while (r == -1 && ((errno == EINTR) || (errno == EAGAIN)));
+
+    if (r == -1){
+        return false;
+    }
+    return true;
+}
+#endif
+
+#ifdef HAVE_V4L2
+bool CFFUtil::is_v4l2_hw_codec(const AVCodecID av_codec, const uint32_t v4l2_pix_fmt){
+    //i hate these things
+    //we only use this to determine if FFMpeg will probably succeed, so it doesn't have to be 100% accurate
+    switch (av_codec){
+    case AV_CODEC_ID_MPEG1VIDEO:
+        return v4l2_pix_fmt == V4L2_PIX_FMT_MPEG1;
+    case AV_CODEC_ID_MPEG2VIDEO:
+        return v4l2_pix_fmt == V4L2_PIX_FMT_MPEG2;
+    case AV_CODEC_ID_H263:
+        return v4l2_pix_fmt == V4L2_PIX_FMT_H263;
+    case AV_CODEC_ID_H264:
+        return v4l2_pix_fmt == V4L2_PIX_FMT_H264 ||
+            v4l2_pix_fmt == V4L2_PIX_FMT_H264_NO_SC ||
+            v4l2_pix_fmt == V4L2_PIX_FMT_H264_MVC;
+    case AV_CODEC_ID_MPEG4:
+        return v4l2_pix_fmt == V4L2_PIX_FMT_MPEG4 ||
+            v4l2_pix_fmt == V4L2_PIX_FMT_XVID;
+    case AV_CODEC_ID_VC1:
+        return v4l2_pix_fmt == V4L2_PIX_FMT_VC1_ANNEX_G ||
+            v4l2_pix_fmt == V4L2_PIX_FMT_VC1_ANNEX_L;
+    case AV_CODEC_ID_HEVC:
+        return v4l2_pix_fmt == V4L2_PIX_FMT_HEVC;
+    case AV_CODEC_ID_VP8:
+        return v4l2_pix_fmt == V4L2_PIX_FMT_VP8;
+    case AV_CODEC_ID_VP9:
+        return v4l2_pix_fmt == V4L2_PIX_FMT_VP9;
+    default:
+        return false;
+    }
 }
 #endif

@@ -115,6 +115,7 @@ public:
     bool have_vaapi(AVCodecID codec_id, int codec_profile, int width, int height);//returns true if VAAPI should work
     bool have_vdpau(AVCodecID codec_id, int codec_profile, int width, int height);//returns true if VDPAU should work
     bool have_opencl(AVCodecID codec_id, int codec_profile, int width, int height);//returns true if OPENCL should work
+    bool have_v4l2(AVCodecID codec_id, int codec_profile, int width, int height);//returns true if v4l2 should work
     bool sw_format_is_hw_compatable(const enum AVPixelFormat pix_fmt);//return true if the format is HW compatable
     std::string get_sw_hw_format_list(Config &cfg);//return the suggested list of formats for use with later HW functions
 
@@ -129,7 +130,11 @@ private:
 #ifdef HAVE_VDPAU
     int  get_vdpau_profile(const AVCodecID codec_id, const int codec_profile, VdpDecoderProfile *profile);//get the VDPAU Profile
 #endif
-
+#ifdef HAVE_V4L2
+    bool have_v4l2_dev(int devfd, AVCodecID codec_id, int codec_profile, int width, int height);//check v4l2 capabilities of device
+    bool vioctl(int fh, int request, void *arg);//run ioctl through v4l2, return false on error
+    bool is_v4l2_hw_codec(const AVCodecID av_codec, const uint32_t v4l2_pix_fmt);
+#endif
     AVBufferRef *vaapi_ctx = NULL;
     bool vaapi_failed = false;//if we failed to initilize vaapi
     AVBufferRef *vdpau_ctx = NULL;
