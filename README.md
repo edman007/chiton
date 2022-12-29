@@ -14,10 +14,6 @@ A binary repository is available at https:://repo.edman007.com/ and the GPG key 
 
 On Debian based OS the gpg key can be added with
 
-```
-wget -qO - https://repo.edman007.com/repo-key.pgp | sudo apt-key add -
-```
-
 For debian/raspbian put the correct line into /etc/apt/sources.list.d/chiton.list
 ```
   #debian bullseye amd64
@@ -32,6 +28,14 @@ For debian/raspbian put the correct line into /etc/apt/sources.list.d/chiton.lis
   #raspbian 64-bit
   deb https://repo.edman007.com/deb/rpi/bullseye/ bullseye main
 ```
+Then run the following commands to install chiton;
+
+```
+#Add the GPG key
+wget -qO - https://repo.edman007.com/repo-key.pgp | sudo apt-key add -
+#install mariadb-server and chiton
+sudo apt install mariadb-server chiton
+```
 
 For Slackware, point slackpkg to the correct mirror:
 ```
@@ -41,6 +45,8 @@ For Slackware, point slackpkg to the correct mirror:
   #Slackware -current
   https://repo.edman007.com/slack/slackware-current/
 ```
+
+Then install chiton (`slackpkg install chiton`), and configure it with `chiton-install`
 
 If you would like to build from source, it is recommended to run the packaging script in the packaging directory to generate a binary for your distribution. If you downloaded this via git you will need to run `./autogen.sh` first. Note, when building from git node-license-checker is a build time dependency
 
