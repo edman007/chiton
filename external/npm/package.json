@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "hls.js": "^1.2.7",
+    "pinch-zoom-element": "github:edman007/pinch-zoom#494b4a2a26ab6307e9f70f2f9a3d9a82844f2709"
+  }
+}
