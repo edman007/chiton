@@ -31,7 +31,7 @@ LT_INIT
 git_version=$(echo $(git log --oneline --no-walk || echo Unknown) | head -1 | cut -d ' ' -f 1 )
 AS_IF([test "x$git_version" == "xUnknown"],
             #assume we are in a dist build, pull the version from that
-            AC_CHECK_FILE(["$srcdir/dist-version"],
+            AC_CHECK_FILE([$srcdir/dist-version],
                    git_version=$(cat "$srcdir/dist-version"),
                    []),
        [])
@@ -41,7 +41,7 @@ define([GITVERSION], $git_version_str)
 AC_SUBST([DIST_VERSION], [$git_version])
 
 AC_DEFINE_UNQUOTED([GIT_VER], GITVERSION, [Git version])
-AS_IF([echo BUILDVER | grep pre],
+AS_IF([echo BUILDVER | grep -q pre],
   AC_DEFINE_UNQUOTED([BUILD_VERSION], ["]BUILDVER[_$git_version"], [Build Version]),
   AC_DEFINE([BUILD_VERSION], ["]BUILDVER["], [Build Version])
 )
