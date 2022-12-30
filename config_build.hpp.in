@@ -30,7 +30,7 @@
 /* Have OpenCV */
 #undef HAVE_OPENCV
 
-/* Define if you have POSIX threads libraries and header files. */
+/* Have pthread */
 #undef HAVE_PTHREAD
 
 /* Have PTHREAD_PRIO_INHERIT. */
