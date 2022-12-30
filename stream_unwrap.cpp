@@ -537,32 +537,36 @@ AVCodecContext* StreamUnwrap::get_codec_context(AVStream *stream){
 }
 
 bool StreamUnwrap::charge_video_decoder(void){
-    decoded_packets.emplace_back();
-    if (!get_next_packet(decoded_packets.back())){
-        decoded_packets.pop_back();
-        return false;
-    }
-    AVPacket &pkt = decoded_packets.back();
-    if (decoded_video_frames.empty() && is_video(pkt)){
-
-        if (decode_packet(pkt)){
-            bool ret;
-            do {
-                AVFrame* next_frame = av_frame_alloc();
-                ret = get_decoded_frame_int(pkt.stream_index, next_frame);
-                if (ret){
-                    decoded_video_frames.push_back(next_frame);
-                    LDEBUG("Decoded frame");
-                    next_frame = NULL;
-                } else {
-                    av_frame_free(&next_frame);
-                }
-            } while (ret);
-        } else {
-            LWARN("Failed to decode video during charge");
+    do {
+        decoded_packets.emplace_back();
+        if (!get_next_packet(decoded_packets.back())){
+            decoded_packets.pop_back();
             return false;
         }
-    }
+        AVPacket &pkt = decoded_packets.back();
+        if (decoded_video_frames.empty() && is_video(pkt)){
+            LDEBUG("Decoding packet");
+            if (decode_packet(pkt)){
+                LDEBUG("Decoded packet");
+                bool ret;
+                do {
+                    AVFrame* next_frame = av_frame_alloc();
+                    ret = get_decoded_frame_int(pkt.stream_index, next_frame);
+                    if (ret){
+                        decoded_video_frames.push_back(next_frame);
+                        LDEBUG("Decoded frame");
+                        next_frame = NULL;
+                        break;
+                    } else {
+                        av_frame_free(&next_frame);
+                    }
+                } while (ret);
+            } else {
+                LWARN("Failed to decode video during charge");
+                return false;
+            }
+        }
+    } while (decoded_video_frames.empty());
     return true;
 }
 

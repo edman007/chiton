@@ -450,7 +450,11 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
             encode_ctx[out_stream->index]->rc_max_rate = encode_ctx[out_stream->index]->bit_rate + (encode_ctx[out_stream->index]->bit_rate/10);
             encode_ctx[out_stream->index]->rc_min_rate = encode_ctx[out_stream->index]->bit_rate - (encode_ctx[out_stream->index]->bit_rate/10);
 
-            encode_ctx[out_stream->index]->max_b_frames = 16;
+            int bframe_max = cfg.get_value_int("video-encode-b-frame-max");
+            if (bframe_max < 0){
+                bframe_max = 16;
+            }
+            encode_ctx[out_stream->index]->max_b_frames = bframe_max;
 
             LINFO("Selected video encode bitrate: " + std::to_string(encode_ctx[out_stream->index]->bit_rate/1000) + "kbps");
             //apply encode video options
@@ -458,8 +462,10 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
             av_dict_copy(&opts, vopts, 0);
             av_dict_free(&vopts);
 
+            //check if v4l2 was selected
+            bool using_v4l2 = std::string(encode_ctx[out_stream->index]->codec->name).find("_v4l2m2m") != std::string::npos;
             //connect encoder, try VA-API
-            if (!encode_ctx[out_stream->index]->hw_device_ctx &&
+            if (!using_v4l2 && !encode_ctx[out_stream->index]->hw_device_ctx &&
                 (cfg.get_value("video-encode-method") == "auto" || cfg.get_value("video-encode-method") == "vaapi")){
                 encode_ctx[out_stream->index]->hw_device_ctx = gcff_util.get_vaapi_ctx(encode_ctx[out_stream->index]->codec_id, encode_ctx[out_stream->index]->profile,
                                                                                        encode_ctx[out_stream->index]->width, encode_ctx[out_stream->index]->height);
@@ -475,6 +481,8 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
                         LWARN("Wrong pixel format provided for initilization");
                     }
                 }
+            } else if (using_v4l2 && dec_ctx->pix_fmt == AV_PIX_FMT_DRM_PRIME){
+                encode_ctx[out_stream->index]->pix_fmt = AV_PIX_FMT_DRM_PRIME;//if using V4L2 and the source was in DRM, keep using DRM
             }
             //if it fails we get the SW encoder
         } else {
@@ -913,7 +921,7 @@ bool StreamWriter::get_video_format(const AVFrame *frame, AVPixelFormat &pix_fmt
     const AVCodec *vencoder = get_vencoder(frame->width, frame->height, codec_id, codec_profile);
     if (!vencoder || !vencoder->pix_fmts){
         LWARN("Video Encoder has no pixel formats?");
-        pix_fmt = AV_PIX_FMT_NONE;
+        pix_fmt = static_cast<AVPixelFormat>(frame->format);//I guess the encoder takes anything...see what this does
         return false;
     }
     //FIXME: This is overly restrictive, our API should return all pix_fmts
@@ -931,6 +939,11 @@ const AVCodec* StreamWriter::get_vencoder(int width, int height, AVCodecID &code
             gcff_util.have_vaapi(codec_id, codec_profile, width, height)){
             encoder = avcodec_find_encoder_by_name("hevc_vaapi");
         }
+        if (!encoder && ((cfg.get_value("video-encode-method") == "auto" || cfg.get_value("video-encode-method") == "vaapi") &&
+                         gcff_util.have_v4l2(codec_id, codec_profile, width, height))){
+            encoder = avcodec_find_encoder_by_name("hevc_v4l2m2m");
+        }
+
         if (!encoder){
             encoder = avcodec_find_encoder(AV_CODEC_ID_HEVC);
         }
@@ -943,6 +956,11 @@ const AVCodec* StreamWriter::get_vencoder(int width, int height, AVCodecID &code
             gcff_util.have_vaapi(AV_CODEC_ID_H264, FF_PROFILE_H264_MAIN, width, height)){
             encoder = avcodec_find_encoder_by_name("h264_vaapi");
         }
+        if (!encoder && ((cfg.get_value("video-encode-method") == "auto" || cfg.get_value("video-encode-method") == "v4l2") &&
+            gcff_util.have_v4l2(AV_CODEC_ID_H264, FF_PROFILE_H264_MAIN, width, height))){
+            encoder = avcodec_find_encoder_by_name("h264_v4l2m2m");
+        }
+
         if (!encoder){
             encoder = avcodec_find_encoder(AV_CODEC_ID_H264);
         }

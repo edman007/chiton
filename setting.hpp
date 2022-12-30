@@ -94,7 +94,7 @@ const std::vector<Setting> setting_options {
  {"audio-bitrate", "auto", "audio bitrate", "Bitrate, in kbps, to encode the audio at (or 'auto' to autoselect)", SETTING_OPTIONAL_CAMERA},
  {"video-bitrate", "auto", "video bitrate", "Bitrate, in kbps, to encode the video at (or 'auto' to autoselect)", SETTING_OPTIONAL_CAMERA},
  {"output-extension", ".mp4", "Output Extension <.ts|.mp4>", "HLS Output Format, .ts for mpeg-ts files, .mp4 for fragmented mp4", SETTING_OPTIONAL_CAMERA},
- {"video-encode-method", "auto", "Video Encode method <auto|sw|vaapi>", "Method to use for encoding, vaapi is the supported HW encoder,"
+ {"video-encode-method", "auto", "Video Encode method <auto|sw|vaapi|v4l2>", "Method to use for encoding, vaapi and v4l2 are the supported HW encoders,"
   " auto tries both HW decoders before defaulting to SW, SW is a fallback", SETTING_OPTIONAL_CAMERA},
  {"video-decode-method", "auto", "Video Decode method <auto|sw|vaapi|vdpau|v4l2>", "Method to use for decoding, vaapi, vdpau, and v4l2 are supported HW decoders,"
   " auto tries both HW decoders before defaulting to SW, SW is a fallback", SETTING_OPTIONAL_CAMERA},
@@ -123,4 +123,5 @@ const std::vector<Setting> setting_options {
  {"motion-opencv-map-vaapi", "true", "Motion OpenCV's VA-API Mapping <true|false>", "Use OpenCV to map the direct VA-API buffer", SETTING_OPTIONAL_CAMERA},
  {"motioncontroller-skip-ratio", "0.05", "Motion Controller Skip Ratio <0-1>", "The ratio of time that should be spent blocking waiting for packets, 0 disables motion controller "
   "skipping, 1 will cause all frames to skip motion processing", SETTING_OPTIONAL_CAMERA},
+ {"video-encode-b-frame-max", "16", "Video Encode Maximum B-frames <0->", "Maximum B-frames when encoding", SETTING_OPTIONAL_CAMERA},
 };
