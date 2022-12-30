@@ -159,7 +159,7 @@ uninstall-hook:
 	if test -d $(DESTDIR)$(pkgdatadir); then chmod -R u+w $(DESTDIR)$(pkgdatadir) ; rm -rf $(DESTDIR)$(pkgdatadir); fi
 
 #imagemagick command...should pull from ./configure
-CONVERT=@IMAGEMAGICK_CONVERT@
+CONVERT=@RSVG_CONVERT@
 
 clean-local:
 	-rm -rf web/inc/external/*
@@ -201,9 +201,9 @@ $(BREEZE_SVG):  $(BREEZE_FILES) | web/static/breeze
 	cp $(word $(call getpos,$@,$(BREEZE_SVG)),$(BREEZE_FILES)) $@
 
 $(BREEZE_2X_PNG): $(BREEZE_SVG)
-	$(CONVERT) -background none -density 144 $(word $(call getpos,$@,$(BREEZE_2X_PNG)),$(BREEZE_SVG))  $@
+	$(CONVERT) -x 2 -y 2 -o $@ $(word $(call getpos,$@,$(BREEZE_2X_PNG)),$(BREEZE_SVG))
 $(BREEZE_4X_PNG): $(BREEZE_SVG)
-	$(CONVERT) -background none -density 288 $(word $(call getpos,$@,$(BREEZE_4X_PNG)),$(BREEZE_SVG))  $@
+	$(CONVERT) -x 4 -y 4 -o $@ $(word $(call getpos,$@,$(BREEZE_4X_PNG)),$(BREEZE_SVG))
 
 
 external/npm/node_modules $(HLS_FILES) external/npm/node_modules/pinch-zoom-element/dist/pinch-zoom-min.js &:
@@ -239,10 +239,10 @@ pinch-zoom: | external/npm/node_modules
 	cp $(top_srcdir)/external/npm/node_modules/pinch-zoom-element/dist/pinch-zoom-min.js  web/static/pinch-zoom-min.js
 
 web/static/2x-bottom-cursor.png: $(top_srcdir)/web/static/bottom-cursor.svg | $(abs_builddir)/web/static
-	$(CONVERT) -background none -density 144 $<  $@
+	$(CONVERT) -x 2 -y 2 -density 144 -o $@ $<
 
 web/static/4x-bottom-cursor.png: $(top_srcdir)/web/static/bottom-cursor.svg | $(abs_builddir)/web/static
-	$(CONVERT) -background none -density 288 $<  $@
+	$(CONVERT) -x 2 -y 2 -o $@ $<
 $(abs_builddir)/web/static:
 	$(MKDIR_P) web/static
 chiton-install: chiton-install.in Makefile

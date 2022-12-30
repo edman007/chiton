@@ -217,9 +217,9 @@ AC_ARG_WITH([apacheappendconf],
 AC_SUBST([apacheappendconf])
 
 
-AC_ARG_VAR([IMAGEMAGICK_CONVERT], [The path to imagemagick's convert])
-AC_CHECK_PROG([IMAGEMAGICK_CONVERT], [convert], [convert], [false])
-AS_IF([test x"$IMAGEMAGICK_CONVERT" = x"false"], [AC_MSG_ERROR([Could not find imagemagick, required for building])])
+AC_ARG_VAR([RSVG_CONVERT], [The path to rsvg-convert])
+AC_CHECK_PROG([RSVG_CONVERT], [rsvg-convert], [rsvg-convert], [false])
+AS_IF([test x"$RSVG_CONVERT" = x"false"], [AC_MSG_ERROR([Could not find rsvg-convert, required for building])])
 
 AC_CONFIG_FILES(Makefile)
 AC_CONFIG_HEADERS([config_build.hpp])
