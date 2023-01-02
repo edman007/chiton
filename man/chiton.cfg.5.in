@@ -1,0 +1,25 @@
+.\" Manpage for chiton.
+.\" Contact edman007@edman007.com to correct errors or typos.
+.TH CHITON.CFG 5 "2022-12-30" Linux "chiton.cfg man page"
+.SH NAME
+chiton.cfg \- Configuration file for chiton
+.SH DESCRIPTION
+chiton.cfg is the configuration file for chiton, a performance optimized NVR (Network Video Recorder). The chiton.cfg file consists of a list of key->value pairs, the file is parsed at initial startup and used to create the initial configuration. Every configuration value is addationally set with an applicapability of either system wide or to a specific camera. Values in chiton.cfg are always set as a system value. The database is typically the primary store of configuration values and it can be managed via the web interface and supports the same configuration settings, however the database supports per-camera settings as well as system settings.
+
+Settings can addationally be overridden, the order of precedence is as follows: The configuration file is loaded and all settings read in as a system setting. Next the database settings are loaded and system settings in the database override the system settings. These system settings are then used for any system functions. Next cameras are loaded, the system settings initilize the camera settings and each camera maintains it's own settings with camera settings for that particular camera overriding the system settings. Therefore settings can be set globally for all cameras by setting them as system settings, or can be set for a particular camera by setting them for a particular camera. When a setting is not set then the default value is used.
+.SH SYNTAX
+The general format is:
+.br
+.B key " = " value
+.br
+.br
+Whitespace is not significant unless enclosed in quotes. Anything after a # on a line is ignored unless enclosed in quotes.
+.\" START SETTINGS
+
+.\" END SETTINGS
+.SH COPYRIGHT
+Copyright © 2022 Ed Martin <edman007@edman007.com>.  License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>. This is free software: you are free to change and redistribute it.  There is NO WARRANTY, to the extent permitted by law.
+.SH SEE ALSO
+chiton(1) chiton-install(1)
+.SH REPORTING BUGS
+Report bugs to <edman007@edman007.com>

@@ -53,11 +53,19 @@ struct Setting {
     SettingPriority priority;//priority
 };
 
+//comments starting with @key become long documentation
 const std::vector<Setting> setting_options {
     //DO NOT REMOVE THE COMMENT BELOW
     //PHP BELOW
+ /* Ignore Comment to fix AWK script
+  */
  {"database-version", "0", "Database Version", "Updated to track the internal state of the database", SETTING_READ_ONLY},
+  /* @database-version Internal use only
+  */
  {"cfg-path", "", "Config File", "Path to the config file that is loaded", SETTING_READ_ONLY},
+  /* @cfg-path Only has effect when set via the command line.
+  * This is passed on the command line to set the location of the configuration file
+  */
  {"pid-file", "", "PID File", "path to write the PID to", SETTING_READ_ONLY},
  {"fork", "0", "Fork", "Set to non-zero to fork to the background", SETTING_READ_ONLY},
  {"privs-user", "", "System User", "System Username to drop privs to (the daemon runs as this user)", SETTING_READ_ONLY},
@@ -73,14 +81,32 @@ const std::vector<Setting> setting_options {
  {"active", "0", "Camera Active", "set to 1 when the camera is active", SETTING_REQUIRED_CAMERA},
  {"camera-id", "", "Camera ID", "Used internally to track what is the active camera", SETTING_READ_ONLY},
  {"output-dir", "", "Output Directory", "The location to store videos", SETTING_REQUIRED_SYSTEM},
+  /* @output-dir Eventually this is planned to work on a per-camera basis, however this has not been implemented yet,
+  * setting it for a specific camera may cause undefined behavior
+  */
  {"ffmpeg-demux-options", "", "FFMPEG demux options", "Options for the ffmpeg demuxer", SETTING_OPTIONAL_CAMERA},
+  /* @ffmpeg-demux-options These are option passed to libavformat when demuxing (reading a stream), see man ffmpeg-formats
+  */
  {"ffmpeg-mux-options", "", "FFMPEG mux options", "Options for the ffmpeg muxer", SETTING_OPTIONAL_CAMERA},
+  /* @ffmpeg-mux-options These are option passed to libavformat when muxing (writing a stream), see man ffmpeg-formats
+  */
  {"reorder-queue-len", "0", "Reorder queue length", "How many packets to cache to properly resort frames "
          "(required for some cameras that give us out of order data even on TCP)", SETTING_OPTIONAL_CAMERA},
+  /* @reorder-queue-len Specifically implemented for reolink cameras that transmit packets out of order, this will reorder those parkets and correct
+   * some types of stream corruption
+  */
  {"seconds-per-file", "360", "Seconds per file", "How long a file should be, files are split at the next opprotunity after this, in seconds", SETTING_OPTIONAL_SYSTEM},
+ /* @seconds-per-file when using fMP4, this is the length of the individual mp4 files and it is also the unit size that is deleted when removing old videos
+  */
  {"seconds-per-segment", "6", "Seconds per segment", "How long a segment should be, files are segmented at the next opprotunity after this, in seconds, Apple recommends 6", SETTING_OPTIONAL_SYSTEM},
+ /* @seconds-per-segment Smaller values can improve latency and give finer control of when skipping the video, however it produces more records in the database
+  * and results in larger .m3u8 files to the browser. Smaller values can also allow you to view closer to realtime video in the web player. Setting this to a value less than the period
+  * between keyframes results in the period between keyframes being the controlling factor.
+  */
  {"min-free-space", "1073741824", "min-free-space", "How many bytes of free space triggers a cleanup, if it contains a %, "
          "it is the target free-percentage of user accessable space", SETTING_OPTIONAL_SYSTEM},
+ /* @min-free-space Needs to be at least enough to accomidate 10 seconds of recording
+  */
  {"display-name", "", "Camera Name", "The name of the camera used in displays", SETTING_OPTIONAL_CAMERA},
  {"max-sync-offset", "5", "Max Sync Offset", "The maximum drift in camera time tolerated before we resync the clock", SETTING_OPTIONAL_CAMERA},
  {"socket-path", DEFAULT_SOCKET_PATH, "Control Socket Path", "The path for the control socket, required to manage the system from the web interface", SETTING_OPTIONAL_SYSTEM},
@@ -108,7 +134,12 @@ const std::vector<Setting> setting_options {
  {"log-color-enabled", "1", "Enable CLI color <1|0>", "Enable Color Logging", SETTING_OPTIONAL_SYSTEM},
  {"log-name-length", "16", " Logging Camera Name Length", "Maxiumn Length of thread name (typically the camera) to copy into log messages", SETTING_OPTIONAL_SYSTEM},
  {"motion-mods", "cvdetect", "Motion Algorithms <none|abc[,xyz...]>", "List of motion algorithms to run against, ',' delimited", SETTING_OPTIONAL_CAMERA},
+ /* @motion-mods Current modules are: cvbackground (computes an average background), cvdebugshow (if compiled with debug support, shows the frames being processed),
+    cvdetect (performs motion detection), cvmask (subtracts the background to identify changed areas), opencv (converts frames into opencv for processing)
+  */
  {"event-mods", "db,console", "Event Notification Algorithms <none|abc[,xyz...]>", "List of Event Notification algorithms to run against, ',' delimited", SETTING_OPTIONAL_CAMERA},
+ /* @event-mods Current modules are db (writes events to the databse) and console (prints events to logs)
+  */
  {"motion-cvmask-tau", "0.01", "Motion CVMask Tau <0-1>", "Tau parameter for CVMask Algorithm", SETTING_OPTIONAL_CAMERA},
  {"motion-cvmask-beta", "15.0", "Motion CVMask Tau <0.0-255.0>", "Beta parameter for CVMask Algorithm", SETTING_OPTIONAL_CAMERA},
  {"motion-cvmask-threshold", "20", "Motion CVMask Threshold <1-255>", "Threshold parameter for CVMask Algorithm", SETTING_OPTIONAL_CAMERA},
@@ -124,4 +155,8 @@ const std::vector<Setting> setting_options {
  {"motioncontroller-skip-ratio", "0.05", "Motion Controller Skip Ratio <0-1>", "The ratio of time that should be spent blocking waiting for packets, 0 disables motion controller "
   "skipping, 1 will cause all frames to skip motion processing", SETTING_OPTIONAL_CAMERA},
  {"video-encode-b-frame-max", "16", "Video Encode Maximum B-frames <0->", "Maximum B-frames when encoding", SETTING_OPTIONAL_CAMERA},
+ /* @video-encode-b-frame-max When encoding video, this is the maxium b-frames that the encoder should put out between keyframes
+  * Some encoders, such as the V4L2 encoder on the raspberry pi do not suppor this and it must be set to 0.
+  * Lower values generally reduce compression, higher values can cause seconds-per-segment to be exceeded
+  */
 };
