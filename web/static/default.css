@@ -290,3 +290,13 @@ ul.events li {
 ul.events li:hover {
     background-color:rgb(40, 40, 40);
 }
+
+
+.cfg_name, .cfg_default, .cfg_short_desc {
+    font-family: sans-serif;
+    margin-left:3em;
+}
+
+.cfg_def_val {
+    font-family: monospace;
+}

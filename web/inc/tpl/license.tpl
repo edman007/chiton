@@ -1,5 +1,5 @@
 {config_load file="main.conf" section="license"}
-{include file="header.tpl" title=Home}
+{include file="header.tpl" title=License}
 
 {if !empty($no_license)}
 <h1>Check your configuration</h1>
