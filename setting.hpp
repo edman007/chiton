@@ -103,7 +103,7 @@ const std::vector<Setting> setting_options {
   * and results in larger .m3u8 files to the browser. Smaller values can also allow you to view closer to realtime video in the web player. Setting this to a value less than the period
   * between keyframes results in the period between keyframes being the controlling factor.
   */
- {"min-free-space", "1073741824", "min-free-space", "How many bytes of free space triggers a cleanup, if it contains a %, "
+ {"min-free-space", "1073741824", "Miniumn Free Space", "How many bytes of free space triggers a cleanup, if it contains a %, "
          "it is the target free-percentage of user accessable space", SETTING_OPTIONAL_SYSTEM},
  /* @min-free-space Needs to be at least enough to accomidate 10 seconds of recording
   */

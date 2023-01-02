@@ -84,6 +84,7 @@ function sortSettings(i1, v1, i2, v2, l, r){
         type = unescape($5)
         setting[key]["key"] = key
         setting[key]["def"] = defaultVal
+        setting[key]["name"] = name
         setting[key]["help"] = shortHelp
         setting[key]["type"] = type
     } else if (NF == 4){
@@ -96,6 +97,7 @@ function sortSettings(i1, v1, i2, v2, l, r){
         type = unescape($4)
         setting[key]["key"] = key
         setting[key]["def"] = defaultVal
+        setting[key]["name"] = name
         setting[key]["help"] = shortHelp
         setting[key]["type"] = type
     } else {
@@ -105,7 +107,6 @@ function sortSettings(i1, v1, i2, v2, l, r){
 
 #extract the long text
 /^[ ]*\/\*/ {
-    print $0
     keyStart = index($0, "@")
     keyLong = substr($0, keyStart)
     keyEnd = index(keyLong, " ")
@@ -127,7 +128,10 @@ END {
         }
         print ".br"
         print ".SS " sorted[i]["key"]
+        print ".br"
         print ".TR "
+        print "Long Name: " sorted[i]["name"]
+        print ".br"
         print "Default Value: \"" sorted[i]["def"] "\""
         print ".PP"
         print sorted[i]["help"]
