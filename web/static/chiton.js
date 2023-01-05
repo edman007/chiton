@@ -701,6 +701,8 @@ function setDefaultOpt(id){
     } else {
         textVal.value = settings[select.value].value;
     }
+    let descBox = select.parentElement.parentElement.querySelector(".setting_desc");
+    descBox.innerHTML = settings[select.value].desc;
 }
 
 function clearSystemCheckbox(caller, id){

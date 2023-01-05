@@ -190,31 +190,33 @@ ul.sitemap li a {
 }
 
 /* System Setting boxes */
-ul.settings {
-    list-style-type: none;
+table.settings {
     margin:0;
     padding:0;
     width:60em;
+    border-collapse:collapse;
 }
 
-ul.settings input[type=text] {
+table.settings input[type=text] {
     margin:0;
     padding:0;
     width:90%;
 }
 
-ul.settings li  {
-    columns:3;
-    padding-top:1px;
-    padding-bottom:1px;
-    column-rule-width:1px;
-    column-rule-color:rgb(200,200,200);
-    column-rule-style:solid;
+table.settings tr  {
+    clear:left;
+}
+
+table.settings td {
+    padding:0.1em;
+    margin:0;
     border-width:1px;
     border-color:rgb(200,200,200);
     border-style:solid;
 }
 
+table.settings td.setting_desc {
+}
 .setting_default input, .setting_default select {
     background-color:rgb(240, 180, 180);
 }
