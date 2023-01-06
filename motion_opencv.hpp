@@ -35,7 +35,7 @@ public:
     bool process_frame(const AVFrame *frame, bool video);//process the frame, return false on error
     bool set_video_stream(const AVStream *stream, const AVCodecContext *codec);//identify the video stream
     static const std::string& get_mod_name(void);//return the name of the algorithm
-    const cv::UMat& get_UMat(void);//return the UMat (CV_8UC1) for this frame
+    const cv::UMat& get_UMat(void) const;//return the UMat (CV_8UC1) for this frame
 private:
     cv::UMat buf_mat;//the Mat we operate on
     cv::Mat input_mat;//the sw mat

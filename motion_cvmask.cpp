@@ -29,7 +29,7 @@
 static const std::string algo_name = "cvmask";
 
 MotionCVMask::MotionCVMask(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller, algo_name), sensitivity_it(sensitivity_db.begin()) {
-    ocv = NULL;
+    ocvr = NULL;
     background = NULL;
     //FIXME: Make config parameters
     tau = cfg.get_value_double("motion-cvmask-tau");
@@ -57,7 +57,7 @@ MotionCVMask::MotionCVMask(Config &cfg, Database &db, MotionController &controll
 }
 
 MotionCVMask::~MotionCVMask(){
-    ocv = NULL;//we don't own it
+    ocvr = NULL;//we don't own it
     background = NULL;//we don't own it
 }
 
@@ -65,7 +65,7 @@ bool MotionCVMask::process_frame(const AVFrame *frame, bool video){
     if (!video){
         return true;
     }
-    if (!ocv || !background){
+    if (!ocvr || !background){
         return false;
     }
     try {
@@ -76,7 +76,7 @@ bool MotionCVMask::process_frame(const AVFrame *frame, bool video){
         }
 
         cv::UMat diff;
-        cv::absdiff(ocv->get_UMat(), background->get_background(), diff);//difference between the background
+        cv::absdiff(ocvr->get_UMat(), background->get_background(), diff);//difference between the background
 
         if ((*sensitivity_it).empty()){
             *sensitivity_it = cv::UMat(diff.size(), CV_32FC1);
@@ -106,7 +106,7 @@ const std::string& MotionCVMask::get_mod_name(void) {
 }
 
 bool MotionCVMask::init(void) {
-    ocv = static_cast<MotionOpenCV*>(controller.get_module_before("opencv", this));
+    ocvr = static_cast<MotionCVResize*>(controller.get_module_before("cvresize", this));
     background = static_cast<MotionCVBackground*>(controller.get_module_before("cvbackground", this));
     return true;
 }

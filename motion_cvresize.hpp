@@ -1,5 +1,5 @@
-#ifndef __MOTION_ALGO_CVMASK_HPP__
-#define __MOTION_ALGO_CVMASK_HPP__
+#ifndef __MOTION_ALGO_CVRESIZE_HPP__
+#define __MOTION_ALGO_CVRESIZE_HPP__
 /**************************************************************************
  *
  *     This file is part of Chiton.
@@ -17,7 +17,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2022 Ed Martin <edman007@edman007.com>
+ *   Copyright 2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -25,30 +25,26 @@
 #include "config_build.hpp"
 #ifdef HAVE_OPENCV
 #include "motion_algo.hpp"
-#include "motion_cvresize.hpp"
-#include "motion_cvbackground.hpp"
+#include "filter.hpp"
+#include "motion_opencv.hpp"
 #include <opencv2/core.hpp>
 
-class MotionCVMask : public MotionAlgo {
+class MotionCVResize : public MotionAlgo {
 public:
-    MotionCVMask(Config &cfg, Database &db, MotionController &controller);
-    ~MotionCVMask();
+    MotionCVResize(Config &cfg, Database &db, MotionController &controller);
+    ~MotionCVResize();
     bool process_frame(const AVFrame *frame, bool video);//process the frame, return false on error
     bool set_video_stream(const AVStream *stream, const AVCodecContext *codec);//identify the video stream
-    static const std::string& get_mod_name(void);//return the name of the algorithm
     bool init(void);//called immeditly after the constructor to allow dependicies to be setup
-    const cv::UMat get_masked(void);//returns a CV_8UC1 (static bits masked out)
-    const cv::UMat get_sensitivity(void);//returns the underlaying sensitivity mask
+    static const std::string& get_mod_name(void);//return the name of the algorithm
+    const cv::UMat& get_UMat(void) const;//return the UMat (CV_8UC1) for this frame
+    float get_scale_ratio(void) const;//return the scale ratio (0-1)
 private:
-    MotionCVResize *ocvr;
-    MotionCVBackground *background;
-    cv::UMat masked;//the masked image
-    std::vector<cv::UMat> sensitivity_db;//storage of all sensitivity UMats
-    std::vector<cv::UMat>::iterator sensitivity_it;//reference to the active sensitivity
-    float tau;//sensitivity tau (time constant)
-    float beta;//sensitivity beta (diff amplification factor)
-    float thresh;//final thresholding value
+    cv::UMat buf_mat;//the output UMat
+    float scale_ratio;//the configured scale ratio
+    MotionOpenCV *ocv;//the ocv source object
 };
+
 
 #endif
 #endif

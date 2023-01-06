@@ -159,4 +159,5 @@ const std::vector<Setting> setting_options {
   * Some encoders, such as the V4L2 encoder on the raspberry pi do not suppor this and it must be set to 0.
   * Lower values generally reduce compression, higher values can cause seconds-per-segment to be exceeded
   */
+ {"motion-cvresize-scale", "1", "Motion Detection Scale ratio <0-1>", "Scale ratio for motion processing, 1 is no scaling, 0.5 is downscale 50%", SETTING_OPTIONAL_CAMERA},
 };

@@ -29,7 +29,7 @@
 static const std::string algo_name = "cvbackground";
 
 MotionCVBackground::MotionCVBackground(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller, algo_name) {
-    ocv = NULL;
+    ocvr = NULL;
     tau = cfg.get_value_double("motion-cvbackground-tau");
     if (tau < 0 || tau > 1){
         tau = 0.01;
@@ -37,26 +37,26 @@ MotionCVBackground::MotionCVBackground(Config &cfg, Database &db, MotionControll
 }
 
 MotionCVBackground::~MotionCVBackground(){
-    ocv = NULL;//we don't own it
+    ocvr = NULL;//we don't own it
 }
 
 bool MotionCVBackground::process_frame(const AVFrame *frame, bool video){
     if (!video){
         return true;
     }
-    if (!ocv){
+    if (!ocvr){
         return false;
     }
 
     try {
         //always do the math in CV_16U for extra precision
         if (avg.empty()){
-            ocv->get_UMat().convertTo(avg, CV_16U, 256.0);
-            ocv->get_UMat().copyTo(low_res);
+            ocvr->get_UMat().convertTo(avg, CV_16U, 256.0);
+            ocvr->get_UMat().copyTo(low_res);
         } else {
             //compute the frame average
             cv::UMat buf16;
-            ocv->get_UMat().convertTo(buf16, CV_16U, 256.0);
+            ocvr->get_UMat().convertTo(buf16, CV_16U, 256.0);
             cv::addWeighted(avg, 1-tau, buf16, tau, 0, avg);
             avg.convertTo(low_res, CV_8U, 1.0/256.0);
         }
@@ -76,7 +76,7 @@ const std::string& MotionCVBackground::get_mod_name(void){
 }
 
 bool MotionCVBackground::init(void) {
-    ocv = static_cast<MotionOpenCV*>(controller.get_module_before("opencv", this));
+    ocvr = static_cast<MotionCVResize*>(controller.get_module_before("cvresize", this));
     return true;
 }
 

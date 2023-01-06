@@ -31,6 +31,7 @@ static const std::string algo_name = "cvdetect";
 MotionCVDetect::MotionCVDetect(Config &cfg, Database &db, MotionController &controller) : MotionAlgo(cfg, db, controller, algo_name) {
     masked_objects = NULL;
     ocv = NULL;
+    ocvr = NULL;
 
     min_dist = cfg.get_value_double("motion-cvdetect-dist");
     if (min_dist <= 0 || min_dist > 10000){
@@ -51,6 +52,8 @@ MotionCVDetect::MotionCVDetect(Config &cfg, Database &db, MotionController &cont
 
 MotionCVDetect::~MotionCVDetect(){
     masked_objects = NULL;
+    ocv = NULL;
+    ocvr = NULL;
 }
 
 bool MotionCVDetect::process_frame(const AVFrame *frame, bool video){
@@ -117,7 +120,18 @@ const std::string& MotionCVDetect::get_mod_name(void) {
 
 bool MotionCVDetect::init(void) {
     ocv = static_cast<MotionOpenCV*>(controller.get_module_before("opencv", this));
+    ocvr = static_cast<MotionCVResize*>(controller.get_module_before("cvresize", this));
     masked_objects = static_cast<MotionCVMask*>(controller.get_module_before("cvmask", this));
+
+    //the settings need to be scalled by the scale factor
+    if (ocvr){
+        float scale = ocvr->get_scale_ratio();
+        if (scale != 1){
+            scale *= scale;
+            min_dist *= scale;
+            min_area *= scale;
+        }
+    }
     return true;
 }
 
@@ -147,7 +161,14 @@ void MotionCVDetect::send_events(void){
     for (auto &target : targets){
         if (target.get_count() == tracking_time_send){
             Event &e = controller.get_event_controller().get_new_event();
-            e.set_position(target);
+            if (!ocvr || ocvr->get_scale_ratio() == 1){
+                e.set_position(target);
+            } else {
+                //scale the target
+                TargetRect scaled_rect = TargetRect(target);
+                scaled_rect.scale(ocvr->get_scale_ratio());
+                e.set_position(scaled_rect);
+            }
             struct timeval time;
             controller.get_frame_timestamp(target.get_best_frame(), true, time);
             e.set_frame(target.get_best_frame());

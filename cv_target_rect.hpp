@@ -41,12 +41,13 @@ public:
     int get_count(void) const;//get the number of times this has been seen
     const AVFrame *get_best_frame(void) const;//return the best frame found
     const cv::RotatedRect& get_best_rect(void) const;//return the rect for the best frame
-
+    void scale(float scale);//Applies the scaling ratio
 private:
     cv::RotatedRect rect, best_rect;//the underlying rects
     int count;//how many times we have seen this
     bool valid;//is this is still valid
     AVFrame *frame;//the best frame found so far
+    void scale_rect(float scale, cv::RotatedRect &rect);//scale the target Rect
 };
 
 #endif

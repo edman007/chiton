@@ -26,7 +26,7 @@
 #include "motion_cvmask.hpp"
 #include "motion_cvdetect.hpp"
 #include "motion_cvdebugshow.hpp"
-
+#include "motion_cvresize.hpp"
 
 MotionController::MotionController(Database &db, Config &cfg, StreamUnwrap &stream) : ModuleController<MotionAlgo, MotionController>(cfg, db, "motion"), stream(stream), events(cfg, db)  {
     video_idx = -1;
@@ -43,6 +43,7 @@ MotionController::MotionController(Database &db, Config &cfg, StreamUnwrap &stre
     register_module(new ModuleFactory<MotionCVBackground, MotionAlgo, MotionController>());
     register_module(new ModuleFactory<MotionCVMask, MotionAlgo, MotionController>());
     register_module(new ModuleFactory<MotionCVDetect, MotionAlgo, MotionController>());
+    register_module(new ModuleFactory<MotionCVResize, MotionAlgo, MotionController>());
 #ifdef DEBUG
     register_module(new ModuleFactory<MotionCVDebugShow, MotionAlgo, MotionController>());
 #endif

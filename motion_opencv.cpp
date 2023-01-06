@@ -176,7 +176,7 @@ const std::string& MotionOpenCV::get_mod_name(void) {
     return algo_name;
 }
 
-const cv::UMat& MotionOpenCV::get_UMat(void){
+const cv::UMat& MotionOpenCV::get_UMat(void) const {
     return buf_mat;
 }
 

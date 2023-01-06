@@ -25,7 +25,7 @@
 #include "config_build.hpp"
 #ifdef HAVE_OPENCV
 #include "motion_algo.hpp"
-#include "motion_opencv.hpp"
+#include "motion_cvresize.hpp"
 #include "filter.hpp"
 #include <opencv2/core.hpp>
 
@@ -39,7 +39,7 @@ public:
     const cv::UMat get_background(void);//get the averaged background
     bool init(void);//called immeditly after the constructor to allow dependicies to be setup
 private:
-    MotionOpenCV *ocv;
+    MotionCVResize *ocvr;
     cv::UMat avg;//the 16-bit average image
     cv::UMat low_res;//low res version derived from the 16-bit
     float tau;

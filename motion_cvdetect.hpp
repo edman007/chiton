@@ -28,6 +28,7 @@
 #include "motion_cvmask.hpp"
 #include <opencv2/core.hpp>
 #include "motion_opencv.hpp"
+#include "motion_cvresize.hpp"
 #include "cv_target_rect.hpp"
 
 //algorithm to implement the cvdetect motion detection algorithm
@@ -46,6 +47,7 @@ private:
     std::vector<TargetRect> targets;//the targets we are counting
     cv::UMat debug_view, canny;
     MotionOpenCV *ocv;
+    MotionCVResize *ocvr;
     void display_objects(void);//debug tool to display the objects
     void send_events(void);
 

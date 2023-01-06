@@ -71,7 +71,7 @@ TargetRect::~TargetRect(){
     av_frame_free(&frame);
 }
 
-const cv::RotatedRect& TargetRect::get_rect(void) const{
+const cv::RotatedRect& TargetRect::get_rect(void) const {
     return rect;
 }
 
@@ -87,11 +87,26 @@ int TargetRect::get_count(void) const{
     return count;
 }
 
-const AVFrame *TargetRect::get_best_frame(void) const{
+void TargetRect::scale(float s) {
+    if (s == 1){
+        return;
+    }
+    scale_rect(s, rect);
+    scale_rect(s, best_rect);
+}
+
+void TargetRect::scale_rect(float s, cv::RotatedRect &rect) {
+    rect.center.x /= s;
+    rect.center.y /= s;
+    rect.size.width /= s;
+    rect.size.height /= s;
+}
+
+const AVFrame *TargetRect::get_best_frame(void) const {
     return frame;
 }
 
-const cv::RotatedRect& TargetRect::get_best_rect(void) const{
+const cv::RotatedRect& TargetRect::get_best_rect(void) const {
     return best_rect;
 }
 
