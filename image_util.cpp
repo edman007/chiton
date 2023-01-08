@@ -66,6 +66,10 @@ bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const s
         av_frame_free(&filtered_frame);
     }
 
+    if (!cropped_frame){
+        LWARN("Failed to get cropped frame, not writing image");
+        return false;
+    }
 
     AVCodecContext* c = avcodec_alloc_context3(codec);
     if (!c) {
@@ -146,8 +150,12 @@ bool ImageUtil::write_frame_png(const AVFrame *frame, std::string &name, const s
 }
 
 AVFrame* ImageUtil::apply_rect(const AVFrame *frame, rect &src){
-        //copy the frame
+    //copy the frame
     AVFrame* out = av_frame_clone(frame);
+    if (!out){
+        LWARN("av_frame_clone() failed");
+        return NULL;
+    }
 
     //adjust rect and apply if x is not negative
     if (src.x >= 0){

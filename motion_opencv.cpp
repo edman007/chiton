@@ -164,7 +164,7 @@ bool MotionOpenCV::set_video_stream(const AVStream *stream, const AVCodecContext
     //CODEC is only needed for HW Mapping...we will map it ourself
     fmt_filter.set_source_time_base(stream->time_base);
     if (map_cl){
-        LWARN("Setup for OpenCL");
+        LINFO("Setup for OpenCL");
         fmt_filter.set_target_fmt(AV_PIX_FMT_OPENCL, AV_CODEC_ID_NONE, 0);//
     } else {
         fmt_filter.set_target_fmt(AV_PIX_FMT_GRAY8, AV_CODEC_ID_NONE, 0);

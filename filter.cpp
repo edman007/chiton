@@ -143,7 +143,7 @@ bool Filter::peek_frame(AVFrame *frame){
     }
 
     if (ret < 0){
-        LWARN("Error getting from from filter");
+        LWARN("Error getting frame from filter");
         return false;
     }
     av_frame_ref(frame, tmp_frame);
