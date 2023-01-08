@@ -32,7 +32,7 @@
 #include <fstream>
 #include <iostream>
 
-static char timezone_env[256];//if timezone is changed from default, we need to store it in memory for putenv()
+
 static int exit_count = 0;//multiple exit requests will kill the application with this
 static SystemController* global_sys_controller = NULL;
 
@@ -50,19 +50,6 @@ void reload_signal(int sig){
     if (global_sys_controller){
         global_sys_controller->request_reload();
     }
-}
-
-void load_sys_cfg(Config &cfg) {
-    std::string timezone = cfg.get_value("timezone");
-    if (timezone.compare("")){
-        LINFO("Setting Timezone to " + timezone);
-        timezone = "TZ=" + timezone;
-        auto len = timezone.copy(timezone_env, sizeof timezone_env, 0);
-        timezone_env[len] = '\0';
-        putenv(timezone_env);
-    }
-    tzset();
-
 }
 
 
