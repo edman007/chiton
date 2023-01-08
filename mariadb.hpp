@@ -30,6 +30,7 @@
 class MariaDB : public Database {
 public:
     int connect(const std::string& server, const std::string& db, const std::string& user, const std::string& pass, const int port, const std::string& socket);
+    void close(void);
     MariaDB();
     ~MariaDB();
 

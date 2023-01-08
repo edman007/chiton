@@ -24,11 +24,13 @@
 
 MariaDB::MariaDB(){
     conn = NULL;
-    
-    conn = mysql_init(conn);
 }
 
 MariaDB::~MariaDB(){
+    close();
+}
+
+void MariaDB::close(void){
     mysql_close(conn);
     conn = NULL;
 }
@@ -37,7 +39,9 @@ int MariaDB::connect(const std::string& server, const std::string& db, const std
     int flags = 0;
     const char *sock;
     my_bool reconnect = 1;
-    
+    if (!conn){
+        conn = mysql_init(conn);
+    }
     mysql_options(conn, MYSQL_OPT_RECONNECT, &reconnect);
     
     //doesn't work with an empty string

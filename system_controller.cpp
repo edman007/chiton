@@ -108,6 +108,7 @@ int SystemController::run_instance(void){
         delete cams.back();
         cams.pop_back();
     }
+    db->close();
     return SYS_EXIT_SUCCESS;
 }
 

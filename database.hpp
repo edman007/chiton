@@ -32,6 +32,11 @@ public:
      */
     virtual int connect(const std::string& server, const std::string& db, const std::string& user, const std::string& pass, const int port, const std::string& socket) = 0;
 
+    /*
+     * Disconnect from the database, following calls to connect() will succeed
+     */
+    virtual void close(void) = 0;
+
     //escape a string
     virtual std::string escape(const std::string& str) = 0;
 
