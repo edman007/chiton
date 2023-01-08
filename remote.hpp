@@ -78,6 +78,9 @@ public:
     Remote(Database &db, Config &cfg, Export &expt);
     ~Remote();
 
+    void init(void);//opens the socket
+    void shutdown(void);//closes the socket
+
     //returns if a reload was requested an clears any pending request
     bool get_reload_request(void);
 

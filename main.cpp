@@ -20,41 +20,36 @@
  **************************************************************************
  */
 #include "main.hpp"
+#include "system_controller.hpp"
 #include "util.hpp"
 #include "chiton_config.hpp"
-#include "mariadb.hpp"
-#include "camera.hpp"
 #include <unistd.h>
-#include <thread>
 #include <stdlib.h>
-#include "chiton_ffmpeg.hpp"
-#include "database_manager.hpp"
-#include "remote.hpp"
-#include "export.hpp"
 
 #include <csignal>
-#include <atomic>
-#include <chrono>
 #include <sys/types.h>
 #include <pwd.h>
 #include <fstream>
 #include <iostream>
 
 static char timezone_env[256];//if timezone is changed from default, we need to store it in memory for putenv()
-static std::atomic_bool exit_requested(false);
 static int exit_count = 0;//multiple exit requests will kill the application with this
+static SystemController* global_sys_controller = NULL;
 
-static std::atomic_bool reload_requested(false);
 void shutdown_signal(int sig){
-    exit_requested = true;
+    if (global_sys_controller){
+        global_sys_controller->request_exit();
+    }
     exit_count++;
     if (exit_count > 2){
-        std::exit(sig);
+        std::exit(SYS_EXIT_SIG_SHUTDOWN);
     }
 }
 
 void reload_signal(int sig){
-    reload_requested = true;
+    if (global_sys_controller){
+        global_sys_controller->request_reload();
+    }
 }
 
 void load_sys_cfg(Config &cfg) {
@@ -67,122 +62,6 @@ void load_sys_cfg(Config &cfg) {
         putenv(timezone_env);
     }
     tzset();
-
-}
-
-void run(Config& args){
-    Config cfg;
-    if (!cfg.load_config(args.get_value("cfg-path"))){
-        exit_requested = true;//this is a fatal error
-        return;
-    }
-
-    //set the correct verbosity if it is not supplied on the command line
-    if (args.get_value("verbosity") == "" && cfg.get_value("verbosity") != ""){
-        Util::set_log_level(cfg.get_value_int("verbosity"));
-    }
-
-    MariaDB db;
-    if (db.connect(cfg.get_value("db-host"), cfg.get_value("db-database"), cfg.get_value("db-user"), cfg.get_value("db-password"),
-                   cfg.get_value_int("db-port"), cfg.get_value("db-socket"))){
-        LFATAL("Could not connect to the database! Check your configuration");
-        exit_requested = true;
-        return;
-    }
-
-    DatabaseManager dbm(db);
-    if (!dbm.check_database()){
-        //this is fatal, cannot get the database into a usable state
-        exit_requested = true;
-        return;
-    }
-    //load the default config from the database
-    DatabaseResult *res = db.query("SELECT name, value FROM config WHERE camera = -1");
-    while (res && res->next_row()){
-        cfg.set_value(res->get_field(0), res->get_field(1));
-    }
-    delete res;
-
-    
-    //load system config
-    load_sys_cfg(cfg);
-    Util::load_colors(cfg);
-    if (cfg.get_value_int("log-color-enabled") || args.get_value_int("log-color-enabled") ){
-        Util::enable_color();
-    } else {
-        Util::disable_color();
-    }
-
-    FileManager fm(db, cfg);
-    Export expt(db, cfg, fm);
-    Remote remote(db, cfg, expt);
-
-    //Launch all cameras
-    res = db.query("SELECT camera FROM config WHERE camera != -1 AND name = 'active' AND value = '1' GROUP BY camera");
-    std::vector<Camera*> cams;
-    std::vector<std::thread> threads;
-    while (res && res->next_row()){
-        LINFO("Loading camera " + std::to_string(res->get_field_long(0)));
-        cams.emplace_back(new Camera(res->get_field_long(0), db, cfg));//create camera
-        threads.emplace_back(&Camera::run, cams.back());//start it
-        cams.back()->set_thread_id(threads.back().get_id());
-
-    }
-    delete res;
-
-    //delete broken segments
-    fm.delete_broken_segments();
-    
-    //camera maintance
-    do {
-        //we should check if they are running and restart anything that froze
-        for (auto &c : cams){
-            if (c->ping()){
-                if (!c->in_startup()){
-                    int id = c->get_id();
-                    LWARN("Lost connection to cam " + std::to_string(id) + ", restarting...");
-                    
-                    //then this needs to be restarted
-                    c->stop();
-                    //find the thread and replace it...
-                    for (auto &t : threads){
-                        if (t.get_id() == c->get_thread_id()){
-                            t.join();
-                            delete c;
-                            c = new Camera(id, db, cfg);
-                            t = std::thread(&Camera::run, c);
-                            c->set_thread_id(t.get_id());
-                            break;
-                        }
-                    }
-                    
-                } else {
-                    LWARN("Camera stalled, but appears to be in startup");
-                }
-                
-            }
-        }
-        fm.clean_disk();
-        expt.check_for_jobs();
-        std::this_thread::sleep_for(std::chrono::seconds(10));
-    } while (!exit_requested && !remote.get_reload_request() && !reload_requested);
-
-    //shutdown all cams
-    for (auto c : cams){
-        c->stop();
-    }
-
-    for (auto &t : threads){
-        t.join();
-    }
-
-    //destruct everything
-    while (!cams.empty()){
-        delete cams.back();
-        cams.pop_back();
-    }
-
-    gcff_util.free_hw();
 
 }
 
@@ -249,6 +128,7 @@ bool write_pid(const std::string& path){
     out.close();
     return true;
 }
+
 //this reads the arguments, writes the Config object for received parameters
 void process_args(Config& arg_cfg, int argc, char **argv){
     //any system wide defaults...these are build-time defaults
@@ -302,13 +182,13 @@ int main (int argc, char **argv){
 
     if (args.get_value("privs-user") != ""){
         if (!drop_privs(args.get_value("privs-user"))){
-            return 1;//exit
+            return SYS_EXIT_PRIVS_ERROR;//exit
         }
     }
 
     if (args.get_value_int("fork")){
         if (!fork_background()){
-            return 0;//exit!
+            return SYS_EXIT_SUCCESS;//exit!
         }
     }
 
@@ -328,11 +208,12 @@ int main (int argc, char **argv){
     std::signal(SIGINT, shutdown_signal);
     std::signal(SIGHUP, reload_signal);
 
-    while (!exit_requested){
-        reload_requested = false;
-        run(args);
-    }
+    SystemController controller(args);
+    global_sys_controller = &controller;
+    int ret = controller.run();
+
+    gcff_util.free_hw();
     Util::disable_syslog();//does nothing if it's not enabled
     Util::disable_color();
-    return 0;
+    return ret;
 }

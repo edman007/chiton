@@ -35,13 +35,16 @@ std::atomic<long long> FileManager::reserved_bytes(0);
 FileManager::FileManager(Database &db, Config &cfg) : db(db), cfg(cfg) {
     bytes_per_segment = 1024*1024;//1M is our default guess
     min_free_bytes = -1;
+}
 
+void FileManager::init(void){
     //we correct this if it's wrong now, so we can assume it's always right
     const std::string &ext = cfg.get_value("output-extension");
     if (ext != ".ts" && ext != ".mp4"){
         LWARN("output-extension MUST be .ts or .mp4, using .mp4");
         cfg.set_value("output-extension", ".mp4");
     }
+
 }
 
 std::string FileManager::get_next_path(long int &file_id, int camera, const struct timeval &start_time, bool extend_file /* = false */){

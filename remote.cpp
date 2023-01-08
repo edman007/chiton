@@ -48,18 +48,26 @@ Remote::Remote(Database &db, Config &cfg, Export &expt) : db(db), cfg(cfg), expt
     command_vec.push_back({"HELP", &Remote::cmd_help});
     command_vec.push_back({"LICENSE", &Remote::cmd_license});
     command_vec.push_back({"TEAPOT", &Remote::cmd_teapot});
+}
 
+void Remote::init(void){
     if (create_socket()){
         spawn_worker();
     }
+
 }
 
-Remote::~Remote(){
+void Remote::shutdown(void){
     stop_worker();
     if (worker.joinable()){
         //force the worker to exit...how?
         worker.join();
     }
+    close(killfd_worker);
+    close(killfd_master);
+    killfd_worker = -1;
+    killfd_master = -1;
+
     if (sockfd != -1){
         //shutdown the workers...
         close(sockfd);
@@ -76,6 +84,10 @@ Remote::~Remote(){
         close_conn(*it);
         it = next_it;//this is valid, old it is not valid
     }
+
+}
+Remote::~Remote(){
+    shutdown();
 }
 
 bool Remote::get_reload_request(void){

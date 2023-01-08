@@ -35,6 +35,8 @@ class FileManager {
 public:
     FileManager(Database &db, Config &cfg);
 
+    void init(void);//init's the FileManager
+
     //returns a valid path starting at start_time, writes out it's ID to int &file_id, if extend_file is true, the previous filename is used
     std::string get_next_path(long int &file_id, int camera, const struct timeval &start_time, bool extend_file = false);
 
