@@ -10,7 +10,7 @@ whenever possible to maximize performance
 
 It is recommended to use a binary package for your distribition. Then start it with `systemctl enable chiton` (on a systemd based system) or executing `/etc/rc.d/rc.chiton start` on a SysV based system (like Slackware).
 
-A binary repository is available at https:://repo.edman007.com/ and the GPG key is at https://repo.edman007.com/repo-key.pgp
+A binary repository is available at https://repo.edman007.com/ and the GPG key is at https://repo.edman007.com/repo-key.pgp
 
 On Debian based OS the gpg key can be added with
 
