@@ -87,7 +87,8 @@ PACKAGING_FILES=packaging/scripts/rc.chiton.in packaging/scripts/chiton.service.
 noinst_SCRIPTS=packaging/scripts/rc.chiton
 
 EXTRA_DIST=external chiton-install.in $(PACKAGING_FILES) dist-version README.md man/transform-settings.awk \
-	README NEWS AUTHORS ChangeLog web/inc/configdb.php.in external/npm/debian.license.in $(NPM_LICENSE)
+	README NEWS AUTHORS ChangeLog web/inc/configdb.php.in external/npm/debian.license.in $(NPM_LICENSE) \
+	man/chiton.cfg.5.in
 
 dist_cfg_DATA=config/chiton.cfg.template web/inc/config.template.php
 cfgdir=$(sysconfdir)/$(PACKAGE)
