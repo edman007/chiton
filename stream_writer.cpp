@@ -371,8 +371,13 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
                 return false;
             }
             encode_ctx[out_stream->index]->sample_rate = dec_ctx->sample_rate;
+            //this changes in FFMpeg 5.1
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 28, 100)
+            encode_ctx[out_stream->index]->ch_layout = dec_ctx->ch_layout;
+#else
             encode_ctx[out_stream->index]->channel_layout = dec_ctx->channel_layout;
             encode_ctx[out_stream->index]->channels = av_get_channel_layout_nb_channels(encode_ctx[out_stream->index]->channel_layout);
+#endif
             encode_ctx[out_stream->index]->sample_fmt = encoder->sample_fmts[0];
             encode_ctx[out_stream->index]->time_base = (AVRational){1, encode_ctx[out_stream->index]->sample_rate};
 
