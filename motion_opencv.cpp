@@ -253,6 +253,7 @@ void MotionOpenCV::indirect_vaapi_map(const AVFrame *input){
             LWARN("VA-API: vaQueryImageFormats failed");
             return;
         }
+        fmt_list.resize(num_formats);
         VAImageFormat *selected_format = nullptr;
         for (auto &fmt : fmt_list){
             if (fmt.fourcc == VA_FOURCC_NV12 || fmt.fourcc == VA_FOURCC_YV12){
