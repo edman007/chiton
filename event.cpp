@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2022 Ed Martin <edman007@edman007.com>
+ *   Copyright 2022-2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -75,7 +75,10 @@ bool Event::set_frame(const AVFrame *frame){
     } else {
         av_frame_unref(src);
     }
-    av_frame_ref(src, frame);
+    int ret = av_frame_ref(src, frame);
+    if (ret){
+        LERROR("av_frame_ref failed Event::set_frame");
+    }
     return true;
 }
 

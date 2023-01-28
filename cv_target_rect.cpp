@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2022 Ed Martin <edman007@edman007.com>
+ *   Copyright 2022-2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -33,10 +33,16 @@ TargetRect::TargetRect(const cv::RotatedRect &rect) : rect(rect) {
 TargetRect::TargetRect(const TargetRect &old_target, const cv::RotatedRect &new_rect, const AVFrame *cur_frame){
     frame = av_frame_alloc();
     if (old_target.frame && old_target.rect.size.area() > new_rect.size.area()){
-        av_frame_ref(frame, old_target.frame);
+        int ret = av_frame_ref(frame, old_target.frame);
+        if (ret){
+            LERROR("av_frame_ref failed TargetRect::1");
+        }
         best_rect = old_target.rect;
     } else {
-        av_frame_ref(frame, cur_frame);
+        int ret = av_frame_ref(frame, cur_frame);
+        if (ret){
+            LERROR("av_frame_ref failed Targetrect::2");
+        }
         best_rect = new_rect;
     }
     rect = new_rect;
@@ -52,7 +58,10 @@ TargetRect::TargetRect(const TargetRect &rhs){
     if (rhs.frame){
         //alloc and copy the frame
         frame = av_frame_alloc();
-        av_frame_ref(frame, rhs.frame);
+        int ret = av_frame_ref(frame, rhs.frame);
+        if (ret){
+            LERROR("av_frame_ref failed TargetRect::3");
+        }
     } else {
         frame = NULL;
     }
