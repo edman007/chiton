@@ -386,7 +386,6 @@ std::string CFFUtil::get_sw_hw_format_list(Config &cfg, const AVFrame *frame, AV
     void* hw_config = NULL;
 #ifdef HAVE_VAAPI
     if (frame && frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx){
-        const VASurfaceID surface = reinterpret_cast<uintptr_t const>(frame->data[3]);
         AVVAAPIDeviceContext *hwctx = get_vaapi_ctx_from_frames(frame->hw_frames_ctx);;
         AVHWFramesContext *frames = reinterpret_cast<AVHWFramesContext*>(frame->hw_frames_ctx->data);
         hw_config = av_hwdevice_hwconfig_alloc(frames->device_ref);
@@ -888,16 +887,16 @@ bool CFFUtil::have_v4l2_dev(int dev, AVCodecID codec_id, int codec_profile, int 
                 break;
             }
             if (frsize.type == V4L2_FRMSIZE_TYPE_DISCRETE){
-                if (width == frsize.discrete.width && height == frsize.discrete.height){
+                if (width == static_cast<int>(frsize.discrete.width) && height == static_cast<int>(frsize.discrete.height)){
                     return true;
                 }
                 break;//DISCRETE is only one
             } else if (frsize.type == V4L2_FRMSIZE_TYPE_STEPWISE || frsize.type == V4L2_FRMSIZE_TYPE_CONTINUOUS) {
-                if (width >= frsize.stepwise.min_width &&
-                    width <= frsize.stepwise.max_width &&
+                if (width >= static_cast<int>(frsize.stepwise.min_width) &&
+                    width <= static_cast<int>(frsize.stepwise.max_width) &&
                     width % frsize.stepwise.step_width == 0 &&
-                    height >= frsize.stepwise.min_height &&
-                    height <= frsize.stepwise.max_height &&
+                    height >= static_cast<int>(frsize.stepwise.min_height) &&
+                    height <= static_cast<int>(frsize.stepwise.max_height) &&
                     height % frsize.stepwise.step_height == 0){
                     return true;
                 }
