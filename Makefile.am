@@ -15,7 +15,7 @@
  #   You should have received a copy of the GNU General Public License
  #   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  #
- #   Copyright 2020-2022 Ed Martin <edman007@edman007.com>
+ #   Copyright 2020-2023 Ed Martin <edman007@edman007.com>
  #
  ########################################################################
 
@@ -241,7 +241,7 @@ pinch-zoom: | external/npm/node_modules
 	cp $(top_srcdir)/external/npm/node_modules/pinch-zoom-element/dist/pinch-zoom-min.js  web/static/pinch-zoom-min.js
 
 web/static/2x-bottom-cursor.png: $(top_srcdir)/web/static/bottom-cursor.svg | $(abs_builddir)/web/static
-	$(CONVERT) -x 2 -y 2 -density 144 -o $@ $<
+	$(CONVERT) -x 2 -y 2 --dpi-x 144 --dpi-y 144 -o $@ $<
 
 web/static/4x-bottom-cursor.png: $(top_srcdir)/web/static/bottom-cursor.svg | $(abs_builddir)/web/static
 	$(CONVERT) -x 2 -y 2 -o $@ $<
