@@ -17,7 +17,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2021 Ed Martin <edman007@edman007.com>
+ *   Copyright 2021-2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -39,7 +39,7 @@ public:
     //set the target pixel format
     //returns true if format was accepted
     bool set_target_fmt(const AVPixelFormat fmt, AVCodecID codec_id, int codec_profile);
-
+    bool set_source_codec(AVCodecID codec_id, int codec_profile);//set the source codec, used for hinting the best HW download format
     void set_source_time_base(const AVRational time_base);
     bool send_frame(const AVFrame *frame);//refs the frame into this loader
     bool get_frame(AVFrame *frame);//refs a frame into the supplied arg, caller must av_frame_unref() it
@@ -56,8 +56,8 @@ private:
     bool peeked;//true if peek frame was called previously
     AVRational time_base;
     AVPixelFormat target_fmt;//fmt that we are converting t
-    AVCodecID target_codec;
-    int target_profile;
+    AVCodecID target_codec, source_codec;
+    int target_profile, source_profile;
     AVFrame *tmp_frame;//used to passthrough a frame when no conversion is required and to implement peeking
     bool tmp_frame_filled;
     AVFilterGraph *filter_graph;

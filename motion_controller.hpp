@@ -17,7 +17,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2022 Ed Martin <edman007@edman007.com>
+ *   Copyright 2022-2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -26,16 +26,19 @@
 #include "chiton_ffmpeg.hpp"
 #include "chiton_config.hpp"
 #include "module_controller.hpp"
+#include "image_util.hpp"
 class MotionController;
+#include "event_controller.hpp"
 #include "motion_algo.hpp"
 #include <list>
 #include "stream_unwrap.hpp"
 #include "event_notification.hpp"
 
+
 //this class runs all motion detection algorithms
 class MotionController : public ModuleController<MotionAlgo, MotionController> {
 public:
-    MotionController(Database &db, Config &cfg, StreamUnwrap &stream);
+    MotionController(Database &db, Config &cfg, StreamUnwrap &stream, ImageUtil &img);
     ~MotionController();
     bool process_frame(int index, const AVFrame *frame);//process the frame, return false on error
     bool set_streams(void);//identify the streams (by looking at the StreamUnwrap instance)
@@ -44,9 +47,11 @@ public:
     //returns the motion algorithm with name, will be executed before algo, returns null if the algorithm does not exist, calls init() on the algorithm
     void get_frame_timestamp(const AVFrame *frame, bool video, struct timeval &time);//wrapper for StreamUnwrap timestamp(), assumes from video stream if video is true
     EventController& get_event_controller(void);//return a handle to the event controller
+    ImageUtil& get_img_util(void);//return the imageutil object
 private:
     StreamUnwrap &stream;
     EventController events;
+    ImageUtil &img;
 
     int video_idx;//index of the video stream
     int audio_idx;//index of the audio stream

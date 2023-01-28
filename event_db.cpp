@@ -25,7 +25,7 @@
 
 static std::string algo_name = "db";
 
-EventDB::EventDB(Config &cfg, Database &db, EventController &controller) : EventNotification(cfg, db, controller, algo_name), im(db, cfg) {
+EventDB::EventDB(Config &cfg, Database &db, EventController &controller) : EventNotification(cfg, db, controller, algo_name) {
 
 }
 
@@ -50,7 +50,7 @@ bool EventDB::send_event(Event &e){
         LWARN("x: " + std::to_string(dims.x) + " y: " + std::to_string(dims.y) +
             " w: " + std::to_string(dims.w) + " h: " + std::to_string(dims.h));
         std::string source = std::string(e.get_source());
-        if (!im.write_frame_jpg(frame, source, &e_time, dims, &im_id)){
+        if (!controller.get_img_util().write_frame_jpg(frame, source, &e_time, dims, &im_id)){
             im_id = -1;
         }
     }

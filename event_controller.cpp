@@ -26,7 +26,7 @@
 #include "event_console.hpp"
 #include "event_db.hpp"
 
-EventController::EventController(Config &cfg, Database &db) : ModuleController<EventNotification, EventController>(cfg, db, "event") {
+EventController::EventController(Config &cfg, Database &db, ImageUtil &img) : ModuleController<EventNotification, EventController>(cfg, db, "event"), img(img) {
     register_module(new ModuleFactory<EventDB, EventNotification, EventController>());
     register_module(new ModuleFactory<EventConsole, EventNotification, EventController>());
     add_mods();
@@ -36,6 +36,9 @@ EventController::~EventController(){
 
 }
 
+ImageUtil& EventController::get_img_util(void){
+    return img;
+}
 
 Event& EventController::get_new_event(void){
     for (auto &e : events){

@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2021-2022 Ed Martin <edman007@edman007.com>
+ *   Copyright 2021-2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -46,7 +46,9 @@ Filter::Filter(Config& cfg) : cfg(cfg) {
     peeked = false;
     tmp_frame_filled = false;
     target_codec = AV_CODEC_ID_NONE;
-    target_profile = 0;
+    target_profile = FF_PROFILE_UNKNOWN;
+    source_codec = AV_CODEC_ID_NONE;
+    source_profile = FF_PROFILE_UNKNOWN;
 }
 
 Filter::~Filter(){
@@ -59,6 +61,12 @@ bool Filter::set_target_fmt(const AVPixelFormat fmt, AVCodecID codec_id, int cod
     target_codec = codec_id;
     target_profile = codec_profile;
     return fmt != AV_PIX_FMT_NONE && target_codec != AV_CODEC_ID_NONE;
+}
+
+bool Filter::set_source_codec(AVCodecID codec_id, int codec_profile){
+    source_codec = codec_id;
+    source_profile = codec_profile;
+    return codec_id != AV_CODEC_ID_NONE;
 }
 
 bool Filter::send_frame(const AVFrame *frame){
@@ -115,7 +123,7 @@ bool Filter::get_frame(AVFrame *frame){
     }
 
     if (ret < 0){
-        LWARN("Error getting from from filter");
+        LWARN("Error getting frame from filter");
         return false;
     }
 
@@ -292,7 +300,7 @@ std::string Filter::get_filter_str(const AVFrame *frame) const {
         //have a SW format and the SW decoder didn't get it into something compatable, so format into something compatable
         if (!is_hw(frame->format) &&
             (!gcff_util.sw_format_is_hw_compatable(static_cast<enum AVPixelFormat>(frame->format)) || cfg.get_value("video-hw-pix-fmt") != "auto")){
-            filters_txt << "format=pix_fmts=" << gcff_util.get_sw_hw_format_list(cfg) << ",";
+            filters_txt << "format=pix_fmts=" << gcff_util.get_sw_hw_format_list(cfg, frame, source_codec, source_profile) << ",";
         }
 
         //transfer between HW...HWMap?
@@ -300,7 +308,8 @@ std::string Filter::get_filter_str(const AVFrame *frame) const {
         if (!is_hw(frame->format)){
             filters_txt << "hwupload=";
         } else if (!is_hw(target_fmt)){
-            filters_txt << "hwdownload,format=pix_fmts=" << gcff_util.get_sw_hw_format_list(cfg);//request to download into supported format, then format later
+            //request to download into supported format, then format later
+            filters_txt << "hwdownload,format=pix_fmts=" << gcff_util.get_sw_hw_format_list(cfg, frame, source_codec, source_profile);
         } else {
             filters_txt << "hwmap=mode=read";
         }
@@ -314,10 +323,10 @@ std::string Filter::get_filter_str(const AVFrame *frame) const {
                 LWARN("Unknown target HW format");
             }
         }
-        filters_txt << ",format=pix_fmts=" << target_fmt;
+        filters_txt << ",format=pix_fmts=" << av_get_pix_fmt_name(target_fmt);
     } else {
         //SW conversion
-        filters_txt << "format=pix_fmts=" << target_fmt;
+        filters_txt << "format=pix_fmts=" << av_get_pix_fmt_name(target_fmt);
     }
 
     LDEBUG("Filter str: " + filters_txt.str());

@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2021 Ed Martin <edman007@edman007.com>
+ *   Copyright 2021-2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -26,11 +26,17 @@
 #include "filter.hpp"
 
 ImageUtil::ImageUtil(Database &db, Config &cfg) : db(db), cfg(cfg) {
-
+    codec_id = AV_CODEC_ID_NONE;
+    codec_profile = FF_PROFILE_UNKNOWN;
 }
 
 ImageUtil::~ImageUtil(){
 
+}
+
+void ImageUtil::set_profile(AVCodecID id, int profile){
+    codec_id = id;
+    codec_profile = profile;
 }
 
 bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const struct timeval *start_time /* = NULL */, rect src/* = {-1, -1, 0, 0}*/,  long *file_id/* = NULL*/){
@@ -59,6 +65,7 @@ bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const s
         Filter flt(cfg);
         flt.set_target_fmt(codec->pix_fmts[0], AV_CODEC_ID_MJPEG, FF_PROFILE_MJPEG_HUFFMAN_BASELINE_DCT);
         flt.set_source_time_base({1, 1});//I don't think it actually matters...
+        flt.set_source_codec(codec_id, codec_profile);
         flt.send_frame(frame);
         AVFrame *filtered_frame = av_frame_alloc();
         flt.get_frame(filtered_frame);

@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020-2021 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2023 Ed Martin <edman007@edman007.com>
  *
  *   Portions of this file have been borrowed and modified from FFmpeg,
  *    these portions have been origionally licensed under GPL 2.1
@@ -276,46 +276,61 @@ enum AVPixelFormat get_vdpau_format(AVCodecContext *ctx, const enum AVPixelForma
 }
 
 //Modified list, based on ffmpeg's hwcontext_vaapi.c
-static const AVPixelFormat vaapi_format_map[] = {
-    AV_PIX_FMT_NV12,
-    AV_PIX_FMT_YUV420P,
-    AV_PIX_FMT_YUV422P,
-    AV_PIX_FMT_UYVY422,
-    AV_PIX_FMT_YUYV422,
+static const struct {
+    unsigned int va;//vaapi fourcc
+    AVPixelFormat ff;//ffmpeg
+} vaapi_format_map[] = {
+    {VA_FOURCC_NV12, AV_PIX_FMT_NV12},
+#ifdef VA_FOURCC_I420
+    {VA_FOURCC_I420,  AV_PIX_FMT_YUV420P},
+#endif
+    {VA_FOURCC_YV12,  AV_PIX_FMT_YUV420P},
+    {VA_FOURCC_IYUV,  AV_PIX_FMT_YUV420P},
+    {VA_FOURCC_422H,  AV_PIX_FMT_YUV422P},
+#ifdef VA_FOURCC_YV16
+    {VA_FOURCC_YV16,  AV_PIX_FMT_YUV422P},
+#endif
+    {VA_FOURCC_UYVY,  AV_PIX_FMT_UYVY422},
+    {VA_FOURCC_YUY2,  AV_PIX_FMT_YUYV422},
 #ifdef VA_FOURCC_Y210
-#ifdef AV_PIX_FMT_Y210
-    AV_PIX_FMT_Y210,
+    {VA_FOURCC_Y210,  AV_PIX_FMT_Y210},
 #endif
+#if defined(VA_FOURCC_Y212) && defined(AV_PIX_FMT_Y212)
+    {VA_FOURCC_Y212,  AV_PIX_FMT_Y212},
 #endif
-    AV_PIX_FMT_YUV411P,
-    AV_PIX_FMT_YUV440P,
-    AV_PIX_FMT_YUV444P,
-    AV_PIX_FMT_GRAY8,
+    {VA_FOURCC_411P,  AV_PIX_FMT_YUV411P},
+    {VA_FOURCC_422V,  AV_PIX_FMT_YUV440P},
+    {VA_FOURCC_444P,  AV_PIX_FMT_YUV444P},
+#if defined(VA_FOURCC_XYUV) && defined(AV_PIX_FMT_VUYX)
+    {VA_FOURCC_XYUV,  AV_PIX_FMT_VUYX},
+#endif
+    {VA_FOURCC_Y800,  AV_PIX_FMT_GRAY8},
 #ifdef VA_FOURCC_P010
-#ifdef AV_PIX_FMT_P010
-    AV_PIX_FMT_P010,
+    {VA_FOURCC_P010, AV_PIX_FMT_P010},
 #endif
+#if defined(VA_FOURCC_P012) && defined(AV_PIX_FMT_P012)
+    {VA_FOURCC_P012, AV_PIX_FMT_P012},
 #endif
-    AV_PIX_FMT_BGRA,
-    AV_PIX_FMT_BGR0,
-    AV_PIX_FMT_RGBA,
-    AV_PIX_FMT_RGB0,
+    {VA_FOURCC_BGRA,   AV_PIX_FMT_BGRA},
+    {VA_FOURCC_BGRX,   AV_PIX_FMT_BGR0},
+    {VA_FOURCC_RGBA,   AV_PIX_FMT_RGBA},
+    {VA_FOURCC_RGBX,   AV_PIX_FMT_RGB0},
 #ifdef VA_FOURCC_ABGR
-#ifdef AV_PIX_FMT_ABGR
-    AV_PIX_FMT_ABGR,
+    {VA_FOURCC_ABGR,   AV_PIX_FMT_ABGR},
+    {VA_FOURCC_XBGR,   AV_PIX_FMT_0BGR},
 #endif
-#ifdef AV_PIX_FMT_0BGR
-    AV_PIX_FMT_0BGR,
-#endif
-#endif
-    AV_PIX_FMT_ARGB,
-    AV_PIX_FMT_0RGB,
+    {VA_FOURCC_ARGB,   AV_PIX_FMT_ARGB},
+    {VA_FOURCC_XRGB,   AV_PIX_FMT_0RGB},
 #ifdef VA_FOURCC_X2R10G10B10
-#ifdef AV_PIX_FMT_X2RGB10
-    AV_PIX_FMT_X2RGB10,
+    {VA_FOURCC_X2R10G10B10, AV_PIX_FMT_X2RGB10},
 #endif
+#if defined(VA_FOURCC_Y410) && defined(AV_PIX_FMT_XV30)
+    {VA_FOURCC_Y410, AV_PIX_FMT_XV30},
 #endif
-    AV_PIX_FMT_NONE
+#if defined(VA_FOURCC_Y412) && defined(AV_PIX_FMT_XV36)
+    {VA_FOURCC_Y412,  AV_PIX_FMT_XV36},
+#endif
+    {0, AV_PIX_FMT_NONE}
 };
 
 
@@ -356,7 +371,7 @@ bool CFFUtil::sw_format_is_hw_compatable(const enum AVPixelFormat pix_fmt){
     return false;
 }
 
-std::string CFFUtil::get_sw_hw_format_list(Config &cfg){
+std::string CFFUtil::get_sw_hw_format_list(Config &cfg, const AVFrame *frame, AVCodecID codec_id, int codec_profile){
     load_vaapi();
     if (!vaapi_ctx){
         return "";
@@ -367,12 +382,56 @@ std::string CFFUtil::get_sw_hw_format_list(Config &cfg){
             return std::string(cfg_fmt);
         }
     }
-    AVHWFramesConstraints* c = av_hwdevice_get_hwframe_constraints(vaapi_ctx, NULL);
+    std::stringstream ss;
+    void* hw_config = NULL;
+#ifdef HAVE_VAAPI
+    if (frame && frame->format == AV_PIX_FMT_VAAPI && frame->hw_frames_ctx){
+        const VASurfaceID surface = reinterpret_cast<uintptr_t const>(frame->data[3]);
+        AVVAAPIDeviceContext *hwctx = get_vaapi_ctx_from_frames(frame->hw_frames_ctx);;
+        AVHWFramesContext *frames = reinterpret_cast<AVHWFramesContext*>(frame->hw_frames_ctx->data);
+        hw_config = av_hwdevice_hwconfig_alloc(frames->device_ref);
+        if (hw_config){
+            AVVAAPIHWConfig *va_hw_config = static_cast<AVVAAPIHWConfig*>(hw_config);
+
+            //the stupid defaults
+            VAEntrypoint entry = VAEntrypointVLD;//this is correct for FFMPeg decode, but does NOT work with VAProfileNone
+            VAProfile prof = VAProfileNone;
+
+            if (codec_id != AV_CODEC_ID_NONE){
+                prof = get_va_profile(hwctx, codec_id, codec_profile);
+            }
+            if (prof == VAProfileNone){
+                entry = VAEntrypointVideoProc;//if we didn't get a profile, we set to this to be more generic
+            }
+            VAStatus cfg_stat = vaCreateConfig(hwctx->display, prof, entry, NULL, 0, &va_hw_config->config_id);
+            if (cfg_stat != VA_STATUS_SUCCESS){
+                LWARN("vaCreateConfig Failed");
+                av_free(hw_config);
+                hw_config = NULL;
+            }
+        }
+
+    }
+#endif
+    AVHWFramesConstraints* c = av_hwdevice_get_hwframe_constraints(vaapi_ctx, hw_config);
+    if (hw_config){
+        //free the hw config
+#ifdef HAVE_VAAPI
+        if (frame && frame->format == AV_PIX_FMT_VAAPI){
+            AVVAAPIDeviceContext *hwctx = get_vaapi_ctx_from_frames(frame->hw_frames_ctx);;
+            if (hwctx){
+                AVVAAPIHWConfig *va_hw_config = static_cast<AVVAAPIHWConfig*>(hw_config);
+                vaDestroyConfig(hwctx->display, va_hw_config->config_id);
+            }
+        }
+#endif
+        av_free(hw_config);
+    }
     if (!c){
         return "";
     }
 
-    std::stringstream ss;
+
     const enum AVPixelFormat *v;
     for (v = c->valid_sw_formats; *v != AV_PIX_FMT_NONE; v++){
         if (v != c->valid_sw_formats){
@@ -399,39 +458,7 @@ bool CFFUtil::have_vaapi(AVCodecID codec_id, int codec_profile, int width, int h
     if (!codec_desc) {
         return NULL;
     }
-    VAProfile profile, *profile_list = NULL;
-    int profile_count;
-    profile_count = vaMaxNumProfiles(hwctx->display);
-    profile_list = new VAProfile[profile_count];
-    if (!profile_list){
-        return NULL;
-    }
-
-    VAStatus vas;
-    vas = vaQueryConfigProfiles(hwctx->display, profile_list, &profile_count);
-    if (vas != VA_STATUS_SUCCESS) {
-        delete[] profile_list;
-        return NULL;
-    }
-
-    profile = VAProfileNone;
-
-    //search all known codecs to see if there is a matching profile
-    for (unsigned int i = 0; i < FF_ARRAY_ELEMS(vaapi_profile_map); i++) {
-        if (codec_id != vaapi_profile_map[i].codec_id){
-            continue;
-        }
-        for (int j = 0; j < profile_count; j++) {
-            if (vaapi_profile_map[i].va_profile == profile_list[j] &&
-                vaapi_profile_map[i].codec_profile == codec_profile) {
-                profile = profile_list[j];
-                break;//exact found, we are done
-            } else if (vaapi_profile_map[i].va_profile == profile_list[j]){
-                profile = profile_list[j];//in exact found
-            }
-        }
-    }
-    delete[] profile_list;
+    VAProfile profile = get_va_profile(hwctx, codec_id, codec_profile);
 
     //if we couldn't find a matching profile we bail
     if (profile == VAProfileNone){
@@ -929,5 +956,56 @@ bool CFFUtil::is_v4l2_hw_codec(const AVCodecID av_codec, const uint32_t v4l2_pix
     default:
         return false;
     }
+}
+#endif
+
+
+#ifdef HAVE_VAAPI
+AVPixelFormat CFFUtil::get_pix_fmt_from_va(const VAImageFormat &fmt){
+    for (unsigned int i = 0; i < (sizeof(vaapi_format_map)/sizeof(vaapi_format_map[0])); i++){
+        if (fmt.fourcc == vaapi_format_map[i].va){
+            return vaapi_format_map[i].ff;
+        }
+    }
+    return AV_PIX_FMT_NONE;
+}
+#endif
+
+#ifdef HAVE_VAAPI
+VAProfile CFFUtil::get_va_profile(AVVAAPIDeviceContext* hwctx, AVCodecID codec_id, int codec_profile){
+    VAProfile profile, *profile_list;
+    int profile_count;
+    VAStatus vas;
+    profile = VAProfileNone;
+
+    profile_count = vaMaxNumProfiles(hwctx->display);
+    profile_list = new VAProfile[profile_count];
+    if (!profile_list){
+        return VAProfileNone;
+    }
+
+    vas = vaQueryConfigProfiles(hwctx->display, profile_list, &profile_count);
+    if (vas != VA_STATUS_SUCCESS) {
+        delete[] profile_list;
+        return VAProfileNone;
+    }
+
+    //search all known codecs to see if there is a matching profile
+    for (unsigned int i = 0; i < FF_ARRAY_ELEMS(vaapi_profile_map); i++) {
+        if (codec_id != vaapi_profile_map[i].codec_id){
+            continue;
+        }
+        for (int j = 0; j < profile_count; j++) {
+            if (vaapi_profile_map[i].va_profile == profile_list[j] &&
+                vaapi_profile_map[i].codec_profile == codec_profile) {
+                profile = profile_list[j];
+                break;//exact found, we are done
+            } else if (vaapi_profile_map[i].va_profile == profile_list[j]){
+                profile = profile_list[j];//inexact found
+            }
+        }
+    }
+    delete[] profile_list;
+    return profile;
 }
 #endif

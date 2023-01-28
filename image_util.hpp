@@ -17,7 +17,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -38,9 +38,12 @@ public:
     bool write_frame_jpg(const AVFrame *frame, std::string &name, const struct timeval *start_time = NULL, rect src = {-1, -1, 0, 0}, long *file_id = NULL);
     bool write_frame_png(const AVFrame *frame, std::string &name, const struct timeval *start_time = NULL, rect src = {-1, -1, 0, 0}, long *file_id = NULL);
 
+    void set_profile(AVCodecID id, int profile);//set the codec profile (used to download images from HW)
 private:
     Database &db;
     Config &cfg;
+    AVCodecID codec_id;
+    int codec_profile;
 
     //Returns a clone of the frame with the new rect applied
     AVFrame* apply_rect(const AVFrame *frame, rect &src);

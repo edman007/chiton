@@ -17,7 +17,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020-2022 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -35,7 +35,8 @@ extern "C" {
 #include <libavutil/hwcontext.h>
 };
 #include <mutex>
-
+#include <vector>
+#include <map>
 #ifdef HAVE_VDPAU
 #include <vdpau/vdpau.h>
 #include <libavutil/hwcontext_vdpau.h>
@@ -117,8 +118,7 @@ public:
     bool have_opencl(AVCodecID codec_id, int codec_profile, int width, int height);//returns true if OPENCL should work
     bool have_v4l2(AVCodecID codec_id, int codec_profile, int width, int height);//returns true if v4l2 should work
     bool sw_format_is_hw_compatable(const enum AVPixelFormat pix_fmt);//return true if the format is HW compatable
-    std::string get_sw_hw_format_list(Config &cfg);//return the suggested list of formats for use with later HW functions
-
+    std::string get_sw_hw_format_list(Config &cfg, const AVFrame *frame, AVCodecID codec_id, int codec_profile);//return the suggested list of formats for use with later HW functions
 private:
     void load_vaapi(void);//init global vaapi context
     void free_vaapi(void);//free the vaapi context
@@ -135,6 +135,10 @@ private:
     bool vioctl(int fh, int request, void *arg);//run ioctl through v4l2, return false on error
     bool is_v4l2_hw_codec(const AVCodecID av_codec, const uint32_t v4l2_pix_fmt);
 #endif
+#ifdef HAVE_VAAPI
+    AVPixelFormat get_pix_fmt_from_va(const VAImageFormat &fmt);
+    VAProfile get_va_profile(AVVAAPIDeviceContext* hwctx, AVCodecID codec_id, int codec_profile);//return the VAProfile for the codec
+#endif
     AVBufferRef *vaapi_ctx = NULL;
     bool vaapi_failed = false;//if we failed to initilize vaapi
     AVBufferRef *vdpau_ctx = NULL;
@@ -142,7 +146,6 @@ private:
     AVBufferRef *opencl_ctx = NULL;
     bool opencl_failed = false;//if we failed to initilize opencl
     std::mutex codec_lock;
-
 };
 
 enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);//global VAAPI format selector

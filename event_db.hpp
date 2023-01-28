@@ -33,6 +33,6 @@ public:
     bool send_event(Event &e);//Send the event through notification method
     static const std::string& get_mod_name(void);
 private:
-    ImageUtil im;
+
 };
 #endif

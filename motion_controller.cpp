@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2022 Ed Martin <edman007@edman007.com>
+ *   Copyright 2022-2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -28,7 +28,12 @@
 #include "motion_cvdebugshow.hpp"
 #include "motion_cvresize.hpp"
 
-MotionController::MotionController(Database &db, Config &cfg, StreamUnwrap &stream) : ModuleController<MotionAlgo, MotionController>(cfg, db, "motion"), stream(stream), events(cfg, db)  {
+MotionController::MotionController(Database &db, Config &cfg, StreamUnwrap &stream, ImageUtil &img) :
+    ModuleController<MotionAlgo, MotionController>(cfg, db, "motion"),
+    stream(stream),
+    events(cfg, db, img),
+    img(img) {
+
     video_idx = -1;
     audio_idx = -1;
     skip_ratio = cfg.get_value_double("motioncontroller-skip-ratio");
@@ -83,6 +88,9 @@ bool MotionController::set_video_stream(const AVStream *stream, const AVCodecCon
         return false;//there is no video stream
     }
     video_idx = stream->index;
+    if (codec){
+        img.set_profile(codec->codec_id, codec->profile);
+    }
     bool ret = true;
     for (auto &ma : mods){
         ret &= ma->set_video_stream(stream, codec);

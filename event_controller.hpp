@@ -27,21 +27,23 @@
 #include "chiton_config.hpp"
 #include "module_controller.hpp"
 #include "event.hpp"
+#include "image_util.hpp"
 class EventController;
 #include "event_notification.hpp"
 
 //this class manages events, sending out notifications
 class EventController : public ModuleController<EventNotification, EventController> {
 public:
-    EventController(Config &cfg, Database &db);
+    EventController(Config &cfg, Database &db, ImageUtil &img);
     ~EventController();
     Event& get_new_event(void);//allocate a new Event, note, Event must be sent via send_event() or marked invalid
     bool send_event(Event& event);//send event, it is not valid to access the Event after calling send_event()
     //returns the event notification algorithm with name, will be executed before algo, returns null if the algorithm does not exist, calls init() on the algorithm
     EventNotification* get_notification_before(const std::string &name, const EventNotification *algo);
     void register_event_notification(ModuleAllocator<EventNotification, EventController>* maa);//registers an allocator and makes an algorithm available for use
-
+    ImageUtil& get_img_util(void);//return a reference to the image util
 private:
     std::vector<Event> events;
+    ImageUtil &img;
 };
 #endif

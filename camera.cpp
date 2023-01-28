@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020-2021 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -79,7 +79,8 @@ void Camera::run(void){
     LINFO("Camera " + std::to_string(id) + " connected...");
     std::string out_filename = fm.get_next_path(file_id, id, stream.get_start_time());
     StreamWriter out = StreamWriter(cfg);
-    MotionController motion(db, cfg, stream);
+    ImageUtil img(db, cfg);
+    MotionController motion(db, cfg, stream, img);
     out.change_path(out_filename);
     out.set_keyframe_callback(std::bind(&Camera::cut_video, this, std::placeholders::_1, std::placeholders::_2));
     //look at the stream and settings and see what needs encoding and decoding
@@ -176,7 +177,6 @@ void Camera::run(void){
     long last_stream_index = 0;
     bool failed = false;
     int frame_cnt = 0;
-    ImageUtil img(db, cfg);
     motion.set_streams();
     while (!shutdown && !failed && stream.get_next_frame(pkt)){
         watchdog = true;
