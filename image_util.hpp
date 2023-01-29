@@ -25,11 +25,12 @@
 #include "chiton_config.hpp"
 #include "chiton_ffmpeg.hpp"
 #include "database.hpp"
+#include "system_controller.fwd.hpp"
 
 class ImageUtil {
 
 public:
-    ImageUtil(Database &db, Config &cfg);
+    ImageUtil(SystemController &sys, Config &cfg);
     ~ImageUtil();
 
     //write out the source coordinates as a jpeg
@@ -40,6 +41,7 @@ public:
 
     void set_profile(AVCodecID id, int profile);//set the codec profile (used to download images from HW)
 private:
+    SystemController &sys;
     Database &db;
     Config &cfg;
     AVCodecID codec_id;//codec being used by HW

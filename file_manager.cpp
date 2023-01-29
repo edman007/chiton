@@ -21,18 +21,23 @@
  */
 #include "file_manager.hpp"
 
+#include "util.hpp"
+#include "system_controller.hpp"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/statvfs.h>
 #include <dirent.h>
-#include "util.hpp"
 
 //static globals
 std::mutex FileManager::cleanup_mtx;//lock when cleanup is in progress, locks just the clean_disk() to prevent iterating over the same database results twice
 std::atomic<long long> FileManager::reserved_bytes(0);
 
-FileManager::FileManager(Database &db, Config &cfg) : db(db), cfg(cfg) {
+FileManager::FileManager(SystemController &sys) : FileManager(sys, sys.get_sys_cfg()) {
+    //no-op, calls detailed version
+}
+
+FileManager::FileManager(SystemController &sys, Config &cfg) : sys(sys), db(sys.get_db()), cfg(cfg) {
     bytes_per_segment = 1024*1024;//1M is our default guess
     min_free_bytes = -1;
 }

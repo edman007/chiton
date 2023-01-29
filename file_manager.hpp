@@ -30,10 +30,12 @@
 #include <iostream>
 #include <fstream>
 #include "stream_writer.hpp"
+#include "system_controller.fwd.hpp"
 
 class FileManager {
 public:
-    FileManager(Database &db, Config &cfg);
+    FileManager(SystemController &sys);
+    FileManager(SystemController &sys, Config &cfg);//with alternate config
 
     void init(void);//init's the FileManager
 
@@ -73,6 +75,7 @@ public:
 private:
     Database &db;
     Config &cfg;
+    SystemController &sys;
     long long bytes_per_segment;//estimate of segment size for our database to optimize our cleanup calls
     long long min_free_bytes;//the config setting min-free-space as computed for the output-dir
     std::string last_filename;//when extending files, holds the current filename

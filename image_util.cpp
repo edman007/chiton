@@ -24,8 +24,9 @@
 #include "util.hpp"
 #include "file_manager.hpp"
 #include "filter.hpp"
+#include "system_controller.hpp"
 
-ImageUtil::ImageUtil(Database &db, Config &cfg) : db(db), cfg(cfg) {
+ImageUtil::ImageUtil(SystemController &sys, Config &cfg) : sys(sys), db(sys.get_db()), cfg(cfg) {
     codec_id = AV_CODEC_ID_NONE;
     codec_profile = FF_PROFILE_UNKNOWN;
     pkt = av_packet_alloc();
@@ -126,7 +127,7 @@ bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const s
     }
 
     //write out the packet
-    FileManager fm(db, cfg);
+    FileManager fm(sys, cfg);
     std::string path;
     bool success = false;
     if (fm.get_image_path(path, name, ".jpg", start_time, file_id)){

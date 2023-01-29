@@ -24,6 +24,7 @@
 #include "chiton_config.hpp"
 #include "database.hpp"
 #include "file_manager.hpp"
+#include "system_controller.fwd.hpp"
 #include <thread>
 #include <atomic>
 #include <mutex>
@@ -33,12 +34,13 @@
  */
 class Export {
 public:
-    Export(Database &db, Config &cfg, FileManager &fm);
+    Export(SystemController &sys);
     ~Export(void);
 
     bool check_for_jobs(void);//checks for any pending export jobs and executes them, returns true if a job is in progress
     bool rm_export(int export_id);//deletes export with this ID, cancles it if in progress, thread safe
 private:
+    SystemController &sys;
     Database &db;
     Config &cfg;
     FileManager &g_fm;

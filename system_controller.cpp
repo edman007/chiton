@@ -44,9 +44,9 @@
 SystemController::SystemController(Config &args) :
     system_args(args),
     db(std::unique_ptr<Database>(new MariaDB())),
-    fm(*db, cfg),
-    expt(*db, cfg, fm),
-    remote(*db, cfg, expt),
+    fm(*this),
+    expt(*this),
+    remote(*this),
     exit_requested(false),
     reload_requested(false){
 
@@ -112,12 +112,24 @@ int SystemController::run_instance(void){
     return SYS_EXIT_SUCCESS;
 }
 
-Config& SystemController::get_cfg(void){
+Config& SystemController::get_sys_cfg(void){
     return cfg;
 }
 
 Database& SystemController::get_db(void){
     return *db;
+}
+
+Export& SystemController::get_export(void){
+    return expt;
+}
+
+Remote& SystemController::get_remote(void){
+    return remote;
+}
+
+FileManager& SystemController::get_fm(void){
+    return fm;
 }
 
 
@@ -145,7 +157,7 @@ void SystemController::launch_cams(void){
     res = db->query("SELECT camera FROM config WHERE camera != -1 AND name = 'active' AND value = '1' GROUP BY camera");
     while (res && res->next_row()){
         LINFO("Loading camera " + std::to_string(res->get_field_long(0)));
-        cams.emplace_back(new Camera(res->get_field_long(0), *db, cfg));//create camera
+        cams.emplace_back(new Camera(*this, res->get_field_long(0)));//create camera
         threads.emplace_back(&Camera::run, cams.back());//start it
         cams.back()->set_thread_id(threads.back().get_id());
 
@@ -174,7 +186,7 @@ void SystemController::loop(){
                         if (t.get_id() == c->get_thread_id()){
                             t.join();
                             delete c;
-                            c = new Camera(id, *db, cfg);
+                            c = new Camera(*this, id);
                             t = std::thread(&Camera::run, c);
                             c->set_thread_id(t.get_id());
                             break;

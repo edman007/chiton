@@ -21,7 +21,6 @@
  *
  **************************************************************************
  */
-
 #include "main.hpp"
 #include "util.hpp"
 //#include "chiton_config.hpp"
@@ -58,8 +57,11 @@ public:
     void request_reload(void);
 
     //getters
-    Config& get_cfg(void);
+    Config& get_sys_cfg(void);
     Database& get_db(void);
+    Export& get_export(void);
+    Remote& get_remote(void);
+    FileManager& get_fm(void);
 private:
     Config &system_args;
     Config cfg;

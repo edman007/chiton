@@ -23,8 +23,9 @@
  */
 
 #include "chiton_config.hpp"
-#include "database.hpp"
+#include "system_controller.fwd.hpp"
 #include "export.hpp"
+#include "database.hpp"
 #include <atomic>
 #include <thread>
 #include <list>
@@ -75,7 +76,7 @@
  */
 class Remote {
 public:
-    Remote(Database &db, Config &cfg, Export &expt);
+    Remote(SystemController &sys);
     ~Remote();
 
     void init(void);//opens the socket
@@ -85,9 +86,9 @@ public:
     bool get_reload_request(void);
 
 private:
+    SystemController &sys;
     Database &db;
     Config &cfg;
-    Export &expt;
 
     std::atomic_bool reload_requested;
     int sockfd;

@@ -43,7 +43,7 @@ chiton_SOURCES = main.cpp config.cpp config_parser.cpp database.cpp mariadb.cpp 
 	motion_cvmask.hpp motion_cvmask.cpp motion_cvdebugshow.hpp motion_cvdebugshow.cpp \
 	motion_cvresize.hpp motion_cvresize.cpp system_controller.hpp system_controller.cpp \
 	motion_cvdetect.cpp motion_cvdetect.hpp cv_target_rect.cpp cv_target_rect.hpp \
-	event.hpp event.cpp event_controller.hpp event_controller.cpp \
+	event.hpp event.cpp event_controller.hpp event_controller.cpp system_controller.fwd.hpp \
 	event_notification.hpp event_notification.cpp module.hpp module_controller.hpp \
 	event_console.hpp event_console.cpp event_db.hpp event_db.cpp
 

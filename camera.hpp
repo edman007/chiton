@@ -27,6 +27,7 @@
 #include "stream_unwrap.hpp"
 #include "stream_writer.hpp"
 #include "file_manager.hpp"
+#include "system_controller.fwd.hpp"
 #include <atomic>
 #include <thread>
 
@@ -37,7 +38,7 @@ class Camera {
      */
     
 public:
-    Camera(int camera, Database& db, const Config &sys_cfg);
+    Camera(SystemController &sys, int camera);
     ~Camera();
     void run(void);//connect and run the camera monitor
     void stop(void);//requests the thread stops
@@ -49,6 +50,7 @@ public:
 private:
 
     void load_cfg(void);
+    SystemController &sys;
     int id; //camera ID
     Config cfg;
     Database& db;

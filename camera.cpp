@@ -25,8 +25,9 @@
 #include "image_util.hpp"
 #include "filter.hpp"
 #include "motion_controller.hpp"
+#include "system_controller.hpp"
 
-Camera::Camera(int camera, Database& db, const Config &sys_cfg) : id(camera), cfg(sys_cfg), db(db), stream(cfg), fm(db, cfg) {
+Camera::Camera(SystemController &sys, int camera) : sys(sys), id(camera), cfg(sys.get_sys_cfg()), db(sys.get_db()), stream(cfg), fm(sys, cfg) {
     //load the config
     load_cfg();
     shutdown = false;
@@ -80,7 +81,7 @@ void Camera::run(void){
     LINFO("Camera " + std::to_string(id) + " connected...");
     std::string out_filename = fm.get_next_path(file_id, id, stream.get_start_time());
     StreamWriter out = StreamWriter(cfg);
-    ImageUtil img(db, cfg);
+    ImageUtil img(sys, cfg);
     MotionController motion(db, cfg, stream, img);
     out.change_path(out_filename);
     out.set_keyframe_callback(std::bind(&Camera::cut_video, this, std::placeholders::_1, std::placeholders::_2));

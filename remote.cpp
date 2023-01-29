@@ -23,6 +23,7 @@
 
 #include "remote.hpp"
 #include "util.hpp"
+#include "system_controller.hpp"
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -35,7 +36,7 @@ struct Remote::RemoteCommand {const std::string cmd;
         std::function<void(Remote&, int, RemoteCommand&, std::string&)> cbk;
         };
 
-Remote::Remote(Database &db, Config &cfg, Export &expt) : db(db), cfg(cfg), expt(expt) {
+Remote::Remote(SystemController &sys) : sys(sys), db(sys.get_db()), cfg(sys.get_sys_cfg()) {
     sockfd = -1;
     killfd_worker = -1;
     killfd_master = -1;
@@ -385,7 +386,7 @@ void Remote::cmd_reload(int fd, RemoteCommand& rc, std::string &cmd){
 
 void Remote::cmd_rm_export(int fd, RemoteCommand& rc, std::string &cmd){
     int export_id = std::stoi(cmd.substr(rc.cmd.length() + 1));
-    if (expt.rm_export(export_id)){
+    if (sys.get_export().rm_export(export_id)){
         write_data(fd, "OK\n");
     } else {
         write_data(fd, "ERROR\n");

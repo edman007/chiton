@@ -24,9 +24,10 @@
 #include "stream_unwrap.hpp"
 #include "stream_writer.hpp"
 #include "io/cfmp4.hpp"
+#include "system_controller.hpp"
 #include <memory>
 
-Export::Export(Database &db, Config &cfg, FileManager &fm) : db(db), cfg(cfg), g_fm(fm) {
+Export::Export(SystemController &sys) : sys(sys), db(sys.get_db()), cfg(sys.get_sys_cfg()), g_fm(sys.get_fm()) {
     force_exit = false;
     export_in_progress = false;
     id = 0;
@@ -90,7 +91,7 @@ void Export::run_job(void){
     camera_cfg = new Config(cfg);//reinit the config with the system config
     camera_cfg->load_camera_config(camera, db);
 
-    FileManager fm(db, *camera_cfg);
+    FileManager fm(sys, *camera_cfg);
     if (path != ""){
         fm.rm_file(path + std::to_string(id) + EXPORT_EXT);
         path = "";
