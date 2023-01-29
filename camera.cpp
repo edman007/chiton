@@ -33,6 +33,7 @@ Camera::Camera(int camera, Database& db, const Config &sys_cfg) : id(camera), cf
     alive = true;
     watchdog = false;
     startup = true;
+    pkt = av_packet_alloc();
 
     //variables for cutting files...
     last_cut = av_make_q(0, 1);
@@ -169,7 +170,6 @@ void Camera::run(void){
 
     out.open();
     
-    AVPacket pkt;
     bool valid_keyframe = false;
 
     //used for calculating shutdown time for the last segment
@@ -180,12 +180,12 @@ void Camera::run(void){
     motion.set_streams();
     while (!shutdown && !failed && stream.get_next_frame(pkt)){
         watchdog = true;
-        last_pts = pkt.pts;
-        last_stream_index = pkt.stream_index;
+        last_pts = pkt->pts;
+        last_stream_index = pkt->stream_index;
         frame_cnt++;
 
         //we skip processing until we get a video keyframe
-        if (valid_keyframe || (pkt.flags & AV_PKT_FLAG_KEY && stream.is_video(pkt))){
+        if (valid_keyframe || (pkt->flags & AV_PKT_FLAG_KEY && stream.is_video(pkt))){
             valid_keyframe = true;
         } else {
             LINFO("Dropping packets before first keyframe");
@@ -196,9 +196,9 @@ void Camera::run(void){
         //decode the packets
         if (frame && stream.is_video(pkt) && decode_video){
             if (stream.decode_packet(pkt)){
-                while (!failed && stream.get_decoded_frame(pkt.stream_index, frame)){
+                while (!failed && stream.get_decoded_frame(pkt->stream_index, frame)){
                     //LDEBUG("Decoded Video Frame");
-                    motion.process_frame(pkt.stream_index, frame);
+                    motion.process_frame(pkt->stream_index, frame);
                     if (encode_video){
                         //Filter the frame before encoding
                         if (vfilter.send_frame(frame)){
@@ -232,9 +232,9 @@ void Camera::run(void){
             }
         } else if (frame && stream.is_audio(pkt) && decode_audio){
                 if (stream.decode_packet(pkt)){
-                    while (!failed && stream.get_decoded_frame(pkt.stream_index, frame)){
+                    while (!failed && stream.get_decoded_frame(pkt->stream_index, frame)){
                         //LDEBUG("Decoded Audio Frame");
-                        motion.process_frame(pkt.stream_index, frame);
+                        motion.process_frame(pkt->stream_index, frame);
                         if (encode_audio){
                             if (!out.write(frame, stream.get_stream(pkt))){
                                 stream.unref_frame(pkt);
@@ -300,16 +300,16 @@ std::thread::id Camera::get_thread_id(void){
     return thread_id;
 }
 
-void Camera::cut_video(const AVPacket &pkt, StreamWriter &out){
-    if (pkt.flags & AV_PKT_FLAG_KEY && stream.is_video(pkt)){
+void Camera::cut_video(const AVPacket *cut_pkt, StreamWriter &out){
+    if (cut_pkt->flags & AV_PKT_FLAG_KEY && stream.is_video(cut_pkt)){
         //calculate the seconds:
-        AVRational sec_raw = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);//current time..
+        AVRational sec_raw = av_mul_q(av_make_q(cut_pkt->dts, 1), stream.get_format_context()->streams[cut_pkt->stream_index]->time_base);//current time..
         AVRational sec = av_sub_q(sec_raw, last_cut);
 
         if (av_cmp_q(sec, seconds_per_segment) == 1 || (sec.num < 0 && last_cut.num > 0)){
             //cutting the video
             struct timeval start;
-            stream.timestamp(pkt, start);
+            stream.timestamp(cut_pkt, start);
             AVRational file_seconds = av_sub_q(sec_raw, last_cut_file);
             if (out.is_fragmented() && sec.num >= 0 && av_cmp_q(file_seconds, seconds_per_file) == -1){
                 LDEBUG("Fragging Segment");
@@ -335,10 +335,10 @@ void Camera::cut_video(const AVPacket &pkt, StreamWriter &out){
                 long long size = out.change_path(out_filename);;//apply new filename, and get length of old file
                 fm.update_file_metadata(old_id, end, size, out, last_cut_byte, old_init_len);
                 last_cut_byte = 0;
-                last_cut_file = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);
+                last_cut_file = av_mul_q(av_make_q(cut_pkt->dts, 1), stream.get_format_context()->streams[cut_pkt->stream_index]->time_base);
             }
             //save out this position
-            last_cut = av_mul_q(av_make_q(pkt.dts, 1), stream.get_format_context()->streams[pkt.stream_index]->time_base);
+            last_cut = av_mul_q(av_make_q(cut_pkt->dts, 1), stream.get_format_context()->streams[cut_pkt->stream_index]->time_base);
         }
     }
 }

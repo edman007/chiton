@@ -60,6 +60,7 @@ private:
     std::atomic_bool startup;//used to identify if we are in an extended wait due to startup
     std::thread::id thread_id;//used for tracking our thread
 
+    AVPacket *pkt;//packet we are processing
     AVRational last_cut;//last time a segment was cut
     AVRational last_cut_file;//last time a file was cut
     long long last_cut_byte;//the bytes of the end of the previous segment (or file)
@@ -68,7 +69,7 @@ private:
 
     long int file_id;//database id of current file we are writing to
     //check if packet is a keyframe and switch the filename as needed
-    void cut_video(const AVPacket &pkt, StreamWriter &out);
+    void cut_video(const AVPacket *pkt, StreamWriter &out);
     bool get_vencode(void);//get if video needs to be encoded
     bool get_aencode(void);//get if audio needs to be encoded
 };

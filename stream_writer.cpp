@@ -41,6 +41,7 @@ StreamWriter::StreamWriter(Config& cfg) : cfg(cfg) {
     video_width = -1;
     video_height = -1;
     video_framerate = 0;
+    enc_pkt = av_packet_alloc();
 }
 
 bool StreamWriter::open(void){
@@ -124,6 +125,7 @@ bool StreamWriter::open_path(void){
 
 StreamWriter::~StreamWriter(){
     free_context();
+    av_packet_free(&enc_pkt);
 }
 
 long long StreamWriter::close(void){
@@ -150,19 +152,19 @@ long long StreamWriter::close(void){
     return pos;
 }
 
-bool StreamWriter::write(const AVPacket &packet, const AVStream *in_stream){
+bool StreamWriter::write(const AVPacket *packet, const AVStream *in_stream){
     if (!file_opened){
         return false;
     }
 
-    if (packet.stream_index >= static_cast<int>(stream_mapping.size()) ||
-        stream_mapping[packet.stream_index] < 0) {
+    if (packet->stream_index >= static_cast<int>(stream_mapping.size()) ||
+        stream_mapping[packet->stream_index] < 0) {
         return true;//we processed the stream we don't care about
     }
 
     AVStream *out_stream;
     PacketInterleavingBuf *pkt_buf = new PacketInterleavingBuf(packet);
-    pkt_buf->video_keyframe = in_stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && packet.flags & AV_PKT_FLAG_KEY;
+    pkt_buf->video_keyframe = in_stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && packet->flags & AV_PKT_FLAG_KEY;
 
     if (!pkt_buf->in || !pkt_buf->out){
         LERROR("Could not allocate new output packet for writing");
@@ -213,7 +215,7 @@ bool StreamWriter::write(const AVPacket &packet, const AVStream *in_stream){
 bool StreamWriter::write(PacketInterleavingBuf *pkt_buf){
 
     if (keyframe_cbk && pkt_buf->video_keyframe){
-        keyframe_cbk(*(pkt_buf->in), *this);
+        keyframe_cbk(pkt_buf->in, *this);
     }
     //LWARN("Writing: " + std::to_string(pkt_buf->dts0) + "(" + std::to_string(pkt_buf->out->dts) + ")");
     int ret = av_interleaved_write_frame(output_format_context, pkt_buf->out);
@@ -226,17 +228,17 @@ bool StreamWriter::write(PacketInterleavingBuf *pkt_buf){
     return true;
 }
 
-void StreamWriter::log_packet(const AVFormatContext *fmt_ctx, const AVPacket &pkt, const std::string &tag){
-    AVRational *time_base = &fmt_ctx->streams[pkt.stream_index]->time_base;
-    LINFO(tag + ": pts:" + std::string(av_ts2str(pkt.pts)) +
-          " pts_time:"+std::string(av_ts2timestr(pkt.pts, time_base))+
-          " dts:" + std::string(av_ts2str(pkt.dts)) +
-          " dts_time:"+ std::string(av_ts2timestr(pkt.dts, time_base)) +
-          " duration:" +std::string(av_ts2str(pkt.duration)) +
-          " duration_time:" + std::string(av_ts2timestr(pkt.duration, time_base))+
-          " stream_index:" + std::to_string(pkt.stream_index)
+void StreamWriter::log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt, const std::string &tag){
+    AVRational *time_base = &fmt_ctx->streams[pkt->stream_index]->time_base;
+    LINFO(tag + ": pts:" + std::string(av_ts2str(pkt->pts)) +
+          " pts_time:"+std::string(av_ts2timestr(pkt->pts, time_base))+
+          " dts:" + std::string(av_ts2str(pkt->dts)) +
+          " dts_time:"+ std::string(av_ts2timestr(pkt->dts, time_base)) +
+          " duration:" +std::string(av_ts2str(pkt->duration)) +
+          " duration_time:" + std::string(av_ts2timestr(pkt->duration, time_base))+
+          " stream_index:" + std::to_string(pkt->stream_index)
     );
-    av_pkt_dump_log2(NULL, 30, &pkt, 0, fmt_ctx->streams[pkt.stream_index]);
+    av_pkt_dump_log2(NULL, 30, pkt, 0, fmt_ctx->streams[pkt->stream_index]);
 }
 
 long long StreamWriter::change_path(const std::string &new_path /* = "" */){
@@ -536,17 +538,13 @@ bool StreamWriter::add_encoded_stream(const AVStream *in_stream, const AVCodecCo
 
 bool StreamWriter::write(const AVFrame *frame, const AVStream *in_stream){
     int ret = 0;
-    AVPacket enc_pkt;
-    av_init_packet(&enc_pkt);
-    enc_pkt.data = NULL;
-    enc_pkt.size = 0;
     ret = avcodec_send_frame(encode_ctx[stream_mapping[in_stream->index]], frame);
     if (ret < 0){
         LWARN("Error during encoding. Error code: " +  std::string(av_err2str(ret)));
         return false;
     }
     while (1) {
-        ret = avcodec_receive_packet(encode_ctx[stream_mapping[in_stream->index]], &enc_pkt);
+        ret = avcodec_receive_packet(encode_ctx[stream_mapping[in_stream->index]], enc_pkt);
         if (ret){
             if (ret == AVERROR(EAGAIN)){
                 break;
@@ -555,9 +553,9 @@ bool StreamWriter::write(const AVFrame *frame, const AVStream *in_stream){
             break;
         }
 
-        enc_pkt.stream_index = in_stream->index;//revert stream index because write will adjust this
+        enc_pkt->stream_index = in_stream->index;//revert stream index because write will adjust this
         bool write_ret = write(enc_pkt, in_stream);
-        av_packet_unref(&enc_pkt);
+        av_packet_unref(enc_pkt);
         if (!write_ret){
             return false;
         }
@@ -628,7 +626,7 @@ long long StreamWriter::get_init_len(void) const {
     return init_len;
 }
 
-void StreamWriter::set_keyframe_callback(std::function<void(const AVPacket &pkt, StreamWriter &out)> cbk){
+void StreamWriter::set_keyframe_callback(std::function<void(const AVPacket *pkt, StreamWriter &out)> cbk){
     keyframe_cbk = cbk;
 }
 
@@ -979,9 +977,9 @@ const AVCodec* StreamWriter::get_vencoder(int width, int height) const {
     return get_vencoder(width, height, codec_id, codec_profile);
 }
 
-PacketInterleavingBuf::PacketInterleavingBuf(const AVPacket &pkt){
-    in = av_packet_clone(&pkt);
-    out = av_packet_clone(&pkt);
+PacketInterleavingBuf::PacketInterleavingBuf(const AVPacket *pkt){
+    in = av_packet_clone(pkt);
+    out = av_packet_clone(pkt);
     video_keyframe = false;
 }
 

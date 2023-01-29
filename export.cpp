@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -32,6 +32,7 @@ Export::Export(Database &db, Config &cfg, FileManager &fm) : db(db), cfg(cfg), g
     id = 0;
     reserved_bytes = 0;
     camera_cfg = nullptr;
+    pkt = av_packet_alloc();
 }
 
 Export::~Export(void){
@@ -42,6 +43,7 @@ Export::~Export(void){
     }
     lock.unlock();
     delete camera_cfg;
+    av_packet_free(&pkt);
 }
 
 bool Export::check_for_jobs(void){
@@ -177,7 +179,6 @@ void Export::run_job(void){
             }
         }
 
-        AVPacket pkt;
         while (in.get_next_frame(pkt)){
             out.write(pkt, in.get_stream(pkt));
             in.unref_frame(pkt);

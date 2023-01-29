@@ -46,16 +46,16 @@ public:
     AVCodecContext* get_codec_context(AVStream *stream);//return the decode context for a given stream, creating the context if required
     AVFormatContext* get_format_context(void);
     unsigned int get_stream_count(void);
-    bool get_next_frame(AVPacket &packet);//writes the next frame out to packet, returns true on success, false on error (end of file)
-    bool decode_packet(AVPacket &packet);//reads packet and decodes it
+    bool get_next_frame(AVPacket *packet);//writes the next frame out to packet, returns true on success, false on error (end of file)
+    bool decode_packet(AVPacket *packet);//reads packet and decodes it
     bool get_decoded_frame(int stream, AVFrame *frame);//gets the next decoded frame
     bool peek_decoded_vframe(AVFrame *frame);//gets the next previously decoded video frame without popping it off the stack
-    void unref_frame(AVPacket &packet);//free resources from frame
-    void timestamp(const AVPacket &packet, struct timeval &time);//write the actual timestamp of packet to time
+    void unref_frame(AVPacket *packet);//free resources from frame
+    void timestamp(const AVPacket *packet, struct timeval &time);//write the actual timestamp of packet to time
     void timestamp(const AVFrame *frame, int stream_idx, struct timeval &time);//write the actual timestamp of frame to time
-    bool is_audio(const AVPacket &packet);//return true if packet is audio packet
-    bool is_video(const AVPacket &packet);//return true if packet is video packet
-    AVStream *get_stream(const AVPacket &packet);//return a pointer to the stream that packet is part of
+    bool is_audio(const AVPacket *packet);//return true if packet is audio packet
+    bool is_video(const AVPacket *packet);//return true if packet is video packet
+    AVStream *get_stream(const AVPacket *packet);//return a pointer to the stream that packet is part of
     AVStream *get_stream(const int id);//return a pointer to the stream given the stream index
     AVStream *get_audio_stream(void);//return a pointer to the best audio stream, NULL if none exists
     AVStream *get_video_stream(void);//return a pointer to the best video stream, NULL if none exists
@@ -73,14 +73,14 @@ private:
     void sort_reorder_queue(void);//ensures the last frame is in the correct position in the queue, sorting it if required
     bool read_frame(void);//read the next frame (internally used)
     bool alloc_decode_context(unsigned int stream);//alloc the codec context, returns true if the context exists or was allocated
-    bool get_next_packet(AVPacket& packet);//return the next packet, without looking at the previous packets used for encoder charging
+    bool get_next_packet(AVPacket *packet);//return the next packet, without looking at the previous packets used for encoder charging
     bool get_decoded_frame_int(int stream, AVFrame *frame);//get the next decoded frame, without looking at the decoded video buffer
     void record_delay(const struct timeval &start, const struct timeval &end);//record the receive delay (to try and guess if it blocked)
     AVFormatContext *input_format_context;
     std::map<int,AVCodecContext*> decode_ctx;//decode context for each stream
 
     unsigned int reorder_len;//length of the queue that we look to reorder packets in
-    std::list<AVPacket> reorder_queue;//the reorder queue
+    std::list<AVPacket*> reorder_queue;//the reorder queue
 
     struct timeval connect_time;//time effective time of the connection (adjusted for long term errors)
     int max_sync_offset;
@@ -89,7 +89,7 @@ private:
     double timeshift_mean_duration;//the current mean duration
 
     //to support early decoding, we can decode into these
-    std::deque<AVPacket> decoded_packets;
+    std::deque<AVPacket*> decoded_packets;
     std::deque<AVFrame*> decoded_video_frames;
 
     static enum AVPixelFormat get_frame_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);

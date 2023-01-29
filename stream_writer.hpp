@@ -32,7 +32,7 @@ public:
     AVPacket* out;//the packet to be written, in destination timebase
     bool video_keyframe;
     long dts0;//DTS in stream 0 timebase
-    PacketInterleavingBuf(const AVPacket &pkt);//clone in & out to pkt
+    PacketInterleavingBuf(const AVPacket *pkt);//clone in & out to pkt
     ~PacketInterleavingBuf();//free the packets
 };
 
@@ -44,7 +44,7 @@ public:
     
     bool open(void);//open the file for writing, returns true on success
     long long close(void);//close the file and return the filesize
-    bool write(const AVPacket &pkt, const AVStream *in_stream);//write the packet to the file, interleave the packet appropriatly
+    bool write(const AVPacket *pkt, const AVStream *in_stream);//write the packet to the file, interleave the packet appropriatly
     bool write(const AVFrame *frame, const AVStream *in_stream);//write the frame to the file (using encoding)
     //set the path of the file to write to, if the stream was opened, it remains opened (and a new file is created), if it was closed then it is not opened
     long long change_path(const std::string &new_path = "");//returns file position of the end of the file
@@ -55,7 +55,7 @@ public:
     bool copy_streams(StreamUnwrap &unwrap);//copy all streams from unwrap to output
     bool is_fragmented(void) const;//return true if this is a file format that supports fragmenting
     long long get_init_len(void) const;//return the init length, -1 if not valid
-    void set_keyframe_callback(std::function<void(const AVPacket &pkt, StreamWriter &out)> cbk);//set a callback when writing video keyframes
+    void set_keyframe_callback(std::function<void(const AVPacket *pkt, StreamWriter &out)> cbk);//set a callback when writing video keyframes
     std::string get_codec_str(void) const;//returns the codec string for the current output
     bool have_video(void) const ;//true if video is included in output
     bool have_audio(void) const;//true if audio is included in output
@@ -84,7 +84,7 @@ private:
     //these offsets are used to shift the time when receiving something
     std::vector<long> stream_offset;
     std::vector<long> last_dts;//used to fix non-increasing DTS
-    std::function<void(const AVPacket &pkt, StreamWriter &out)> keyframe_cbk;//we call this on all video keyframe packets
+    std::function<void(const AVPacket *pkt, StreamWriter &out)> keyframe_cbk;//we call this on all video keyframe packets
 
     //used to track if we were successful in getting a file opened (and skip writing anything if not successful)
     //true means the file is opened
@@ -95,11 +95,13 @@ private:
     long long init_len;
     AVIOContext *output_file;
 
+    AVPacket *enc_pkt;//buffer used when writing files
+
     //buffers used to force proper interleaving
     std::list<PacketInterleavingBuf*> interleaving_buf;
     std::map<int,long> interleaved_dts;
 
-    void log_packet(const AVFormatContext *fmt_ctx, const AVPacket &pkt, const std::string &tag);
+    void log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt, const std::string &tag);
     bool open_path(void);//open the path and write the header
     void free_context(void);//free the context associated with a file
     bool alloc_context(void);

@@ -43,7 +43,7 @@ private:
     Config &cfg;
     FileManager &g_fm;
 
-
+    AVPacket *pkt;//buffer packet
     //details of current job:
     std::atomic<long> id;
     long long starttime;

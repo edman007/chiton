@@ -42,8 +42,9 @@ public:
 private:
     Database &db;
     Config &cfg;
-    AVCodecID codec_id;
-    int codec_profile;
+    AVCodecID codec_id;//codec being used by HW
+    int codec_profile;//codec profile being used by HW
+    AVPacket *pkt;//packet buffer
 
     //Returns a clone of the frame with the new rect applied
     AVFrame* apply_rect(const AVFrame *frame, rect &src);

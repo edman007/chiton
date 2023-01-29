@@ -42,12 +42,14 @@ bool StreamUnwrap::close(void){
     //the reorder queue should be freed
     for (auto pkt : reorder_queue){
         unref_frame(pkt);
+        av_packet_free(&pkt);
     }
     reorder_queue.clear();
     reorder_len = 0;
 
     for (auto &pkt : decoded_packets){
-        av_packet_unref(&pkt);
+        av_packet_unref(pkt);
+        av_packet_free(&pkt);
     }
     for (auto &frame : decoded_video_frames){
         av_frame_free(&frame);
@@ -250,9 +252,10 @@ bool StreamUnwrap::alloc_decode_context(unsigned int stream){
 
 }
 
-bool StreamUnwrap::get_next_frame(AVPacket &packet){
+bool StreamUnwrap::get_next_frame(AVPacket *packet){
     if (!decoded_packets.empty()){
-        av_packet_move_ref(&packet, &decoded_packets.front());
+        av_packet_move_ref(packet, decoded_packets.front());
+        av_packet_free(&decoded_packets.front());
         decoded_packets.pop_front();
         return true;
     }
@@ -260,18 +263,19 @@ bool StreamUnwrap::get_next_frame(AVPacket &packet){
 
 }
 
-bool StreamUnwrap::get_next_packet(AVPacket &packet){
+bool StreamUnwrap::get_next_packet(AVPacket *packet){
     read_frame();
     if (reorder_queue.size() > 0){
-        av_packet_move_ref(&packet, &reorder_queue.front());
+        av_packet_move_ref(packet, reorder_queue.front());
+        av_packet_free(&reorder_queue.front());
         reorder_queue.pop_front();
 
         //fixup the duration
-        if (packet.duration == 0 || packet.duration == AV_NOPTS_VALUE){
-            packet.duration = 0;
+        if (packet->duration == 0 || packet->duration == AV_NOPTS_VALUE){
+            packet->duration = 0;
             for (const auto &next : reorder_queue){
-                if (next.stream_index == packet.stream_index){
-                    packet.duration = next.pts - packet.pts;
+                if (next->stream_index == packet->stream_index){
+                    packet->duration = next->pts - packet->pts;
                     break;
                 }
             }
@@ -284,8 +288,8 @@ bool StreamUnwrap::get_next_packet(AVPacket &packet){
     }
     
 }
-void StreamUnwrap::unref_frame(AVPacket &packet){
-    av_packet_unref(&packet);
+void StreamUnwrap::unref_frame(AVPacket *packet){
+    av_packet_unref(packet);
 }
 
 void StreamUnwrap::dump_options(AVDictionary* dict){
@@ -311,40 +315,40 @@ void StreamUnwrap::sort_reorder_queue(void){
     }
     auto av_old_back = reorder_queue.end();
     std::advance(av_old_back, -2);
-    AVPacket &old_back = *av_old_back;
-    long back_dts_in_old_back = av_rescale_q_rnd(reorder_queue.back().dts,
-                                                 input_format_context->streams[reorder_queue.back().stream_index]->time_base,
-                                                 input_format_context->streams[old_back.stream_index]->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+    AVPacket *old_back = *av_old_back;
+    long back_dts_in_old_back = av_rescale_q_rnd(reorder_queue.back()->dts,
+                                                 input_format_context->streams[reorder_queue.back()->stream_index]->time_base,
+                                                 input_format_context->streams[old_back->stream_index]->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
     
     
-    if (old_back.dts > back_dts_in_old_back){
+    if (old_back->dts > back_dts_in_old_back){
         //need to walk the queue and insert it in the right spot...
-        bool back_is_video = input_format_context->streams[reorder_queue.back().stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
+        bool back_is_video = input_format_context->streams[reorder_queue.back()->stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
         //FIXME: this loop should be optimized to run back to front, as that's the short direction
-        for (std::list<AVPacket>::iterator itr = reorder_queue.begin(); itr != reorder_queue.end() ; itr++){
-            long back_dts_in_itr = av_rescale_q_rnd(reorder_queue.back().dts,
-                                                    input_format_context->streams[reorder_queue.back().stream_index]->time_base,
-                                                    input_format_context->streams[itr->stream_index]->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
-            if ((itr->dts > reorder_queue.back().dts && itr->stream_index == reorder_queue.back().stream_index) || //same stream and dts is out of order
-                (itr->stream_index != reorder_queue.back().stream_index && itr->dts > back_dts_in_itr) || // different stream and out of order
-                (itr->stream_index != reorder_queue.back().stream_index && itr->dts == back_dts_in_itr && back_is_video)){ //different stream and video and same time
+        for (std::list<AVPacket*>::iterator itr = reorder_queue.begin(); itr != reorder_queue.end() ; itr++){
+            long back_dts_in_itr = av_rescale_q_rnd(reorder_queue.back()->dts,
+                                                    input_format_context->streams[reorder_queue.back()->stream_index]->time_base,
+                                                    input_format_context->streams[(*itr)->stream_index]->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+            if (((*itr)->dts > reorder_queue.back()->dts && (*itr)->stream_index == reorder_queue.back()->stream_index) || //same stream and dts is out of order
+                ((*itr)->stream_index != reorder_queue.back()->stream_index && (*itr)->dts > back_dts_in_itr) || // different stream and out of order
+                ((*itr)->stream_index != reorder_queue.back()->stream_index && (*itr)->dts == back_dts_in_itr && back_is_video)){ //different stream and video and same time
                 if (itr == reorder_queue.begin() && reorder_queue.size() == reorder_len){
                     //itr is the front here
                     //estimate what it would take
-                    long dts_itr_to_front = itr->dts - back_dts_in_itr;//this is how far ahead the packet was from the queue
+                    long dts_itr_to_front = (*itr)->dts - back_dts_in_itr;//this is how far ahead the packet was from the queue
                     auto av_back = reorder_queue.end();
                     std::advance(av_back, -2);
-                    AVPacket &back = *av_back;
+                    AVPacket *back = *av_back;
                     
-                    AVPacket &front = reorder_queue.front();
-                    long back_dts_in_itr = av_rescale_q_rnd(back.dts,
-                                                            input_format_context->streams[back.stream_index]->time_base,
-                                                            input_format_context->streams[itr->stream_index]->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
-                    long front_dts_in_itr = av_rescale_q_rnd(front.dts,
-                                                             input_format_context->streams[front.stream_index]->time_base,
-                                                             input_format_context->streams[itr->stream_index]->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
-                    double que_lent = av_q2d(input_format_context->streams[itr->stream_index]->time_base) * ( back_dts_in_itr - front_dts_in_itr);
-                    double target_addational_lent = av_q2d(input_format_context->streams[itr->stream_index]->time_base) * ( dts_itr_to_front );
+                    AVPacket *front = reorder_queue.front();
+                    long back_dts_in_itr = av_rescale_q_rnd(back->dts,
+                                                            input_format_context->streams[back->stream_index]->time_base,
+                                                            input_format_context->streams[(*itr)->stream_index]->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+                    long front_dts_in_itr = av_rescale_q_rnd(front->dts,
+                                                             input_format_context->streams[front->stream_index]->time_base,
+                                                             input_format_context->streams[(*itr)->stream_index]->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
+                    double que_lent = av_q2d(input_format_context->streams[(*itr)->stream_index]->time_base) * ( back_dts_in_itr - front_dts_in_itr);
+                    double target_addational_lent = av_q2d(input_format_context->streams[(*itr)->stream_index]->time_base) * ( dts_itr_to_front );
                     double target_change = (target_addational_lent/que_lent) + 1.0;
                     LINFO("Reorder queue is short by " + std::to_string(target_addational_lent) + "s, recommend making reorder-queue-len at least " +
                           std::to_string((int)(target_change * reorder_queue.size())) + " for camera " /*+ cfg.get_value("camera-id") */);
@@ -360,11 +364,12 @@ void StreamUnwrap::sort_reorder_queue(void){
 }
 
 bool StreamUnwrap::read_frame(void){
-    reorder_queue.emplace_back();
+    reorder_queue.emplace_back(av_packet_alloc());
     struct timeval start_recv_time;
     Util::get_videotime(start_recv_time);
 
-    if (av_read_frame(input_format_context, &reorder_queue.back())){
+    if (av_read_frame(input_format_context, reorder_queue.back())){
+        av_packet_free(&reorder_queue.back());
         reorder_queue.pop_back();
         LINFO("av_read_frame() failed or hit EOF");
         return false;
@@ -375,11 +380,11 @@ bool StreamUnwrap::read_frame(void){
 
 
     //fixup this data...maybe limit it to the first one?
-    if (reorder_queue.back().dts == AV_NOPTS_VALUE){
-        reorder_queue.back().dts = 0;
+    if (reorder_queue.back()->dts == AV_NOPTS_VALUE){
+        reorder_queue.back()->dts = 0;
     }
-    if (reorder_queue.back().pts == AV_NOPTS_VALUE){
-        reorder_queue.back().pts = 0;
+    if (reorder_queue.back()->pts == AV_NOPTS_VALUE){
+        reorder_queue.back()->pts = 0;
     }
 
     //compute the delay
@@ -396,7 +401,7 @@ bool StreamUnwrap::read_frame(void){
     }
     //check the time of the youngest packet...
     double delta = recv_time.tv_sec;
-    delta -= av_q2d(input_format_context->streams[reorder_queue.back().stream_index]->time_base) * reorder_queue.back().dts;
+    delta -= av_q2d(input_format_context->streams[reorder_queue.back()->stream_index]->time_base) * reorder_queue.back()->dts;
     if (delta > max_sync_offset || delta < -max_sync_offset){
         connect_time.tv_sec += delta;
         LWARN("Input stream has drifted " + std::to_string(delta) + "s from wall time on camera " + cfg.get_value("camera-id") + ", resyncing..." );
@@ -409,15 +414,15 @@ const struct timeval& StreamUnwrap::get_start_time(void){
     return connect_time;
 }
 
-bool StreamUnwrap::decode_packet(AVPacket &packet){
+bool StreamUnwrap::decode_packet(AVPacket *packet){
     int ret;
-    if (decode_ctx.find(packet.stream_index) == decode_ctx.end()){
-        if (!alloc_decode_context(packet.stream_index)){
+    if (decode_ctx.find(packet->stream_index) == decode_ctx.end()){
+        if (!alloc_decode_context(packet->stream_index)){
             return false;
         }
     }
 
-    ret = avcodec_send_packet(decode_ctx[packet.stream_index], &packet);
+    ret = avcodec_send_packet(decode_ctx[packet->stream_index], packet);
     if (ret == AVERROR(EAGAIN)){
         //probably should return ret instead of this as it's a soft error
         LWARN("Attempted to decode data without reading all frames");
@@ -476,8 +481,8 @@ bool StreamUnwrap::get_decoded_frame_int(int stream, AVFrame *frame){
     }
 }
 
-void StreamUnwrap::timestamp(const AVPacket &packet, struct timeval &time){
-    Util::compute_timestamp(get_start_time(), time, packet.pts, input_format_context->streams[packet.stream_index]->time_base);
+void StreamUnwrap::timestamp(const AVPacket *packet, struct timeval &time){
+    Util::compute_timestamp(get_start_time(), time, packet->pts, input_format_context->streams[packet->stream_index]->time_base);
 }
 
 void StreamUnwrap::timestamp(const AVFrame *frame, int stream_idx, struct timeval &time){
@@ -490,16 +495,16 @@ void StreamUnwrap::timestamp(const AVFrame *frame, int stream_idx, struct timeva
     Util::compute_timestamp(get_start_time(), time, frame->pts, input_format_context->streams[stream_idx]->time_base);
 }
 
-bool StreamUnwrap::is_audio(const AVPacket &packet){
-    return input_format_context->streams[packet.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO;
+bool StreamUnwrap::is_audio(const AVPacket *packet){
+    return input_format_context->streams[packet->stream_index]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO;
 }
 
-bool StreamUnwrap::is_video(const AVPacket &packet){
-    return input_format_context->streams[packet.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
+bool StreamUnwrap::is_video(const AVPacket *packet){
+    return input_format_context->streams[packet->stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO;
 }
 
-AVStream *StreamUnwrap::get_stream(const AVPacket &packet){
-    return get_stream(packet.stream_index);
+AVStream *StreamUnwrap::get_stream(const AVPacket *packet){
+    return get_stream(packet->stream_index);
 }
 
 AVStream *StreamUnwrap::get_stream(const int id){
@@ -538,12 +543,13 @@ AVCodecContext* StreamUnwrap::get_codec_context(AVStream *stream){
 
 bool StreamUnwrap::charge_video_decoder(void){
     do {
-        decoded_packets.emplace_back();
+        decoded_packets.emplace_back(av_packet_alloc());
         if (!get_next_packet(decoded_packets.back())){
+            av_packet_free(&decoded_packets.back());
             decoded_packets.pop_back();
             return false;
         }
-        AVPacket &pkt = decoded_packets.back();
+        AVPacket *pkt = decoded_packets.back();
         if (decoded_video_frames.empty() && is_video(pkt)){
             LDEBUG("Decoding packet");
             if (decode_packet(pkt)){
@@ -551,7 +557,7 @@ bool StreamUnwrap::charge_video_decoder(void){
                 bool ret;
                 do {
                     AVFrame* next_frame = av_frame_alloc();
-                    ret = get_decoded_frame_int(pkt.stream_index, next_frame);
+                    ret = get_decoded_frame_int(pkt->stream_index, next_frame);
                     if (ret){
                         decoded_video_frames.push_back(next_frame);
                         LDEBUG("Decoded frame");
@@ -598,7 +604,7 @@ void StreamUnwrap::record_delay(const struct timeval &start, const struct timeva
     delay += (end.tv_usec - start.tv_usec)/1000000.0;
 
     //compute the mean time of the packets received
-    double duration = av_q2d(input_format_context->streams[reorder_queue.back().stream_index]->time_base) * reorder_queue.back().duration;
+    double duration = av_q2d(input_format_context->streams[reorder_queue.back()->stream_index]->time_base) * reorder_queue.back()->duration;
     duration /= input_format_context->nb_streams;
 
     if (timeshift_mean_delay != 0){

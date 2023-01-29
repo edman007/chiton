@@ -28,10 +28,11 @@
 ImageUtil::ImageUtil(Database &db, Config &cfg) : db(db), cfg(cfg) {
     codec_id = AV_CODEC_ID_NONE;
     codec_profile = FF_PROFILE_UNKNOWN;
+    pkt = av_packet_alloc();
 }
 
 ImageUtil::~ImageUtil(){
-
+    av_packet_free(&pkt);
 }
 
 void ImageUtil::set_profile(AVCodecID id, int profile){
@@ -104,28 +105,23 @@ bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const s
     }
     gcff_util.unlock();
 
-    AVPacket pkt;
-    av_init_packet(&pkt);
-    pkt.data = NULL;
-    pkt.size = 0;
-
     int ret = avcodec_send_frame(c, cropped_frame);
     if (ret){
         //failed...free and exit
         LWARN("Failed to Send Frame for encoding");
         avcodec_free_context(&c);
-        av_packet_unref(&pkt);
+        av_packet_unref(pkt);
         av_frame_free(&cropped_frame);
         return false;
     }
 
-    ret = avcodec_receive_packet(c, &pkt);
+    ret = avcodec_receive_packet(c, pkt);
     avcodec_free_context(&c);
     av_frame_free(&cropped_frame);
     if (ret){
         LWARN("Failed to receive decoded frame");
         //failed...free and exit
-        av_packet_unref(&pkt);
+        av_packet_unref(pkt);
         return false;
     }
 
@@ -137,7 +133,7 @@ bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const s
         std::ofstream out_s = fm.get_fstream_write(name, path);
         LWARN("Writing to " + name);
         if (out_s.is_open()){
-            out_s.write(reinterpret_cast<char*>(pkt.data), pkt.size);
+            out_s.write(reinterpret_cast<char*>(pkt->data), pkt->size);
             success = out_s.good();
             out_s.close();
         } else {
@@ -146,7 +142,7 @@ bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const s
     } else {
         LWARN("Failed to get image path");
     }
-    av_packet_unref(&pkt);
+    av_packet_unref(pkt);
 
     return success;
 }
