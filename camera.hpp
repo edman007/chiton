@@ -40,15 +40,15 @@ class Camera {
 public:
     Camera(SystemController &sys, int camera);
     ~Camera();
-    void run(void);//connect and run the camera monitor
+    void start(void);//start the camera thread
     void stop(void);//requests the thread stops
+    void join(void);//join the Camera thread
     bool ping(void);//checks that this is running, returns true if the thread has not progressed (processed at least one frame) since last ping
     bool in_startup(void);//returns true if we have not completed connecting
-    void set_thread_id(std::thread::id tid);
     std::thread::id get_thread_id(void);
     int get_id(void);//return this camera's ID
 private:
-
+    void run(void);//connect and run the camera monitor
     void load_cfg(void);
     SystemController &sys;
     int id; //camera ID
@@ -60,7 +60,7 @@ private:
     std::atomic_bool watchdog;//used by ping to check our status
     std::atomic_bool shutdown;//signals that we should exit
     std::atomic_bool startup;//used to identify if we are in an extended wait due to startup
-    std::thread::id thread_id;//used for tracking our thread
+    std::thread thread;
 
     AVPacket *pkt;//packet we are processing
     AVRational last_cut;//last time a segment was cut

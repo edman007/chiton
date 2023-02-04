@@ -28,6 +28,7 @@
 #include "camera.hpp"
 #include <unistd.h>
 #include <thread>
+#include <list>
 #include <stdlib.h>
 //#include "chiton_ffmpeg.hpp"
 #include "database_manager.hpp"
@@ -45,6 +46,11 @@ const int SYS_EXIT_DB_UPDATE_ERROR = 3;
 const int SYS_EXIT_SIG_SHUTDOWN = 4;
 const int SYS_EXIT_PRIVS_ERROR = 5;
 
+/*
+ * SystemController:
+ * - This class manages all cameras, starting and stopping them
+ * - This class also manages access between cameras, the remote, and system functions
+ */
 class SystemController {
 public:
     //args: initial args to initilize from, cfg-path must be set
@@ -73,8 +79,8 @@ private:
     std::atomic_bool exit_requested;
     std::atomic_bool reload_requested;
 
-    std::vector<Camera*> cams;
-    std::vector<std::thread> threads;
+    std::list<Camera*> cams;
+
     char timezone_env[256];//if timezone is changed from default, we need to store it in memory for putenv()
 
     int run_instance(void);//run an instance of chiton (this exits upon reload)

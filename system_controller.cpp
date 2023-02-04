@@ -95,12 +95,12 @@ int SystemController::run_instance(void){
     remote.shutdown();
 
     //shutdown all cams
-    for (auto c : cams){
+    for (auto &c : cams){
         c->stop();
     }
 
-    for (auto &t : threads){
-        t.join();
+    for (auto &c : cams){
+        c->join();
     }
 
     //destruct everything
@@ -158,9 +158,8 @@ void SystemController::launch_cams(void){
     while (res && res->next_row()){
         LINFO("Loading camera " + std::to_string(res->get_field_long(0)));
         cams.emplace_back(new Camera(*this, res->get_field_long(0)));//create camera
-        threads.emplace_back(&Camera::run, cams.back());//start it
-        cams.back()->set_thread_id(threads.back().get_id());
-
+        auto cam = cams.back();
+        cam->start();
     }
     delete res;
 
@@ -181,17 +180,10 @@ void SystemController::loop(){
 
                     //then this needs to be restarted
                     c->stop();
-                    //find the thread and replace it...
-                    for (auto &t : threads){
-                        if (t.get_id() == c->get_thread_id()){
-                            t.join();
-                            delete c;
-                            c = new Camera(*this, id);
-                            t = std::thread(&Camera::run, c);
-                            c->set_thread_id(t.get_id());
-                            break;
-                        }
-                    }
+                    c->join();
+                    delete c;
+                    c = new Camera(*this, id);
+                    c->start();
                 } else {
                     LWARN("Camera stalled, but appears to be in startup");
                 }

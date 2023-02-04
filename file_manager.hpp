@@ -73,9 +73,9 @@ public:
     std::ofstream get_fstream_write(const std::string &name, const std::string &path = "" , const std::string &base = "NULL");
     std::ifstream get_fstream_read(const std::string &name, const std::string &path = "" , const std::string &base = "NULL");
 private:
+    SystemController &sys;
     Database &db;
     Config &cfg;
-    SystemController &sys;
     long long bytes_per_segment;//estimate of segment size for our database to optimize our cleanup calls
     long long min_free_bytes;//the config setting min-free-space as computed for the output-dir
     std::string last_filename;//when extending files, holds the current filename

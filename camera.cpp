@@ -294,11 +294,8 @@ bool Camera::in_startup(void){
 }
 
 
-void Camera::set_thread_id(std::thread::id tid){
-    thread_id = tid;
-}
 std::thread::id Camera::get_thread_id(void){
-    return thread_id;
+    return thread.get_id();
 }
 
 void Camera::cut_video(const AVPacket *cut_pkt, StreamWriter &out){
@@ -394,4 +391,14 @@ bool Camera::get_aencode(void){
         }
     }
 
+}
+
+
+void Camera::start(void){
+    thread = std::thread(&Camera::run, this);//start it
+}
+
+void Camera::join(void){
+    stop();//just in case we forgot
+    thread.join();
 }
