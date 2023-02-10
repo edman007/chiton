@@ -49,6 +49,9 @@ Remote::Remote(SystemController &sys) : sys(sys), db(sys.get_db()), cfg(sys.get_
     command_vec.push_back({"HELP", &Remote::cmd_help});
     command_vec.push_back({"LICENSE", &Remote::cmd_license});
     command_vec.push_back({"TEAPOT", &Remote::cmd_teapot});
+    command_vec.push_back({"START", &Remote::cmd_start});
+    command_vec.push_back({"STOP", &Remote::cmd_stop});
+    command_vec.push_back({"RESTART", &Remote::cmd_restart});
 }
 
 void Remote::init(void){
@@ -385,7 +388,13 @@ void Remote::cmd_reload(int fd, RemoteCommand& rc, std::string &cmd){
 }
 
 void Remote::cmd_rm_export(int fd, RemoteCommand& rc, std::string &cmd){
-    int export_id = std::stoi(cmd.substr(rc.cmd.length() + 1));
+    int export_id = 0;
+    try {
+        export_id = std::stoi(cmd.substr(rc.cmd.length() + 1));
+    } catch (std::logic_error &e){
+        write_data(fd, "INVALID ARGUMENT\n");
+        return;
+    }
     if (sys.get_export().rm_export(export_id)){
         write_data(fd, "OK\n");
     } else {
@@ -422,4 +431,52 @@ void Remote::cmd_license(int fd, RemoteCommand& rc, std::string &cmd){
 
 void Remote::cmd_teapot(int fd, RemoteCommand& rc, std::string &cmd){
     write_data(fd, "I'm a teapot! 29b6b3dad9327e74f5bff8259f9965a5\n");//echo -n edman007''@''edman007.com | md5sum  -
+}
+
+void Remote::cmd_start(int fd, RemoteCommand& rc, std::string &cmd){
+    int cam_id = 0;
+    try {
+        cam_id = std::stoi(cmd.substr(rc.cmd.length() + 1));
+    } catch (std::logic_error &e){
+        write_data(fd, "INVALID ARGUMENT\n");
+        return;
+    }
+    bool ret = sys.start_cam(cam_id);
+    if (ret){
+        write_data(fd, "OK\n");
+    } else {
+        write_data(fd, "BUSY\n");
+    }
+}
+
+void Remote::cmd_stop(int fd, RemoteCommand& rc, std::string &cmd){
+    int cam_id = 0;
+    try {
+        cam_id = std::stoi(cmd.substr(rc.cmd.length() + 1));
+    } catch (std::logic_error &e){
+        write_data(fd, "INVALID ARGUMENT\n");
+        return;
+    }
+    bool ret = sys.stop_cam(cam_id);
+    if (ret){
+        write_data(fd, "OK\n");
+    } else {
+        write_data(fd, "BUSY\n");
+    }
+}
+
+void Remote::cmd_restart(int fd, RemoteCommand& rc, std::string &cmd){
+    int cam_id = 0;
+    try {
+        cam_id = std::stoi(cmd.substr(rc.cmd.length() + 1));
+    } catch (std::logic_error &e){
+        write_data(fd, "INVALID ARGUMENT\n");
+        return;
+    }
+    bool ret = sys.restart_cam(cam_id);
+    if (ret){
+        write_data(fd, "OK\n");
+    } else {
+        write_data(fd, "BUSY\n");
+    }
 }

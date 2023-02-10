@@ -73,6 +73,20 @@
  * HELP
  *  - Server responds with 'SUPPORTED COMMANDS:' followed by a space deliminated list of commands supported
  *
+ * START <INT1>
+ *  - Requests that camera with ID <INT1> is started
+ *  - Invalid or inactive camera IDs do nothing
+ *  - Prints "OK" if added, "BUSY" if already queued for starting
+ *
+ * STOP <INT1>
+ *  - Requests that camera with ID <INT1> is started
+ *  - If no camera with this ID is running then does nothing
+ *  - Prints "OK" if added, "BUSY" if already queued for stopping
+ *
+ * RESTART <INT1>
+ *  - Requests that camera with ID <INT1> is started
+ *  - Equivilent to running STOP and then START atomically
+ *  - Prints "OK" if added, "BUSY" if already queued for starting
  */
 class Remote {
 public:
@@ -130,6 +144,9 @@ private:
     void cmd_help(int fd, RemoteCommand& rc, std::string &cmd);
     void cmd_license(int fd, RemoteCommand& rc, std::string &cmd);
     void cmd_teapot(int fd, RemoteCommand& rc, std::string &cmd);
+    void cmd_start(int fd, RemoteCommand& rc, std::string &cmd);
+    void cmd_stop(int fd, RemoteCommand& rc, std::string &cmd);
+    void cmd_restart(int fd, RemoteCommand& rc, std::string &cmd);
 };
 
 #endif
