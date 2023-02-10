@@ -258,6 +258,18 @@ void SystemController::stop_cams(void){
 
 void SystemController::start_cams(void){
     for (auto &start : start_cams_list){
+        //check if cam is already running and refuse to start a duplicate camera
+        bool dup = false;
+        for (auto &c : cams){
+            if (c.get_id() == start){
+                dup = true;
+                break;
+            }
+        }
+        if (dup){
+            LDEBUG("Cam " + std::to_string(start) + " already started");
+            continue;
+        }
         DatabaseResult *res = db->query("SELECT camera FROM config WHERE camera = '" + std::to_string(start) +
                                         "' AND name = 'active' AND value = '1' LIMIT 1");
         if (res && res->next_row()){
