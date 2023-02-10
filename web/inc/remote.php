@@ -107,6 +107,60 @@ class Remote {
         }
     }
 
+    //requests that the backend restarts the camera
+    public function restart_cam($id){
+        if (!$this->connect()){
+            return false;
+        }
+        if ($this->send_cmd('RESTART ' . (int)$id)){
+            $response = $this->get_next_line();
+            if ($response == 'OK'){
+                return true;
+            } else {
+                $this->error_msg = $response;
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    //requests that the backend starts the camera
+    public function start_cam($id){
+        if (!$this->connect()){
+            return false;
+        }
+        if ($this->send_cmd('START ' . (int)$id)){
+            $response = $this->get_next_line();
+            if ($response == 'OK'){
+                return true;
+            } else {
+                $this->error_msg = $response;
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    //requests that the backend stops the camera
+    public function stop_cam($id){
+        if (!$this->connect()){
+            return false;
+        }
+        if ($this->send_cmd('STOP ' . (int)$id)){
+            $response = $this->get_next_line();
+            if ($response == 'OK'){
+                return true;
+            } else {
+                $this->error_msg = $response;
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
     public function get_error(){
         if (!empty($this->error_msg)){
             return $this->error_msg;

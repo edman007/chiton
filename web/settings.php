@@ -50,6 +50,37 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST'){
             //reload failed
             $system_messages[] = 'Reloading the backend failed ' . $remote->get_error();
         }
+    } else if (!empty($_POST['restart_cam']) && isset($_POST['camera_id'])){
+        require_once('./inc/remote.php');
+        $remote = new Remote($db);
+        $camera = (int)$_POST['camera_id'];
+        if ($remote->restart_cam($camera)){
+            $system_messages[] = 'Camera Restarted';
+        } else {
+            //restart failed
+            $system_messages[] = 'Restarting Camera failed ' . $remote->get_error();
+        }
+    } else if (!empty($_POST['start_cam']) && isset($_POST['camera_id'])){
+        require_once('./inc/remote.php');
+        $remote = new Remote($db);
+        $camera = (int)$_POST['camera_id'];
+        if ($remote->start_cam($camera)){
+            $system_messages[] = 'Camera Started';
+        } else {
+            //restart failed
+            $system_messages[] = 'Starting Camera failed ' . $remote->get_error();
+        }
+    } else if (!empty($_POST['stop_cam']) && isset($_POST['camera_id'])){
+        require_once('./inc/remote.php');
+        $remote = new Remote($db);
+        $camera = (int)$_POST['camera_id'];
+        if ($remote->stop_cam($camera)){
+            $system_messages[] = 'Camera Stopped';
+        } else {
+            //stop failed
+            $system_messages[] = 'Stopping Camera failed ' . $remote->get_error();
+        }
+
     } elseif (!empty($_POST['create_camera'])){
         //create a camera
         $sql = "INSERT INTO config (name, value, camera) SELECT 'active', '0', MAX(camera) + 1 FROM config";

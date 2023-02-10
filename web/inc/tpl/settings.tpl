@@ -83,11 +83,30 @@
 <input type="submit" value="Create New Camera"/>
 </form>
 
+
+{if $camera_id == -1}
 {* Reload Backend *}
 <form method="post" action="settings.php">
 <input type="hidden" value="1" name="reload_backend"/>
 <input type="submit" value="Reload Backend and Apply Settings"/>
 </form>
+{else}
+<form method="post" action="settings.php?camera={$camera_id}">
+<input type="hidden" value="1" name="restart_cam"/>
+<input type="hidden" value="{$camera_id}" name="camera_id"/>
+<input type="submit" value="Restart Camera and Apply Settings for this Camera"/>
+</form>
+<form method="post" action="settings.php?camera={$camera_id}">
+<input type="hidden" value="1" name="start_cam"/>
+<input type="hidden" value="{$camera_id}" name="camera_id"/>
+<input type="submit" value="Start Camera"/>
+</form>
+<form method="post" action="settings.php?camera={$camera_id}">
+<input type="hidden" value="1" name="stop_cam"/>
+<input type="hidden" value="{$camera_id}" name="camera_id"/>
+<input type="submit" value="Stop Camera"/>
+</form>
+{/if}
 
 <a href="settings.php">System Settings</a>
 <h2>Cameras</h2>
