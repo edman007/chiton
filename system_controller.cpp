@@ -93,21 +93,21 @@ int SystemController::run_instance(void){
     launch_cams();//launch all configured cameras
     loop();//main loop
     remote.shutdown();
-
     //shutdown all cams
     for (auto &c : cams){
-        c->stop();
+        c.stop();
     }
 
     for (auto &c : cams){
-        c->join();
+        c.join();
     }
 
     //destruct everything
-    while (!cams.empty()){
-        delete cams.back();
-        cams.pop_back();
-    }
+    cams.clear();
+    cam_set_lock.lock();
+    stop_cams_list.clear();
+    start_cams_list.clear();
+    cam_set_lock.unlock();
     db->close();
     return SYS_EXIT_SUCCESS;
 }
@@ -156,10 +156,7 @@ void SystemController::launch_cams(void){
     //Launch all cameras
     res = db->query("SELECT camera FROM config WHERE camera != -1 AND name = 'active' AND value = '1' GROUP BY camera");
     while (res && res->next_row()){
-        LINFO("Loading camera " + std::to_string(res->get_field_long(0)));
-        cams.emplace_back(new Camera(*this, res->get_field_long(0)));//create camera
-        auto cam = cams.back();
-        cam->start();
+        start_cam(res->get_field_long(0));//delayed start
     }
     delete res;
 
@@ -173,22 +170,20 @@ void SystemController::loop(){
     do {
         //we should check if they are running and restart anything that froze
         for (auto &c : cams){
-            if (c->ping()){
-                if (!c->in_startup()){
-                    int id = c->get_id();
+            if (c.ping()){
+                if (!c.in_startup()){
+                    int id = c.get_id();
                     LWARN("Lost connection to cam " + std::to_string(id) + ", restarting...");
-
-                    //then this needs to be restarted
-                    c->stop();
-                    c->join();
-                    delete c;
-                    c = new Camera(*this, id);
-                    c->start();
+                    restart_cam(id);
                 } else {
                     LWARN("Camera stalled, but appears to be in startup");
                 }
             }
         }
+        cam_set_lock.lock();
+        stop_cams();
+        start_cams();
+        cam_set_lock.unlock();
         fm.clean_disk();
         expt.check_for_jobs();
         std::this_thread::sleep_for(std::chrono::seconds(10));
@@ -215,4 +210,63 @@ void SystemController::load_sys_cfg(Config &cfg) {
     }
     tzset();
 
+}
+
+bool SystemController::stop_cam(int id){
+    cam_set_lock.lock();
+    auto p = stop_cams_list.insert(id);
+    cam_set_lock.unlock();
+    return p.second;
+}
+
+bool SystemController::start_cam(int id){
+    cam_set_lock.lock();
+    auto p = start_cams_list.insert(id);
+    cam_set_lock.unlock();
+    return p.second;
+}
+
+bool SystemController::restart_cam(int id){
+    cam_set_lock.lock();
+    stop_cams_list.insert(id);
+    auto p = start_cams_list.insert(id);
+    cam_set_lock.unlock();
+    return p.second;
+}
+
+void SystemController::stop_cams(void){
+    for (auto &stop : stop_cams_list){
+        for (auto &c : cams){
+            if (c.get_id() == stop){
+                c.stop();
+                break;
+            }
+        }
+    }
+    for (auto &join : stop_cams_list){
+        for (auto it = cams.begin(); it != cams.end(); it++){
+            auto &c = *it;
+            if (c.get_id() == join){
+                c.join();
+                cams.erase(it);
+                break;
+            }
+        }
+    }
+    stop_cams_list.clear();
+}
+
+void SystemController::start_cams(void){
+    for (auto &start : start_cams_list){
+        DatabaseResult *res = db->query("SELECT camera FROM config WHERE camera = '" + std::to_string(start) +
+                                        "' AND name = 'active' AND value = '1' LIMIT 1");
+        if (res && res->next_row()){
+            LINFO("Loading camera " + std::to_string(res->get_field_long(0)));
+            cams.emplace_back(*this, res->get_field_long(0));//create camera
+            auto &cam = cams.back();
+            cam.start();
+        }
+        delete res;
+    }
+    start_cams_list.clear();
 }

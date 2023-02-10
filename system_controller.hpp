@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <thread>
 #include <list>
+#include <set>
 #include <stdlib.h>
 //#include "chiton_ffmpeg.hpp"
 #include "database_manager.hpp"
@@ -62,6 +63,10 @@ public:
     void request_exit(void);
     void request_reload(void);
 
+    bool stop_cam(int id);//stop a given camera
+    bool start_cam(int id);//start the cam with given ID
+    bool restart_cam(int id);//restart tha cam with a given ID
+
     //getters
     Config& get_sys_cfg(void);
     Database& get_db(void);
@@ -79,7 +84,12 @@ private:
     std::atomic_bool exit_requested;
     std::atomic_bool reload_requested;
 
-    std::list<Camera*> cams;
+    std::list<Camera> cams;//all the currently running cameras
+
+    //these lists are used to request camera's are stop/restarted and can be set from other threads
+    std::set<int> stop_cams_list;//cams stopped that need to be joined
+    std::set<int> start_cams_list;//list of cameras to start
+    std::mutex cam_set_lock;//lock to manage the two above sets
 
     char timezone_env[256];//if timezone is changed from default, we need to store it in memory for putenv()
 
@@ -87,6 +97,9 @@ private:
     void launch_cams(void);//launch all configured cameras
     void loop(void);//execute the main loop
     void load_sys_cfg(Config &cfg);
+
+    void stop_cams(void);//stop and join all required cams
+    void start_cams(void);//start all required cams
 
 };
 #endif
