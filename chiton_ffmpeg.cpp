@@ -321,7 +321,7 @@ static const struct {
 #endif
     {VA_FOURCC_ARGB,   AV_PIX_FMT_ARGB},
     {VA_FOURCC_XRGB,   AV_PIX_FMT_0RGB},
-#ifdef VA_FOURCC_X2R10G10B10
+#if defined(VA_FOURCC_X2R10G10B10) && defined(AV_PIX_FMT_X2RGB10)
     {VA_FOURCC_X2R10G10B10, AV_PIX_FMT_X2RGB10},
 #endif
 #if defined(VA_FOURCC_Y410) && defined(AV_PIX_FMT_XV30)

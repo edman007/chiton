@@ -16,7 +16,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST'){
         if ($remote->start_cam($camera)){
             $system_messages[] = 'Camera Started';
         } else {
-            //restart failed
+            //start failed
             $system_messages[] = 'Starting Camera failed ' . $remote->get_error();
         }
     } else if (!empty($_POST['stop_cam']) && isset($_POST['camera_id'])){
