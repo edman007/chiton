@@ -189,7 +189,7 @@ int main (int argc, char **argv){
     LWARN("Starting Chiton...");
     LWARN(std::string("\tVersion ") + BUILD_VERSION);
     LWARN(std::string("\tBuilt ") + BUILD_DATE);
-    Util::set_thread_name("System", args);
+    Util::set_thread_name(-1, args);
     gcff_util.load_ffmpeg();
     //load the signal handlers
     std::signal(SIGINT, shutdown_signal);

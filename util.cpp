@@ -27,7 +27,8 @@
 #include <sys/syscall.h>
 #include <sstream>
 
-thread_local std::string thread_name = "";
+thread_local std::string thread_name = "System";
+thread_local int thread_cam_id = -1;
 
 std::mutex Util::lock;
 #ifdef DEBUG
@@ -43,6 +44,11 @@ bool Util::use_color = false;
 
 //color codes are mearly suggestions...the terminal decides them
 int Util::color_map[5] = {5, 1, 3, 6, 2};
+
+//these are used to track the log messages
+std::map<int, std::deque<LogMsg>> Util::log_history;//a log of our messages
+unsigned int Util::history_len = 50;
+std::mutex Util::history_lock;
 
 
 void Util::log_msg(const LOG_LEVEL lvl, const std::string& msg){
@@ -85,6 +91,7 @@ void Util::log_msg(const LOG_LEVEL lvl, const std::string& msg){
             lock.unlock();
         }
     }
+    add_history(msg, lvl);
 }
 
 void Util::get_videotime(struct timeval &time){
@@ -251,10 +258,66 @@ bool Util::disable_color(void){
     return !use_color;
 }
 
-void Util::set_thread_name(const std::string name, Config &cfg){
+void Util::set_thread_name(int id, Config &cfg){
+    std::string name;
+    thread_cam_id = id;
+    if (id == -1){
+        name = "System";
+    } else if (cfg.get_value("display-name") == ""){
+        name = "Camera " + std::to_string(id);;
+    } else {
+        name = cfg.get_value("display-name");
+    }
+
     int len = cfg.get_value_int("log-name-length");
     if (len < 0){
         len = 0;
     }
     thread_name = name.substr(0, len);
+}
+
+void Util::add_history(const std::string &msg, enum LOG_LEVEL lvl){
+    if (history_len == 0){
+        return;//no history recording, it's a no-op
+    }
+    history_lock.lock();
+    try {
+        auto &queue = log_history.at(thread_cam_id);
+        queue.emplace(queue.end(), msg, lvl);
+        //delete any excess
+        while (queue.size() > history_len){
+            queue.pop_front();
+        }
+    } catch (std::out_of_range &e){
+        //add the queue and do it again
+        log_history.emplace(std::make_pair(thread_cam_id, std::deque<LogMsg>()));
+        history_lock.unlock();
+        return add_history(msg, lvl);
+    }
+    history_lock.unlock();
+}
+
+void Util::set_history_len(int len){
+    history_len = len;
+    if (history_len < 0){
+        history_len = 0;
+    }
+}
+
+bool Util::get_history(int cam, std::vector<LogMsg> &hist){
+    history_lock.lock();
+	bool ret = false;
+    try {
+        auto &queue = log_history.at(cam);
+        hist.clear();
+        hist.reserve(queue.size());
+        for (auto &msg : queue){
+            hist.emplace_back(msg);
+        }
+        ret = true;
+    }  catch (std::out_of_range &e){
+        //nothing, we return false
+    }
+    history_lock.unlock();
+    return ret;
 }

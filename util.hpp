@@ -25,6 +25,7 @@
 #include <iostream>
 #include <mutex>
 #include <time.h>
+#include <deque>
 #include "config_build.hpp"
 #include "chiton_ffmpeg.hpp"
 #include "chiton_config.hpp"
@@ -63,6 +64,13 @@ struct VideoDate {
     unsigned int ms;
 };
 
+//used for querying log info
+struct LogMsg {
+    std::string msg;
+    LOG_LEVEL lvl;
+    LogMsg(const std::string &msg, LOG_LEVEL lvl) : msg(msg), lvl(lvl) {};
+};
+
 class Util {
 
 public:
@@ -82,6 +90,8 @@ public:
     static void compute_timestamp(const struct timeval &connect_time, struct timeval &out_time, long pts, AVRational &time_base);
 
     static void set_log_level(unsigned int level);//set the amount of logging that we do..
+    static void set_history_len(int len);
+    static bool get_history(int cam, std::vector<LogMsg> &hist);//write thie history for a given camera to hist, return true if messages found
 
     static bool enable_syslog(void);
     static bool disable_syslog(void);
@@ -96,7 +106,7 @@ public:
     static void reset_color(void);//clears the color on the CLI
     static void load_colors(Config &cfg);//load all color settings
 
-    static void set_thread_name(const std::string name, Config &cfg);
+    static void set_thread_name(int id, Config &cfg);//takes the camera ID and the camera's config
 private:
     static std::mutex lock;//lock for actually printing messages
     static unsigned int log_level;//the output logging level
@@ -106,7 +116,12 @@ private:
     static int color_map[5];
     static_assert(sizeof(color_map)/sizeof(color_map[0]) == (1 + CH_LOG_DEBUG), "Color map must be the same size as enum LOG_LEVEL");
 
+    static std::map<int, std::deque<LogMsg>> log_history;//a log of our messages
+    static unsigned int history_len;
+    static std::mutex history_lock;
+
     static std::string get_color_txt(enum LOG_LEVEL ll);//return the string to switch the color on the CLI
+    static void add_history(const std::string &msg, LOG_LEVEL lvl);//add the message to the history log
 };
 
 #endif

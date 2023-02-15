@@ -76,6 +76,7 @@ const std::vector<Setting> setting_options {
  {"db-socket", "", "Database Socket", "Socket path to socket for DB server", SETTING_READ_ONLY},
  {"db-port", "", "Database Port", "Port to connect to (if not local) of the database", SETTING_READ_ONLY},
  {"verbosity", "3", "Verbosity", "Logging verbosity (higher is more verbose, lower is less verbose, range 0-5)", SETTING_OPTIONAL_SYSTEM},
+ {"log-history-len", "50", "Log History Length <0+>", "Length of the message log (for each camera)", SETTING_OPTIONAL_SYSTEM},
  {"timezone", "system", "Timezone", "The timezone to use, if set to \"system\" will use the system timezone)", SETTING_OPTIONAL_SYSTEM},
  {"video-url", "", "Video URL", "FFMPEG compatible URL for the camera", SETTING_REQUIRED_CAMERA},
  {"active", "0", "Camera Active", "set to 1 when the camera is active", SETTING_REQUIRED_CAMERA},
