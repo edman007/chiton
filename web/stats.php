@@ -55,6 +55,11 @@ $remote = new Remote($db);
 $log = $remote->log_cam($camera_id);
 if ($log !== false){
     $smarty->assign('log_msg', $log);
+} else {
+    $error_msg = $remote->get_error();
+    if (!empty($error_msg)){
+        $system_messages[] = $error_msg;
+    }
 }
 
 
