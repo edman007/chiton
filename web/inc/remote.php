@@ -161,6 +161,36 @@ class Remote {
         }
     }
 
+    //requests the log messages from the camera
+    public function log_cam($id){
+        if (!$this->connect()){
+            return false;
+        }
+        $ret = array();
+        if ($this->send_cmd('LOG ' . (int)$id)){
+            while (true){
+                $response = $this->get_next_line();
+                if ($response == 'OK'){
+                    return $ret;
+                } else if ($response == 'INVALID ARGUMENT') {
+                    $this->error_msg = $response;
+                    return false;
+                } else {
+                    $str_info = explode("\t", $response, 3);
+                    if (count($str_info) != 3){
+                        $this->error_msg = 'INVALID FORMAT';
+                        return false;
+                    }
+                    $ret[] = array('id' => $str_info[0],
+                                   'lvl' => $str_info[1],
+                                   'msg' => $str_info[2]);
+                }
+            }
+        } else {
+            return false;
+        }
+    }
+
     public function get_error(){
         if (!empty($this->error_msg)){
             return $this->error_msg;
