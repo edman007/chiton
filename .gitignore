@@ -72,3 +72,6 @@ external/npm/license-meta.csv
 external/npm/node_modules
 maintainer-tools/os-images
 maintainer-tools/lib/settings_local.sh
+man/chiton.cfg.5
+test/
+io/.dirstamp
