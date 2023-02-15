@@ -87,6 +87,11 @@
  *  - Requests that camera with ID <INT1> is started
  *  - Equivilent to running STOP and then START atomically
  *  - Prints "OK" if added, "BUSY" if already queued for starting
+ *
+ * LOG <INT1>
+ *  - Print the log output for given camera, one message per line, use -1 as the camera to access system messages
+ *  - Return value is "<INT1>\t<INT2>\t<STR>", INT1 is the camera ID, INT2 is the message level, STR is the message
+ *  - output is terminated by OK by itself on a line
  */
 class Remote {
 public:
@@ -147,6 +152,7 @@ private:
     void cmd_start(int fd, RemoteCommand& rc, std::string &cmd);
     void cmd_stop(int fd, RemoteCommand& rc, std::string &cmd);
     void cmd_restart(int fd, RemoteCommand& rc, std::string &cmd);
+    void cmd_log(int fd, RemoteCommand& rc, std::string &cmd);
 };
 
 #endif

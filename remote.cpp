@@ -52,6 +52,7 @@ Remote::Remote(SystemController &sys) : sys(sys), db(sys.get_db()), cfg(sys.get_
     command_vec.push_back({"START", &Remote::cmd_start});
     command_vec.push_back({"STOP", &Remote::cmd_stop});
     command_vec.push_back({"RESTART", &Remote::cmd_restart});
+    command_vec.push_back({"LOG", &Remote::cmd_log});
 }
 
 void Remote::init(void){
@@ -416,7 +417,8 @@ void Remote::cmd_help(int fd, RemoteCommand& rc, std::string &cmd){
 
 
 void Remote::cmd_license(int fd, RemoteCommand& rc, std::string &cmd){
-    write_data(fd, "chiton Copyright (C) 2020-2022  Ed Martin <edman007@edman007.com> \n"
+    //FIXME: Date should be pushed from configure
+    write_data(fd, "chiton Copyright (C) 2020-2023  Ed Martin <edman007@edman007.com> \n"
                "This program is free software: you can redistribute it and/or modify "
                "it under the terms of the GNU General Public License as published by "
                "the Free Software Foundation, either version 3 of the License, or "
@@ -479,4 +481,24 @@ void Remote::cmd_restart(int fd, RemoteCommand& rc, std::string &cmd){
     } else {
         write_data(fd, "BUSY\n");
     }
+}
+
+
+void Remote::cmd_log(int fd, RemoteCommand& rc, std::string &cmd){
+    int cam_id = 0;
+    try {
+        cam_id = std::stoi(cmd.substr(rc.cmd.length() + 1));
+    } catch (std::logic_error &e){
+        write_data(fd, "INVALID ARGUMENT\n");
+        return;
+    }
+    std::vector<LogMsg> hist;
+    if (!Util::get_history(cam_id, hist)){
+        write_data(fd, "OK\n");
+        return;
+    }
+    for (const auto &msg : hist){
+        write_data(fd, std::to_string(cam_id) + "\t" + std::to_string(msg.lvl) + "\t" + msg.msg + "\n");
+    }
+    write_data(fd, "OK\n");
 }
