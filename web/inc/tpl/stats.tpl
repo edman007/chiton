@@ -8,7 +8,7 @@
 
 {if !empty($log_msg)}
 <h2>Log Messages</h2>
-<ul>
+<ul class="cameralog">
 {foreach from=$log_msg name=LOGLIST item=msg}
 <li class="lvl{$msg.lvl}">{$msg.msg|escape}</li>
 {/foreach}

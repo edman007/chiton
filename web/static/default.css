@@ -302,3 +302,34 @@ ul.events li:hover {
 .cfg_def_val {
     font-family: monospace;
 }
+
+ul.cameralog {
+    list-style-type: none;
+    margin:0;
+    padding:0;
+    overflow-x: auto;
+    overfloy-y: auto;
+    height:40em;
+}
+
+.lvl0 {
+    /* Fatal */
+    color:rgb(200, 20, 200);
+}
+.lvl1 {
+    /* Error */
+    color:rgb(200, 20, 20);
+}
+.lvl2 {
+    /* Warning */
+    color:rgb(200, 100, 20);
+}
+.lvl3 {
+    /* Info */
+    color:rgb(20, 20, 255);
+}
+.lvl4 {
+    /* Debug */
+    color:rgb(20, 200, 20);
+    /*background-color:rgb(20, 200, 20);*/
+}
