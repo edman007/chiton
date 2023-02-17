@@ -129,7 +129,6 @@ END {
         print ".br"
         print ".SS " sorted[i]["key"]
         print ".br"
-        print ".TR "
         print "Long Name: " sorted[i]["name"]
         print ".br"
         print "Default Value: \"" sorted[i]["def"] "\""
