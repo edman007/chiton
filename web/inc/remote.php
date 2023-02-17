@@ -16,7 +16,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -185,6 +185,31 @@ class Remote {
                                    'lvl' => $str_info[1],
                                    'time' => $str_info[2],
                                    'msg' => $str_info[3]);
+                }
+            }
+        } else {
+            return false;
+        }
+    }
+
+    //requests the camera status
+    public function list_status(){
+        if (!$this->connect()){
+            return false;
+        }
+        $ret = array();
+        if ($this->send_cmd('LIST')){
+            while (true){
+                $response = $this->get_next_line();
+                if ($response == 'OK'){
+                    return $ret;
+                } else {
+                    $str_info = explode("\t", $response, 2);
+                    if (count($str_info) != 2){
+                        $this->error_msg = 'INVALID FORMAT';
+                        return false;
+                    }
+                    $ret[$str_info[0]] = $str_info[1];
                 }
             }
         } else {

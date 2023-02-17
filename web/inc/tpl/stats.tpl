@@ -19,9 +19,7 @@
 <ul>
 <li><a href="stats.php">System</a></li>
 {foreach from=$camera_list name=CAMERALST item=cam key=cam_id}
-{if $cam_id != $camera_id}
-<li><a href="stats.php?camera={$cam_id}">{$cam['name']|escape}{if $cam['active'] == 0} (disabled){/if}</a></li>
-{/if}
+<li><a href="stats.php?camera={$cam_id}">{$cam['name']|escape}{if $cam['active'] == 0} (disabled){/if}{if !empty($cam_status[$cam_id])} [{$cam_status[$cam_id]|escape}]{/if}</a></li>
 {/foreach}
 </ul>
 {include file="footer.tpl"}

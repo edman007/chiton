@@ -62,6 +62,16 @@ if ($log !== false){
     }
 }
 
+$status = $remote->list_status();
+if ($status !== false){
+    $smarty->assign('cam_status', $status);
+} else {
+    $error_msg = $remote->get_error();
+    if (!empty($error_msg)){
+        $system_messages[] = $error_msg;
+    }
+}
+
 
 if (!empty($system_messages)){
     $smarty->assign('system_msg', $system_messages);
