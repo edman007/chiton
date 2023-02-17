@@ -166,6 +166,11 @@ EOF
     fi
     curl -s -d reload_backend=1 -X POST http://localhost/chiton/settings.php | grep -A 1 statusmsg
 
+    sleep 10
+    #check that the stats page is working
+    curl -s 'http://localhost/chiton/stats.php' | grep -A 1 'Loading camera 0'
+    curl -s 'http://localhost/chiton/stats.php' | grep -A 1 '[RUNNING]'
+
     #record stuff for 60 seconds
     echo 'Waiting for video to be processed'
     if [ $ON_DEBIAN = 1 ] ; then
