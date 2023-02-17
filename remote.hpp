@@ -90,7 +90,7 @@
  *
  * LOG <INT1>
  *  - Print the log output for given camera, one message per line, use -1 as the camera to access system messages
- *  - Return value is "<INT1>\t<INT2>\t<STR>", INT1 is the camera ID, INT2 is the message level, STR is the message
+ *  - Return value is "<INT1>\t<INT2>\t<INT3>\t<STR>", INT1 is the camera ID, INT2 is the message level, INT3 is seconds since UTC, STR is the message
  *  - output is terminated by OK by itself on a line
  */
 class Remote {

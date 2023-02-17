@@ -10,7 +10,7 @@
 <h2>Log Messages</h2>
 <ul class="cameralog">
 {foreach from=$log_msg name=LOGLIST item=msg}
-<li class="lvl{$msg.lvl}">{$msg.msg|escape}</li>
+<li class="lvl{$msg.lvl}">[{$msg.time|date_format:"%T"}] {$msg.msg|escape}</li>
 {/foreach}
 </ul>
 {/if}

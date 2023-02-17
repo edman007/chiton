@@ -30,6 +30,8 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <functional>
+#include <sstream>
+#include <iomanip>
 
 const int socket_backlog = 5;//maxiumn connection backlog for the socket
 struct Remote::RemoteCommand {const std::string cmd;
@@ -498,7 +500,14 @@ void Remote::cmd_log(int fd, RemoteCommand& rc, std::string &cmd){
         return;
     }
     for (const auto &msg : hist){
-        write_data(fd, std::to_string(cam_id) + "\t" + std::to_string(msg.lvl) + "\t" + msg.msg + "\n");
+        std::ostringstream oss;
+        oss << cam_id << "\t";
+        oss << msg.lvl << "\t";
+        //tv_usec is 0.000001
+        oss << msg.time.tv_sec << "." << std::setw(6) << std::setfill('0') << msg.time.tv_usec << "\t";
+        oss << msg.msg;
+        oss << "\n";
+        write_data(fd, oss.str());
     }
     write_data(fd, "OK\n");
 }

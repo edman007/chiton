@@ -283,7 +283,9 @@ void Util::add_history(const std::string &msg, enum LOG_LEVEL lvl){
     history_lock.lock();
     try {
         auto &queue = log_history.at(thread_cam_id);
-        queue.emplace(queue.end(), msg, lvl);
+        struct timeval time;
+        get_videotime(time);
+        queue.emplace(queue.end(), msg, lvl, time);
         //delete any excess
         while (queue.size() > history_len){
             queue.pop_front();

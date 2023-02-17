@@ -68,7 +68,8 @@ struct VideoDate {
 struct LogMsg {
     std::string msg;
     LOG_LEVEL lvl;
-    LogMsg(const std::string &msg, LOG_LEVEL lvl) : msg(msg), lvl(lvl) {};
+    struct timeval time;
+    LogMsg(const std::string &msg, LOG_LEVEL lvl, struct timeval time) : msg(msg), lvl(lvl), time(time) {};
 };
 
 class Util {

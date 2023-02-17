@@ -176,14 +176,15 @@ class Remote {
                     $this->error_msg = $response;
                     return false;
                 } else {
-                    $str_info = explode("\t", $response, 3);
-                    if (count($str_info) != 3){
+                    $str_info = explode("\t", $response, 4);
+                    if (count($str_info) != 4){
                         $this->error_msg = 'INVALID FORMAT';
                         return false;
                     }
                     $ret[] = array('id' => $str_info[0],
                                    'lvl' => $str_info[1],
-                                   'msg' => $str_info[2]);
+                                   'time' => $str_info[2],
+                                   'msg' => $str_info[3]);
                 }
             }
         } else {
