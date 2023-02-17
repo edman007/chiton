@@ -55,6 +55,7 @@ Remote::Remote(SystemController &sys) : sys(sys), db(sys.get_db()), cfg(sys.get_
     command_vec.push_back({"STOP", &Remote::cmd_stop});
     command_vec.push_back({"RESTART", &Remote::cmd_restart});
     command_vec.push_back({"LOG", &Remote::cmd_log});
+    command_vec.push_back({"LIST", &Remote::cmd_list});
 }
 
 void Remote::init(void){
@@ -509,5 +510,32 @@ void Remote::cmd_log(int fd, RemoteCommand& rc, std::string &cmd){
         oss << "\n";
         write_data(fd, oss.str());
     }
+    write_data(fd, "OK\n");
+}
+
+void Remote::cmd_list(int fd, RemoteCommand& rc, std::string &cmd){
+    std::map<int, SystemController::CAMERA_STATUS> stat;
+    sys.list_status(stat);
+    for (auto it = stat.begin(); it != stat.end(); it++){
+        std::string state;
+        switch (it->second){
+        case SystemController::STOPPING:
+            state = "STOPPING";
+            break;
+        case SystemController::STARTING:
+            state = "STARTING";
+            break;
+        case SystemController::RUNNING:
+            state = "RUNNING";
+            break;
+        case SystemController::RESTARTING:
+            state = "RESTARTING";
+            break;
+        default:
+            state = "UNKNOWN";
+        }
+        write_data(fd, std::to_string(it->first) + "\t" + state + "\n");
+    }
+
     write_data(fd, "OK\n");
 }

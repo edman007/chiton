@@ -96,6 +96,7 @@ int SystemController::run_instance(void){
     launch_cams();//launch all configured cameras
     loop();//main loop
     remote.shutdown();
+    cams_lock.lock();
     //shutdown all cams
     for (auto &c : cams){
         c.stop();
@@ -111,6 +112,7 @@ int SystemController::run_instance(void){
     stop_cams_list.clear();
     start_cams_list.clear();
     cam_set_lock.unlock();
+    cams_lock.unlock();
     db->close();
     return SYS_EXIT_SUCCESS;
 }
@@ -172,14 +174,23 @@ void SystemController::loop(){
     //camera maintance
     do {
         //we should check if they are running and restart anything that froze
+        cams_lock.lock();
+
+        //clear the list of cameras in startup
+        cam_set_lock.lock();
+        startup_cams_list.clear();
+        cam_set_lock.unlock();
         for (auto &c : cams){
             if (c.ping()){
+                int id = c.get_id();
                 if (!c.in_startup()){
-                    int id = c.get_id();
                     LWARN("Lost connection to cam " + std::to_string(id) + ", restarting...");
                     restart_cam(id);
                 } else {
                     LWARN("Camera stalled, but appears to be in startup");
+                    cam_set_lock.lock();
+                    startup_cams_list.insert(id);
+                    cam_set_lock.unlock();
                 }
             }
         }
@@ -187,6 +198,7 @@ void SystemController::loop(){
         stop_cams();
         start_cams();
         cam_set_lock.unlock();
+        cams_lock.unlock();
         fm.clean_disk();
         expt.check_for_jobs();
         std::this_thread::sleep_for(std::chrono::seconds(10));
@@ -284,4 +296,40 @@ void SystemController::start_cams(void){
         delete res;
     }
     start_cams_list.clear();
+}
+
+void SystemController::list_status(std::map<int, CAMERA_STATUS> &stat){
+    stat.clear();
+
+    //assign all as running
+    cams_lock.lock();
+    cam_set_lock.lock();
+    for (auto &c : cams){
+        stat[c.get_id()] = CAMERA_STATUS::RUNNING;
+    }
+    cams_lock.unlock();//unlocking here is ok, but can't be relocked withot unlocking cam_set_lock first
+
+    //mark the ones still in startup
+    for (auto s : startup_cams_list){
+        stat[s] = CAMERA_STATUS::STARTING;
+    }
+
+    //mark the ones stopping
+    for (auto s : stop_cams_list){
+        stat[s] = CAMERA_STATUS::STOPPING;
+    }
+
+    //mark the ones starting or restarting
+    for (auto s : start_cams_list){
+        if (stop_cams_list.find(s) == start_cams_list.end()){
+            //not on stop list, so starting
+            stat[s] = CAMERA_STATUS::STARTING;
+        } else {
+            //on stop and start list, restarting
+            stat[s] = CAMERA_STATUS::RESTARTING;
+        }
+    }
+
+    cam_set_lock.unlock();
+
 }

@@ -54,18 +54,26 @@ const int SYS_EXIT_PRIVS_ERROR = 5;
  */
 class SystemController {
 public:
+    enum CAMERA_STATUS {
+        STOPPING = 0,
+        STARTING,
+        RUNNING,
+        RESTARTING
+    };
     //args: initial args to initilize from, cfg-path must be set
     SystemController(Config &args);
     SystemController(const SystemController&) = delete;
     ~SystemController();
     int run(void);//run the main program
 
-    void request_exit(void);
-    void request_reload(void);
+    void request_exit(void);//request that the program exits
+    void request_reload(void);//requests that all cameras are restarted
 
     bool stop_cam(int id);//stop a given camera
     bool start_cam(int id);//start the cam with given ID
     bool restart_cam(int id);//restart tha cam with a given ID
+
+    void list_status(std::map<int, CAMERA_STATUS> &stat);//writes to the map the status of all cameras
 
     //getters
     Config& get_sys_cfg(void);
@@ -85,10 +93,12 @@ private:
     std::atomic_bool reload_requested;
 
     std::list<Camera> cams;//all the currently running cameras
+    std::mutex cams_lock;//to manage access to the cameras, never lock after locking cams_set_lock, can only be locked before
 
     //these lists are used to request camera's are stop/restarted and can be set from other threads
     std::set<int> stop_cams_list;//cams stopped that need to be joined
     std::set<int> start_cams_list;//list of cameras to start
+    std::set<int> startup_cams_list;//list of cameras currently in startup
     std::mutex cam_set_lock;//lock to manage the two above sets
 
     char timezone_env[256];//if timezone is changed from default, we need to store it in memory for putenv()

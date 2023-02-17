@@ -92,6 +92,13 @@
  *  - Print the log output for given camera, one message per line, use -1 as the camera to access system messages
  *  - Return value is "<INT1>\t<INT2>\t<INT3>\t<STR>", INT1 is the camera ID, INT2 is the message level, INT3 is seconds since UTC, STR is the message
  *  - output is terminated by OK by itself on a line
+ *
+ * LIST
+ *  - List all running cameras
+ *  - response is <INT1>\t<STATUS>
+ *    INT1 - ID
+ *    STATUS - The current state, STARTING, STOPPING, RESTARTING, RUNNING
+ *  - Terminated by "OK" on it's own line
  */
 class Remote {
 public:
@@ -153,6 +160,7 @@ private:
     void cmd_stop(int fd, RemoteCommand& rc, std::string &cmd);
     void cmd_restart(int fd, RemoteCommand& rc, std::string &cmd);
     void cmd_log(int fd, RemoteCommand& rc, std::string &cmd);
+    void cmd_list(int fd, RemoteCommand& rc, std::string &cmd);
 };
 
 #endif
