@@ -500,7 +500,17 @@ void Remote::cmd_log(int fd, RemoteCommand& rc, std::string &cmd){
         write_data(fd, "OK\n");
         return;
     }
-    for (const auto &msg : hist){
+    for (auto &msg : hist){
+        //check and remove newline characters
+        size_t pos = 0;
+        do {
+            pos = msg.msg.find('\n', pos);
+            if (pos != std::string::npos){
+                msg.msg[pos] = ' ';
+                pos++;
+            }
+        } while (pos != std::string::npos);
+
         std::ostringstream oss;
         oss << cam_id << "\t";
         oss << msg.lvl << "\t";
