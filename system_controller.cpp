@@ -236,6 +236,7 @@ bool SystemController::stop_cam(int id){
 
 bool SystemController::start_cam(int id){
     cam_set_lock.lock();
+    startup_cams_list.insert(id);
     auto p = start_cams_list.insert(id);
     cam_set_lock.unlock();
     return p.second;
