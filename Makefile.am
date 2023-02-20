@@ -45,7 +45,8 @@ chiton_SOURCES = main.cpp config.cpp config_parser.cpp database.cpp mariadb.cpp 
 	motion_cvdetect.cpp motion_cvdetect.hpp cv_target_rect.cpp cv_target_rect.hpp \
 	event.hpp event.cpp event_controller.hpp event_controller.cpp system_controller.fwd.hpp \
 	event_notification.hpp event_notification.cpp module.hpp module_controller.hpp \
-	event_console.hpp event_console.cpp event_db.hpp event_db.cpp
+	event_console.hpp event_console.cpp event_db.hpp event_db.cpp json_encoder.cpp \
+	json_encoder.hpp
 
 #these are actually to make it possible to serve the website out of the source for development
 EXTRA_chiton_DEPENDENCIES=hls pinch-zoom
