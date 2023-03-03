@@ -50,6 +50,8 @@ if (isset($cameras[$camera_id]['name'])){
     $smarty->assign('display_name', $cameras[$camera_id]['name']);
 }
 
+$socket_error = false;//only report the first socket error
+
 $smarty->assign('camera_list', $cameras);
 $remote = new Remote($db);
 $log = $remote->log_cam($camera_id);
@@ -57,8 +59,9 @@ if ($log !== false){
     $smarty->assign('log_msg', $log);
 } else {
     $error_msg = $remote->get_error();
-    if (!empty($error_msg)){
+    if (!empty($error_msg) && !$socket_error){
         $system_messages[] = $error_msg;
+        $socket_error = true;
     }
 }
 
@@ -67,8 +70,9 @@ if ($status !== false){
     $smarty->assign('cam_status', $status);
 } else {
     $error_msg = $remote->get_error();
-    if (!empty($error_msg)){
+    if (!empty($error_msg) && !$socket_error){
         $system_messages[] = $error_msg;
+        $socket_error = true;
     }
 }
 
@@ -77,8 +81,9 @@ if ($detailed_status !== false){
     $smarty->assign('detailed', json_decode($detailed_status));
 } else {
     $error_msg = $remote->get_error();
-    if (!empty($error_msg)){
+    if (!empty($error_msg) && !$socket_error){
         $system_messages[] = $error_msg;
+        $socket_error = true;
     }
 }
 
