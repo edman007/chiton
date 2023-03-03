@@ -45,6 +45,11 @@ bool JSONEncoder::add(const std::string key, unsigned int val){
     return true;
 }
 
+bool JSONEncoder::add(const std::string key, time_t val){
+    add(key, (unsigned int)val);//should this be unsigned long?
+    return true;
+}
+
 bool JSONEncoder::add(const std::string key, double val){
     data[key] = std::to_string(val);
     valid = false;

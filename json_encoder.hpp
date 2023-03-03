@@ -38,6 +38,7 @@ public:
     //these are the setters
     bool add(const std::string key, int val);
     bool add(const std::string key, unsigned int val);
+    bool add(const std::string key, time_t val);
     bool add(const std::string key, double val);
     bool add(const std::string key, bool val);
     bool add(const std::string key, const std::string &val);
