@@ -38,6 +38,7 @@ if ($res){
         $info['url'] = 'stream.php?start=' . $starttime->getTimeStamp() . '&id=' . $row['camera'];
         $info['start_ts'] = $starttime->getTimeStamp();
         $info['camera'] = $row['camera'];
+        $info['active'] = $row['value'];
         $video_info[] = $info;
     }
     $smarty->assign('video_info', $video_info);

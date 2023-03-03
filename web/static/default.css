@@ -372,3 +372,7 @@ ul.detailed_stats .right {
     clear:both;
     width:100%;
 }
+
+h3.inactive {
+    clear:both;
+}
