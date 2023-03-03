@@ -6,6 +6,15 @@
 <h2>{$display_name} Stats</h2>
 {/if}
 
+{if !empty($detailed)}
+<ul class="detailed_stats">
+{foreach from=$detailed name=DETAILED_STATS key=stat item=value}
+<li><div class="left">{$stat}</div><div class="right">{if $stat == "start_time"}{$value|date_format:"%c"}{else}{$value}{/if}</div></li>
+{/foreach}
+</ul>
+<br/>
+{/if}
+
 {if !empty($log_msg)}
 <h2>Log Messages</h2>
 <ul class="cameralog">

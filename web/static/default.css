@@ -333,3 +333,35 @@ ul.cameralog {
     color:rgb(20, 200, 20);
     /*background-color:rgb(20, 200, 20);*/
 }
+
+ul.detailed_stats {
+    max-width: 40em;
+    list-style: none;
+}
+ul.detailed_stats div {
+}
+
+ul.detailed_stats li {
+
+    clear:both;
+}
+
+ul.detailed_stats .left {
+    border-color:rgb(80, 150, 150);
+    boarder-right-width:1px;
+    border-right-style:solid;
+    width:30%;
+    float:left;
+    padding:0;
+    padding-right:4px;
+    margin:3px;
+    text-align:right;
+}
+
+ul.detailed_stats .right {
+    float:left;
+    width:65%;
+    padding:1px;
+    margin:2px;
+    text-align:left;
+}

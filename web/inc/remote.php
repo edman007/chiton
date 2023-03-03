@@ -192,6 +192,32 @@ class Remote {
         }
     }
 
+    //requests the status details from the camera
+    public function status($id){
+        if (!$this->connect()){
+            return false;
+        }
+        $ret = array();
+        if ($this->send_cmd('STATUS ' . (int)$id)){
+            $response = $this->get_next_line();
+            if (is_numeric($response) && $response > 0){
+                $json = $this->get_next_bytes($response);
+                $final = $this->get_next_line();
+                if ($final == 'OK'){
+                    return $json;
+                } else {
+                    $this->error_msg = 'STATUS NOT OK: ' . $final;
+                    return false;
+                }
+            } else {
+                $this->error_msg = $response;
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
     //requests the camera status
     public function list_status(){
         if (!$this->connect()){
@@ -242,6 +268,30 @@ class Remote {
         //get the data up to end and delete the character at the end
         $data = substr($this->read_buf, 0, $end);
         $this->read_buf = substr($this->read_buf, $end + 1);
+        return $data;
+    }
+
+    //returns the next count bytes, and consumes one extra (the \n) but does not return it
+    private function get_next_bytes($count){
+        $need = $count - strlen($this->read_buf);
+        if ($need >= 0){
+            //read more data
+            $data = socket_read($this->sock, $need + 1, PHP_BINARY_READ);
+            if ($data === false){
+                //error
+            } else {
+                $this->read_buf .= $data;
+                if (strlen($this->read_buf) <= $count){
+                    return $this->get_next_bytes($count);//didn't actually get our need, try again
+                }
+                $data = substr($this->read_buf, 0, $count);
+                $this->read_buf = substr($this->read_buf, $count + 1);
+                return $data;
+            }
+        }
+        //get the data up to end and delete the character at the end
+        $data = substr($this->read_buf, 0, $need);
+        $this->read_buf = substr($this->read_buf, $need + 1);
         return $data;
     }
   }

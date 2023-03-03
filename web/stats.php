@@ -72,6 +72,17 @@ if ($status !== false){
     }
 }
 
+$detailed_status = $remote->status($camera_id);
+if ($detailed_status !== false){
+    $smarty->assign('detailed', json_decode($detailed_status));
+} else {
+    $error_msg = $remote->get_error();
+    if (!empty($error_msg)){
+        $system_messages[] = $error_msg;
+    }
+}
+
+
 
 if (!empty($system_messages)){
     $smarty->assign('system_msg', $system_messages);
