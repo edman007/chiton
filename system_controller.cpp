@@ -299,38 +299,64 @@ void SystemController::start_cams(void){
     start_cams_list.clear();
 }
 
-void SystemController::list_status(std::map<int, CAMERA_STATUS> &stat){
+void SystemController::list_state(std::map<int, CAMERA_STATE> &stat){
     stat.clear();
 
     //assign all as running
     cams_lock.lock();
     cam_set_lock.lock();
     for (auto &c : cams){
-        stat[c.get_id()] = CAMERA_STATUS::RUNNING;
+        stat[c.get_id()] = CAMERA_STATE::RUNNING;
     }
     cams_lock.unlock();//unlocking here is ok, but can't be relocked withot unlocking cam_set_lock first
 
     //mark the ones still in startup
     for (auto s : startup_cams_list){
-        stat[s] = CAMERA_STATUS::STARTING;
+        stat[s] = CAMERA_STATE::STARTING;
     }
 
     //mark the ones stopping
     for (auto s : stop_cams_list){
-        stat[s] = CAMERA_STATUS::STOPPING;
+        stat[s] = CAMERA_STATE::STOPPING;
     }
 
     //mark the ones starting or restarting
     for (auto s : start_cams_list){
         if (stop_cams_list.find(s) == start_cams_list.end()){
             //not on stop list, so starting
-            stat[s] = CAMERA_STATUS::STARTING;
+            stat[s] = CAMERA_STATE::STARTING;
         } else {
             //on stop and start list, restarting
-            stat[s] = CAMERA_STATUS::RESTARTING;
+            stat[s] = CAMERA_STATE::RESTARTING;
         }
     }
 
     cam_set_lock.unlock();
 
+}
+
+bool SystemController::get_camera_status(int id, CameraStatus &status){
+    bool ret = false;
+
+    //special case for -1, it sums all the cameras
+    if (id == -1){
+        ret = true;
+        struct timeval req_time;
+        Util::get_videotime(req_time);
+        status = CameraStatus(-1);
+        status.set_start_time(req_time.tv_sec);//to prevent finding the min time incorrectly
+    }
+    cams_lock.lock();
+    for (auto &c : cams){
+        if (c.get_id() == id){
+            status = c.get_status();
+            ret = true;
+            break;
+        } else if (id == -1){
+            //sum the cameras
+            status += c.get_status();
+        }
+    }
+    cams_lock.unlock();
+    return ret;
 }

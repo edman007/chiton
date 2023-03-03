@@ -27,6 +27,7 @@
 #include "stream_unwrap.hpp"
 #include "stream_writer.hpp"
 #include "file_manager.hpp"
+#include "camera_status.hpp"
 #include "system_controller.fwd.hpp"
 #include <atomic>
 #include <thread>
@@ -47,6 +48,7 @@ public:
     bool in_startup(void);//returns true if we have not completed connecting
     std::thread::id get_thread_id(void);
     int get_id(void);//return this camera's ID
+    CameraStatus get_status(void);//return status info
 private:
     void run(void);//connect and run the camera monitor
     void load_cfg(void);
@@ -69,6 +71,7 @@ private:
     AVRational seconds_per_file;//max seconds per file
     AVRational seconds_per_segment;//max seconds per segment
 
+    CameraStatus status;
     long int file_id;//database id of current file we are writing to
     //check if packet is a keyframe and switch the filename as needed
     void cut_video(const AVPacket *pkt, StreamWriter &out);

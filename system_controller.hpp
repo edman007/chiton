@@ -31,7 +31,7 @@
 #include <list>
 #include <set>
 #include <stdlib.h>
-//#include "chiton_ffmpeg.hpp"
+#include "camera_status.hpp"
 #include "database_manager.hpp"
 #include "remote.hpp"
 #include "export.hpp"
@@ -54,7 +54,7 @@ const int SYS_EXIT_PRIVS_ERROR = 5;
  */
 class SystemController {
 public:
-    enum CAMERA_STATUS {
+    enum CAMERA_STATE {
         STOPPING = 0,
         STARTING,
         RUNNING,
@@ -73,7 +73,8 @@ public:
     bool start_cam(int id);//start the cam with given ID
     bool restart_cam(int id);//restart tha cam with a given ID
 
-    void list_status(std::map<int, CAMERA_STATUS> &stat);//writes to the map the status of all cameras
+    void list_state(std::map<int, CAMERA_STATE> &stat);//writes to the map the state of all cameras
+    bool get_camera_status(int id, CameraStatus &status);//writes to status, the current CameraStatus object for the camera
 
     //getters
     Config& get_sys_cfg(void);

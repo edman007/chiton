@@ -24,6 +24,7 @@
 #include "remote.hpp"
 #include "util.hpp"
 #include "system_controller.hpp"
+#include "json_encoder.hpp"
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -56,6 +57,7 @@ Remote::Remote(SystemController &sys) : sys(sys), db(sys.get_db()), cfg(sys.get_
     command_vec.push_back({"RESTART", &Remote::cmd_restart});
     command_vec.push_back({"LOG", &Remote::cmd_log});
     command_vec.push_back({"LIST", &Remote::cmd_list});
+    command_vec.push_back({"STATUS", &Remote::cmd_status});
 }
 
 void Remote::init(void){
@@ -524,8 +526,8 @@ void Remote::cmd_log(int fd, RemoteCommand& rc, std::string &cmd){
 }
 
 void Remote::cmd_list(int fd, RemoteCommand& rc, std::string &cmd){
-    std::map<int, SystemController::CAMERA_STATUS> stat;
-    sys.list_status(stat);
+    std::map<int, SystemController::CAMERA_STATE> stat;
+    sys.list_state(stat);
     for (auto it = stat.begin(); it != stat.end(); it++){
         std::string state;
         switch (it->second){
@@ -548,4 +550,30 @@ void Remote::cmd_list(int fd, RemoteCommand& rc, std::string &cmd){
     }
 
     write_data(fd, "OK\n");
+}
+
+void Remote::cmd_status(int fd, RemoteCommand& rc, std::string &cmd){
+    int cam_id = 0;
+    try {
+        cam_id = std::stoi(cmd.substr(rc.cmd.length() + 1));
+    } catch (std::logic_error &e){
+        write_data(fd, "INVALID ARGUMENT\n");
+        return;
+    }
+    JSONEncoder json;
+    CameraStatus status(-2);
+    bool ret = sys.get_camera_status(cam_id, status);
+    if (!ret){
+        write_data(fd, "INVALID ARGUMENT\n");
+        return;
+    }
+
+    json.add("id", status.get_id());
+    json.add("bytes_written", status.get_bytes_written());
+    json.add("bytes_read", status.get_bytes_read());
+    json.add("dropped_frames", status.get_dropped_frames());
+    json.add("start_time", status.get_start_time());
+    write_data(fd, std::to_string(json.str().length()) + "\n");
+    write_data(fd, json.str());
+    write_data(fd, "\nOK\n");
 }

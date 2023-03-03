@@ -17,7 +17,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -99,6 +99,10 @@
  *    INT1 - ID
  *    STATUS - The current state, STARTING, STOPPING, RESTARTING, RUNNING
  *  - Terminated by "OK" on it's own line
+ *
+ * STATUS <INT1>
+ *  - Show status of camera INT1 (returned as JSON)
+ *  - response is <INT2> on one line, follwed by a \n followed by a JSON string of INT2 len, followed by \nOK\n
  */
 class Remote {
 public:
@@ -161,6 +165,7 @@ private:
     void cmd_restart(int fd, RemoteCommand& rc, std::string &cmd);
     void cmd_log(int fd, RemoteCommand& rc, std::string &cmd);
     void cmd_list(int fd, RemoteCommand& rc, std::string &cmd);
+    void cmd_status(int fd, RemoteCommand& rc, std::string &cmd);
 };
 
 #endif

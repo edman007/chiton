@@ -40,7 +40,7 @@ class MotionController : public ModuleController<MotionAlgo, MotionController> {
 public:
     MotionController(Database &db, Config &cfg, StreamUnwrap &stream, ImageUtil &img);
     ~MotionController();
-    bool process_frame(int index, const AVFrame *frame);//process the frame, return false on error
+    bool process_frame(int index, const AVFrame *frame, bool &skipped);//process the frame, return false on error, skipped is set to true if frame was skipped
     bool set_streams(void);//identify the streams (by looking at the StreamUnwrap instance)
     bool decode_video(void);//true if video is required (configured to do video motion detection)
     bool decode_audio(void);//true if audio is required (configured to do audio motion  detection)

@@ -218,6 +218,7 @@ bool StreamWriter::write(PacketInterleavingBuf *pkt_buf){
         keyframe_cbk(pkt_buf->in, *this);
     }
     //LWARN("Writing: " + std::to_string(pkt_buf->dts0) + "(" + std::to_string(pkt_buf->out->dts) + ")");
+    write_counter += pkt_buf->out->size;//log this
     int ret = av_interleaved_write_frame(output_format_context, pkt_buf->out);
     if (ret < 0) {
         LERROR("Error muxing packet for camera " + cfg.get_value("camera-id"));
@@ -975,6 +976,12 @@ const AVCodec* StreamWriter::get_vencoder(int width, int height) const {
     AVCodecID codec_id;
     int codec_profile;
     return get_vencoder(width, height, codec_id, codec_profile);
+}
+
+unsigned int StreamWriter::get_bytes_written(void){
+    auto bytes = write_counter;
+    write_counter = 0;
+    return bytes;
 }
 
 PacketInterleavingBuf::PacketInterleavingBuf(const AVPacket *pkt){

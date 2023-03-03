@@ -27,7 +27,8 @@
 #include "motion_controller.hpp"
 #include "system_controller.hpp"
 
-Camera::Camera(SystemController &sys, int camera) : sys(sys), id(camera), cfg(sys.get_sys_cfg()), db(sys.get_db()), stream(cfg), fm(sys, cfg) {
+Camera::Camera(SystemController &sys, int camera) : sys(sys), id(camera), cfg(sys.get_sys_cfg()), db(sys.get_db()),
+                                                    stream(cfg), fm(sys, cfg), status(id) {
     //load the config
     load_cfg();
     shutdown = false;
@@ -75,7 +76,9 @@ void Camera::run(void){
     startup = false;
 
     LINFO("Camera " + std::to_string(id) + " connected...");
-    std::string out_filename = fm.get_next_path(file_id, id, stream.get_start_time());
+    const struct timeval& starttime = stream.get_start_time();
+    std::string out_filename = fm.get_next_path(file_id, id, starttime);
+    status.set_start_time(starttime.tv_sec);
     StreamWriter out = StreamWriter(cfg);
     ImageUtil img(sys, cfg);
     MotionController motion(db, cfg, stream, img);
@@ -180,6 +183,7 @@ void Camera::run(void){
         last_pts = pkt->pts;
         last_stream_index = pkt->stream_index;
         frame_cnt++;
+        status.add_bytes_read(pkt->size);
 
         //we skip processing until we get a video keyframe
         if (valid_keyframe || (pkt->flags & AV_PKT_FLAG_KEY && stream.is_video(pkt))){
@@ -195,7 +199,11 @@ void Camera::run(void){
             if (stream.decode_packet(pkt)){
                 while (!failed && stream.get_decoded_frame(pkt->stream_index, frame)){
                     //LDEBUG("Decoded Video Frame");
-                    motion.process_frame(pkt->stream_index, frame);
+                    bool skipped = false;
+                    motion.process_frame(pkt->stream_index, frame, skipped);
+                    if (skipped) {
+                        status.add_dropped_frame();
+                    }
                     if (encode_video){
                         //Filter the frame before encoding
                         if (vfilter.send_frame(frame)){
@@ -231,7 +239,11 @@ void Camera::run(void){
                 if (stream.decode_packet(pkt)){
                     while (!failed && stream.get_decoded_frame(pkt->stream_index, frame)){
                         //LDEBUG("Decoded Audio Frame");
-                        motion.process_frame(pkt->stream_index, frame);
+                        bool skipped = false;
+                        motion.process_frame(pkt->stream_index, frame, skipped);
+                        if (skipped){
+                            status.add_dropped_frame();
+                        }
                         if (encode_audio){
                             if (!out.write(frame, stream.get_stream(pkt))){
                                 stream.unref_frame(pkt);
@@ -255,7 +267,7 @@ void Camera::run(void){
                 failed = true;
             }
         }
-        
+        status.add_bytes_written(out.get_bytes_written());//log the file size written
         stream.unref_frame(pkt);
     }
     LINFO("Camera " + std::to_string(id)+ " is exiting");
@@ -397,4 +409,8 @@ void Camera::start(void){
 void Camera::join(void){
     stop();//just in case we forgot
     thread.join();
+}
+
+CameraStatus Camera::get_status(void){
+    return status;//this is threaded, but the CameraStatus object handles it
 }

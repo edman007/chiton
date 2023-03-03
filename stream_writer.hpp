@@ -64,6 +64,7 @@ public:
     float get_framerate() const;//returns the video framerate, or 0 if unknown
     //return true if we found our encoding parameters, writes out pixel format expected by the encoder, and codec_id and profile as we use
     bool get_video_format(const AVFrame *frame, AVPixelFormat &pix_fmt, AVCodecID &codec_id, int &codec_profile) const;
+    unsigned int get_bytes_written(void);//return the number of bytes written since last call to get_bytes_written()
 private:
     Config &cfg;
     Config *cfg1;
@@ -100,6 +101,8 @@ private:
     //buffers used to force proper interleaving
     std::list<PacketInterleavingBuf*> interleaving_buf;
     std::map<int,long> interleaved_dts;
+
+    unsigned int write_counter;//used to provide write stats
 
     void log_packet(const AVFormatContext *fmt_ctx, const AVPacket *pkt, const std::string &tag);
     bool open_path(void);//open the path and write the header

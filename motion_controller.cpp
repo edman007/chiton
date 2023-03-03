@@ -60,13 +60,15 @@ MotionController::~MotionController(){
 
 }
 
-bool MotionController::process_frame(int index, const AVFrame *frame){
+bool MotionController::process_frame(int index, const AVFrame *frame, bool &skipped){
+    skipped = false;
     bool video = index == video_idx;
     if (!video && index != audio_idx){
         return false;//unknown stream
     }
     if (should_skip()){
         LINFO("Skipping frame due to excessive processing time");
+        skipped = true;
         return true;
     }
 
