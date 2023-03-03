@@ -117,4 +117,6 @@
 {/if}
 {/foreach}
 </ul>
+
+<a href="camera.php?id={$camera_id}">View this Camera</a>
 {include file="footer.tpl"}
