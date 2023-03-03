@@ -365,3 +365,10 @@ ul.detailed_stats .right {
     margin:2px;
     text-align:left;
 }
+
+.footer {
+    font-size:70%;
+    text-align:center;
+    clear:both;
+    width:100%;
+}

@@ -14,7 +14,6 @@
 <li><a href="settings.php">Settings</a></li>
 <li><a href="stats.php">Stats</a></li>
 <li><a href="help.php">Help</a></li>
-<li><a href="license.php">License</a></li>
 </ul>
 {if !empty($system_msg)}
 <ul class="statusmsg">
