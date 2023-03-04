@@ -45,6 +45,8 @@ if [[ $ON_DEBIAN = 1 ]] ; then
     #install mariadb
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mariadb-server
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ./chiton_*.deb
+    #delete downloaded files
+    sudo DEBIAN_FRONTEND=noninteractive apt-get clean
 else
     export PATH=/sbin:/usr/sbin:/bin:/usr/bin
     sudo /etc/rc.d/rc.chiton stop || true
