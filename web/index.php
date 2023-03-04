@@ -16,7 +16,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020,2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
