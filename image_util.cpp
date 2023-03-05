@@ -57,7 +57,6 @@ bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const s
 
 
     AVFrame *cropped_frame = NULL;
-
     if (format_supported(frame, codec)){
         LDEBUG("Format is supported" + std::to_string(frame->format));
         cropped_frame = apply_rect(frame, src);
@@ -65,7 +64,7 @@ bool ImageUtil::write_frame_jpg(const AVFrame *frame, std::string &name, const s
         //run it through a single loop of the filter
         LDEBUG("Filtering prior to writing");
         Filter flt(cfg);
-        flt.set_target_fmt(codec->pix_fmts[0], AV_CODEC_ID_MJPEG, FF_PROFILE_MJPEG_HUFFMAN_BASELINE_DCT);
+        flt.set_target_fmt(get_pix_mpjeg_fmt(codec->pix_fmts), AV_CODEC_ID_MJPEG, FF_PROFILE_MJPEG_HUFFMAN_BASELINE_DCT);
         flt.set_source_time_base({1, 1});//I don't think it actually matters...
         flt.set_source_codec(codec_id, codec_profile);
         flt.send_frame(frame);
@@ -202,4 +201,22 @@ bool ImageUtil::format_supported(const AVFrame *frame, const AVCodec *codec){
     }
 
     return false;
+}
+
+AVPixelFormat ImageUtil::get_pix_mpjeg_fmt(const AVPixelFormat *pix_list){
+    for (int i = 0; pix_list[i] != AV_PIX_FMT_NONE; i++){
+        //switch is based on libswscale depracated pix format check for jpeg in utils.c
+        switch (pix_list[i]) {
+            //these are deprecated
+        case AV_PIX_FMT_YUVJ420P:
+        case AV_PIX_FMT_YUVJ411P:
+        case AV_PIX_FMT_YUVJ422P:
+        case AV_PIX_FMT_YUVJ444P:
+        case AV_PIX_FMT_YUVJ440P:
+            continue;
+        default:
+            return pix_list[i];
+        }
+    }
+    return pix_list[0];//all of them were deprecated, return the first
 }

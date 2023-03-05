@@ -51,6 +51,7 @@ private:
     //Returns a clone of the frame with the new rect applied
     AVFrame* apply_rect(const AVFrame *frame, rect &src);
     bool format_supported(const AVFrame *frame, const AVCodec *codec);//return true if the source is in a native format
+    AVPixelFormat get_pix_mpjeg_fmt(const AVPixelFormat *pix_list);//returns the best pixel format from the list, list is terminated by AV_PIX_FMT_NONE
 };
 
 #endif
