@@ -164,6 +164,7 @@ if (!isset($_GET['stream'])){
             }
 
             $name = "Camera $camera: " . dbtime_to_DateTime($row['starttime'])->format('r');
+            $len = sprintf("%F", $len);
             echo "#EXTINF:$len,$name\n";
             if ($using_mp4 && $row['extension'] == '.mp4'){
                 $seg_len = $row['end_byte'] - $row['start_byte'];

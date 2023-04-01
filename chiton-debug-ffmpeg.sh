@@ -14,7 +14,7 @@ trap "kill -- -$$" EXIT
 #fix RadeonHD bug with VAAPI by running glxgears without vblank to keep the GPU awake
 vblank_mode=0 glxgears &
 (sleep 5 ; chmod 777 chiton.sock) &
-#gdb ./chiton -ex 'break image_util.cpp:53'  -ex 'r -c config/chiton.cfg -d'
+#gdb ./chiton -ex 'break movenc.c:5954'  -ex 'r -c config/chiton.cfg -d'
 #gdb ./chiton -ex 'break chiton_ffmpeg.cpp:1007' -ex 'r -c config/chiton.cfg -d'
 #gdb ./chiton  -ex 'r -c config/chiton.cfg -d'
 #valgrind ./chiton -c config/chiton.cfg -d
