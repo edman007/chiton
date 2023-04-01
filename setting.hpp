@@ -96,6 +96,11 @@ const std::vector<Setting> setting_options {
   /* @reorder-queue-len Specifically implemented for reolink cameras that transmit packets out of order, this will reorder those parkets and correct
    * some types of stream corruption
   */
+ {"interleave-queue-depth", "4", "Interleaving Queue Depth", "How many packets to look when writing to verify the duration is always correct. "
+  "Should be large enough to ensure the queue contains at least 2 of every packet type", SETTING_OPTIONAL_CAMERA},
+  /* @reorder-queue-len Specifically implemented for reolink cameras that transmit packets out of order, this will reorder those parkets and correct
+   * some types of stream corruption
+  */
  {"seconds-per-file", "360", "Seconds per file", "How long a file should be, files are split at the next opprotunity after this, in seconds", SETTING_OPTIONAL_SYSTEM},
  /* @seconds-per-file when using fMP4, this is the length of the individual mp4 files and it is also the unit size that is deleted when removing old videos
   */

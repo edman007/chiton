@@ -36,6 +36,10 @@ StreamWriter::StreamWriter(Config& cfg) : cfg(cfg) {
     } else {
         segment_mode = SEGMENT_MPGTS;
     }
+    interleave_queue_depth = cfg.get_value_int("interleave-queue-depth");
+    if (interleave_queue_depth > 10000 || interleave_queue_depth < 0){
+        interleave_queue_depth = 4;
+    }
     video_stream_found = false;
     audio_stream_found = false;
     video_width = -1;
@@ -213,11 +217,10 @@ bool StreamWriter::write(const AVPacket *packet, const AVStream *in_stream){
 }
 
 bool StreamWriter::write(PacketInterleavingBuf *pkt_buf){
-
     if (keyframe_cbk && pkt_buf->video_keyframe){
         keyframe_cbk(pkt_buf->in, *this);
     }
-    //LWARN("Writing: " + std::to_string(pkt_buf->dts0) + "(" + std::to_string(pkt_buf->out->dts) + ")");
+    //log_packet(output_format_context, pkt_buf->out, "Final Write");
     write_counter += pkt_buf->out->size;//log this
     int ret = av_interleaved_write_frame(output_format_context, pkt_buf->out);
     if (ret < 0) {
@@ -683,14 +686,36 @@ void StreamWriter::interleave(PacketInterleavingBuf *buf){
                                      output_format_context->streams[0]->time_base, AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX);
     }
     interleaved_dts[buf->out->stream_index] = buf->dts0;
-    //find the first buf where dts0 is > than ours, and insert just before that
+    //find the first buf where dts0 is > than ours, and insert jus before that
     for (auto ibuf = interleaving_buf.begin(); ibuf != interleaving_buf.end(); ibuf++){
         if ((*ibuf)->dts0 > buf->dts0){
             interleaving_buf.insert(ibuf, buf);
             return;
         }
     }
-    interleaving_buf.push_back(buf);
+    interleaving_buf.insert(interleaving_buf.end(), buf);
+}
+
+bool StreamWriter::fixup_duration_interleave(std::list<PacketInterleavingBuf*>::iterator itr){
+    auto in = *itr;
+    auto end_dts = in->out->dts + in->out->duration;
+    for (itr++; itr != interleaving_buf.end(); itr++){
+        if ((*itr)->out->stream_index == in->out->stream_index){
+            //found the previous packet
+            if (end_dts > (*itr)->out->dts){//our current DTS puts us past the next packet start
+                //log_packet(output_format_context, in->out, "Pre-fix");
+                auto target_duration = (*itr)->out->dts - in->out->dts;
+                if (target_duration > 0){
+                    in->out->duration = target_duration;
+                }
+                //log_packet(output_format_context, in->out, "Post-fix");
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+    return false;
 }
 
 bool StreamWriter::write_interleaved(void){
@@ -717,7 +742,26 @@ bool StreamWriter::write_interleaved(void){
 
     bool ret = true;
     for (auto ibuf = interleaving_buf.begin(); ibuf != interleaving_buf.end();){
-        if ((*ibuf)->dts0 <= last_dts){
+        if ((*ibuf)->dts0 <= last_dts && interleaving_buf.size() > interleave_queue_depth){
+            //fixup the PTS and DTS
+            try {
+                long track_dts = track_len_dts.at((*ibuf)->out->stream_index);//throws and we don't check
+                if ((*ibuf)->out->dts > track_dts){
+                    long diff = (*ibuf)->out->dts - track_dts;
+                    if (diff < (*ibuf)->out->duration){
+                        //difference is less than a packet, shift DTS and PTS
+                        (*ibuf)->out->dts -= diff;
+                        (*ibuf)->out->pts -= diff;
+                    } else {
+                        LDEBUG("Excessive DTS gap (" + std::to_string(diff) + "), possible dropped packet");
+                    }
+                }
+            } catch (std::out_of_range &e){
+                //track dts is not set (first run)
+            }
+            track_len_dts[(*ibuf)->out->stream_index] = (*ibuf)->out->dts + (*ibuf)->out->duration;
+
+            fixup_duration_interleave(ibuf);
             ret &= write(*ibuf);
             ibuf = interleaving_buf.erase(ibuf);
         } else {

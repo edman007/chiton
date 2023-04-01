@@ -71,7 +71,8 @@ private:
     Config *cfg2;
     std::string path;
     enum {SEGMENT_MPGTS, SEGMENT_FMP4} segment_mode;
-    
+    unsigned int interleave_queue_depth;
+
     AVFormatContext *output_format_context = NULL;
     std::map<int,int> stream_mapping;
     std::map<int, AVCodecContext*> encode_ctx;
@@ -85,6 +86,7 @@ private:
     //these offsets are used to shift the time when receiving something
     std::vector<long> stream_offset;
     std::vector<long> last_dts;//used to fix non-increasing DTS
+    std::map<int,long> track_len_dts;//used to fixup packet DTS (and prevent gaps)
     std::function<void(const AVPacket *pkt, StreamWriter &out)> keyframe_cbk;//we call this on all video keyframe packets
 
     //used to track if we were successful in getting a file opened (and skip writing anything if not successful)
@@ -114,6 +116,8 @@ private:
     long long write_init(void);//write the init segment to the buffer
     bool write(PacketInterleavingBuf *buf);//write the packet to the file (perform the actual write)
     void interleave(PacketInterleavingBuf *buf);//add the packet to the interleaving buffer and write buffers that are ready
+    //fix the packet at itr to have a reasonable duration, return true if error found and fixed
+    bool fixup_duration_interleave(std::list<PacketInterleavingBuf*>::iterator itr);
     bool write_interleaved(void);//write any buffers that are ready to be written
     bool gen_codec_str(const int stream, const AVCodecParameters *codec);//generate the HLS codec ID for the stream
     uint8_t *nal_unit_extract_rbsp(const uint8_t *src, const uint32_t src_len, uint32_t *dst_len);//helper for decoding h264 types
