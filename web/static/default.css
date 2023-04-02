@@ -165,8 +165,13 @@ ul.sitemap li a {
     float:right;
 }
 
+.volume, .fullscreen, .play {
+    height:100%;
+}
+
 .volume img, .fullscreen img, .play img {
     height:100%;
+    max-width:100%;
 }
 .progress {
     position:absolute;
@@ -253,9 +258,6 @@ table.settings td.setting_desc {
     }
     .progress {
         bottom:60%;
-    }
-    .volume, .fullscreen, .play {
-        height:90%;
     }
 }
 
