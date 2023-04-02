@@ -568,7 +568,7 @@ class CameraState {
         }
 
         for (var i = 0; i < this.jsonData.gaps.length; i++){
-            if (this.jsonData.gaps[i].actual_start_ts < targetTime){
+            if (this.jsonData.gaps[i].actual_start_ts < (targetTime - totalGaps)){
                 totalGaps += this.jsonData.gaps[i].len;
             } else {
                 //only works if we guarentee gaps is in order, which it should be
