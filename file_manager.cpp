@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020-2022 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -202,7 +202,7 @@ void FileManager::delete_broken_segments(void){
     std::string future_time = std::to_string(Util::pack_time(curtime));
 
     std::string sql = "SELECT v.name, v.path, c.value, v.extension, v.camera, v.starttime FROM videos AS v LEFT JOIN config AS c ON v.camera=c.camera AND c.name = 'output-dir' WHERE "
-        "v.endtime < v.starttime OR v.starttime > " + future_time;
+        "v.endtime IS NULL OR v.endtime < v.starttime OR v.starttime > " + future_time;
     DatabaseResult* res = db.query(sql);
     if (res && res->num_rows() > 0){
         LWARN("Found " + std::to_string(res->num_rows()) + " broken  segments, deleting them");
