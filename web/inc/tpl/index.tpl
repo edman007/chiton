@@ -12,7 +12,7 @@
 {if !empty($active_found)}
 <h3 class="inactive">Inactive Cameras</h3>
 {foreach from=$video_info item=video name=inactive_loop}
-         {if !empty($video.active)}
+         {if empty($video.active)}
          <a href="camera.php?id={$video.camera}">{if !empty($video.name)}{$video.name|escape}{else}Camera {$video.camera}{/if}</a><br/>
          {/if}
 {/foreach}
