@@ -461,7 +461,7 @@ bool CFFUtil::have_vaapi(AVCodecID codec_id, int codec_profile, int width, int h
 
     //if we couldn't find a matching profile we bail
     if (profile == VAProfileNone){
-        LINFO("VA-API does not support this codec, no profile found");
+        LINFO("VA-API does not support this codec (" + std::string(avcodec_get_name(codec_id)) + "/" + avcodec_profile_name(codec_id, codec_profile) + "), no profile found");
         return NULL;
     }
 #endif
@@ -683,7 +683,7 @@ bool CFFUtil::have_opencl(AVCodecID codec_id, int codec_profile, int width, int 
 
     //if we couldn't find a matching profile we bail
     if (profile == VAProfileNone){
-        LINFO("VA-API does not support this codec, no profile found");
+        LINFO("VA-API does not support this codec (" + std::string(avcodec_get_name(codec_id)) + "/" + avcodec_profile_name(codec_id, codec_profile) + "), no profile found");
         return NULL;
     }
 #endif
