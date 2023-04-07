@@ -141,6 +141,9 @@ static const struct {
 */
 
 void ffmpeg_log_callback(void * avcl, int level, const char * fmt, va_list vl){
+    if (level > gcff_util.get_ff_log_level()){
+        return;//ignore stuff that is too verbose
+    }
     //compute the level first...
     enum LOG_LEVEL chiton_level;
     if (level <= AV_LOG_FATAL){
@@ -151,17 +154,8 @@ void ffmpeg_log_callback(void * avcl, int level, const char * fmt, va_list vl){
         chiton_level = CH_LOG_INFO;
     } else if (level <= AV_LOG_INFO){
         chiton_level = CH_LOG_INFO;
-    } else if (level <= AV_LOG_VERBOSE){
-        chiton_level = CH_LOG_DEBUG;
-    /* Uncomment to see these messages, they do really cause too much output */
-    /*
-    } else if (level <= AV_LOG_DEBUG){
-        chiton_level = CH_LOG_DEBUG;
-    } else if (level <= AV_LOG_TRACE){
-        chiton_level = CH_LOG_DEBUG;
-    */
     } else {
-        return;//higher level stuff is ignored!
+        chiton_level = CH_LOG_DEBUG;
     }
 
     //format the message
@@ -182,11 +176,6 @@ void ffmpeg_log_callback(void * avcl, int level, const char * fmt, va_list vl){
 }
 
 void CFFUtil::load_ffmpeg(void){
-#ifdef DEBUG
-    av_log_set_level(AV_LOG_DEBUG);
-#else
-    av_log_set_level(AV_LOG_WARNING);
-#endif
     av_log_set_callback(ffmpeg_log_callback);
 
     //init vaapi
@@ -553,6 +542,7 @@ AVBufferRef *CFFUtil::get_vdpau_ctx(AVCodecID codec_id, int codec_profile, int w
 CFFUtil::CFFUtil(void){
     vaapi_failed = false;
     vdpau_failed = false;
+    max_ffmpeg_log_level = AV_LOG_VERBOSE;
 }
 
 CFFUtil::~CFFUtil(void){
@@ -957,3 +947,15 @@ VAProfile CFFUtil::get_va_profile(AVVAAPIDeviceContext* hwctx, AVCodecID codec_i
     return profile;
 }
 #endif
+
+int CFFUtil::get_ff_log_level(void) const{
+    return max_ffmpeg_log_level;
+}
+
+void CFFUtil::set_ff_log_level(int lvl){
+    if (lvl < AV_LOG_QUIET || lvl > AV_LOG_TRACE){
+        LINFO("ffmpeg-log-level appears unreasonable, typically between " + std::to_string(AV_LOG_QUIET) + " and " + std::to_string(AV_LOG_TRACE));
+    }
+    max_ffmpeg_log_level = lvl;
+    av_log_set_level(lvl);
+}

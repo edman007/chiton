@@ -119,6 +119,8 @@ public:
     bool have_v4l2(AVCodecID codec_id, int codec_profile, int width, int height);//returns true if v4l2 should work
     bool sw_format_is_hw_compatable(const enum AVPixelFormat pix_fmt);//return true if the format is HW compatable
     std::string get_sw_hw_format_list(Config &cfg, const AVFrame *frame, AVCodecID codec_id, int codec_profile);//return the suggested list of formats for use with later HW functions
+    int get_ff_log_level(void) const;//return the ffmpeg log level
+    void set_ff_log_level(int lvl);//set the ffmpeg log level
 private:
     void load_vaapi(void);//init global vaapi context
     void free_vaapi(void);//free the vaapi context
@@ -146,6 +148,7 @@ private:
     AVBufferRef *opencl_ctx = NULL;
     bool opencl_failed = false;//if we failed to initilize opencl
     std::mutex codec_lock;
+    int max_ffmpeg_log_level;//max log level for FFMpeg messages
 };
 
 enum AVPixelFormat get_vaapi_format(AVCodecContext *ctx, const enum AVPixelFormat *pix_fmts);//global VAAPI format selector

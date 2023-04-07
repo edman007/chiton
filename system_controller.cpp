@@ -76,9 +76,6 @@ int SystemController::run_instance(void){
         Util::set_log_level(cfg.get_value_int("verbosity"));
     }
 
-    //set the history length
-    Util::set_history_len(cfg.get_value_int("log-history-len"));
-
     if (db->connect(cfg.get_value("db-host"), cfg.get_value("db-database"), cfg.get_value("db-user"), cfg.get_value("db-password"),
                    cfg.get_value_int("db-port"), cfg.get_value("db-socket"))){
         LFATAL("Could not connect to the database! Check your configuration");
@@ -225,6 +222,11 @@ void SystemController::load_sys_cfg(Config &cfg) {
     }
     tzset();
 
+    //set the history length
+    Util::set_history_len(cfg.get_value_int("log-history-len"));
+
+    //set the ffmpeg log level
+    gcff_util.set_ff_log_level(cfg.get_value_int("ffmpeg-log-level"));
 }
 
 bool SystemController::stop_cam(int id){

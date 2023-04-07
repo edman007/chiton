@@ -166,4 +166,5 @@ const std::vector<Setting> setting_options {
   * Lower values generally reduce compression, higher values can cause seconds-per-segment to be exceeded
   */
  {"motion-cvresize-scale", "1", "Motion Detection Scale ratio <0-1>", "Scale ratio for motion processing, 1 is no scaling, 0.5 is downscale 50%", SETTING_OPTIONAL_CAMERA},
+ {"ffmpeg-log-level", "40", "FFMpeg log level <-8-56>", "FFMpeg Log level, ffmpeg messages above this will not be printed", SETTING_OPTIONAL_SYSTEM},
 };
