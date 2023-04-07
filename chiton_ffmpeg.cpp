@@ -632,64 +632,13 @@ AVBufferRef *CFFUtil::get_opencl_ctx(AVCodecID codec_id, int codec_profile, int 
 }
 
 bool CFFUtil::have_opencl(AVCodecID codec_id, int codec_profile, int width, int height){
-    load_vaapi();
-    if (!vaapi_ctx){
+    load_opencl();
+    if (!opencl_ctx){
         return NULL;
     }
-
-    //this section is only used to see if VAAPI supports our codec, without VAAPI we can still ask libavcodec to do it, but we won't known
-    //if it's going to work, this will result in is just failing if we try it and it's not supported
-#ifdef HAVE_VAAPI
-    AVVAAPIDeviceContext* hwctx = reinterpret_cast<AVVAAPIDeviceContext*>((reinterpret_cast<AVHWDeviceContext*>(vaapi_ctx->data))->hwctx);
-    //query VAAPI profiles for this codec
-    const AVCodecDescriptor *codec_desc;
-    codec_desc = avcodec_descriptor_get(codec_id);
-    if (!codec_desc) {
-        return NULL;
-    }
-    VAProfile profile, *profile_list = NULL;
-    int profile_count;
-    profile_count = vaMaxNumProfiles(hwctx->display);
-    profile_list = new VAProfile[profile_count];
-    if (!profile_list){
-        return NULL;
-    }
-
-    VAStatus vas;
-    vas = vaQueryConfigProfiles(hwctx->display, profile_list, &profile_count);
-    if (vas != VA_STATUS_SUCCESS) {
-        delete[] profile_list;
-        return NULL;
-    }
-
-    profile = VAProfileNone;
-
-    //search all known codecs to see if there is a matching profile
-    for (unsigned int i = 0; i < FF_ARRAY_ELEMS(vaapi_profile_map); i++) {
-        if (codec_id != vaapi_profile_map[i].codec_id){
-            continue;
-        }
-        for (int j = 0; j < profile_count; j++) {
-            if (vaapi_profile_map[i].va_profile == profile_list[j] &&
-                vaapi_profile_map[i].codec_profile == codec_profile) {
-                profile = profile_list[j];
-                break;//exact found, we are done
-            } else if (vaapi_profile_map[i].va_profile == profile_list[j]){
-                profile = profile_list[j];//in exact found
-            }
-        }
-    }
-    delete[] profile_list;
-
-    //if we couldn't find a matching profile we bail
-    if (profile == VAProfileNone){
-        LINFO("VA-API does not support this codec (" + std::string(avcodec_get_name(codec_id)) + "/" + avcodec_profile_name(codec_id, codec_profile) + "), no profile found");
-        return NULL;
-    }
-#endif
 
     bool found = false;
-    AVHWFramesConstraints* c = av_hwdevice_get_hwframe_constraints(vaapi_ctx, NULL);
+    AVHWFramesConstraints* c = av_hwdevice_get_hwframe_constraints(opencl_ctx, NULL);
     if (!c){
         return NULL;
     }
