@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 if [ ! -d maintainer-tools ] ; then
   cd ..
 fi
@@ -16,5 +17,5 @@ for i in * ; do
     git checkout $TARGET
     cd ..
 done
-cd external/npm
+cd npm
 npm update hls.js
