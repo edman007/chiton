@@ -37,6 +37,7 @@ public:
     static const std::string& get_mod_name(void);//return the name of the algorithm
     const cv::UMat& get_UMat(void) const;//return the UMat (CV_8UC1) for this frame
 private:
+    cv::UMat invalid_mat;//returned when buf_mat is invalid
     cv::UMat buf_mat;//the Mat we operate on
     cv::Mat input_mat;//the sw mat
     cv::UMat tmp1, tmp2;//temporary buffers

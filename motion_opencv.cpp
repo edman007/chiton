@@ -60,6 +60,9 @@ bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
     if (!video){
         return true;
     }
+    if (invalid_mat.empty()){
+        invalid_mat = cv::UMat::zeros(cv::Size(frame->width, frame->height), CV_8UC1);
+    }
     buf_mat.release();
     input_mat.release();
     //opencv libva is HAVE_VA, our libva is HAVE_VAAPI
@@ -177,6 +180,10 @@ const std::string& MotionOpenCV::get_mod_name(void) {
 }
 
 const cv::UMat& MotionOpenCV::get_UMat(void) const {
+    if (buf_mat.empty()){
+        LWARN("Returning empty OpenCV image due to failure to map, OpenCV motion detection will not work");
+        return invalid_mat;
+    }
     return buf_mat;
 }
 
