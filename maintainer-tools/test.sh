@@ -90,8 +90,11 @@ build_source () {
             ./configure
             make distcheck
         else
+            make clean
+            ./configure
             rm -rf release
         fi
+        make -j15
         make -j15 release
         if [ "x$SIGN_KEY" != "x" ]; then
             cd release
