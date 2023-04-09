@@ -321,7 +321,7 @@ initscript_DATA=packaging/scripts/chiton.service
 endif
 initscriptdir=$(initdir)
 
-CLEANFILES=$(EXTERNAL_NO_NPM_LICENSE) $(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG) web/external/smarty \
+CLEANFILES=$(EXTERNAL_NO_NPM_LICENSE) $(BREEZE_2X_PNG) $(BREEZE_4X_PNG) $(BREEZE_SVG) web/inc/external/smarty \
 	$(HLS_BUILD_FILES) $(sbin_SCRIPTS) 	$(SLACKWARE_PACKAGE_FILES_BUILT) $(DEBIAN_PKG_FILES_BUILT) \
 	web/static/2x-bottom-cursor.png web/static/4x-bottom-cursor.png \
 	packaging/scripts/rc.chiton chiton-install packaging/scripts/chiton.service \
