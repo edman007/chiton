@@ -70,7 +70,10 @@ bool Export::check_for_jobs(void){
         delete res;
 
         return start_job();
+    } else if (res){
+        delete res;
     }
+
     lock.unlock();
     return false;
 }
