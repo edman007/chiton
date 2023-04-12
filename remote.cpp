@@ -73,8 +73,12 @@ void Remote::shutdown(void){
         //force the worker to exit...how?
         worker.join();
     }
-    close(killfd_worker);
-    close(killfd_master);
+    if (killfd_worker != -1){
+        close(killfd_worker);
+    }
+    if (killfd_master != -1){
+        close(killfd_master);
+    }
     killfd_worker = -1;
     killfd_master = -1;
 
