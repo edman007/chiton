@@ -53,6 +53,10 @@ Filter::Filter(Config& cfg) : cfg(cfg) {
 
 Filter::~Filter(){
     av_frame_free(&tmp_frame);
+    avfilter_free(buffersrc_ctx);
+    buffersrc_ctx = NULL;
+    avfilter_free(buffersink_ctx);
+    buffersink_ctx = NULL;
     avfilter_graph_free(&filter_graph);
 }
 
@@ -204,7 +208,7 @@ bool Filter::init_filter(const AVFrame *frame){
 
     if (frame->hw_frames_ctx){//copy the input device context if one exists
         AVBufferSrcParameters *bsp = av_buffersrc_parameters_alloc();
-        bsp->hw_frames_ctx = av_buffer_ref(frame->hw_frames_ctx);
+        bsp->hw_frames_ctx = frame->hw_frames_ctx;//we do NOT put a new ref here, we own everything in this struct
         bsp->format = frame->format;
         bsp->width = frame->width;
         bsp->height = frame->height;
