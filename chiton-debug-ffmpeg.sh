@@ -17,5 +17,5 @@ vblank_mode=0 glxgears &
 #gdb ./chiton -ex 'break movenc.c:5954'  -ex 'r -c config/chiton.cfg -d'
 #gdb ./chiton -ex 'break chiton_ffmpeg.cpp:1007' -ex 'r -c config/chiton.cfg -d'
 #gdb ./chiton  -ex 'r -c config/chiton.cfg -d'
-#valgrind ./chiton -c config/chiton.cfg -d
+#valgrind --suppressions=/usr/share/opencv4/valgrind.supp --suppressions=/usr/share/opencv4/valgrind_3rdparty.supp  --leak-check=full --show-leak-kinds=definite --track-origins=yes ./chiton -c config/chiton.cfg -d
 ./chiton -c config/chiton.cfg -d
