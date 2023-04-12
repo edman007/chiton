@@ -57,7 +57,7 @@ Camera::Camera(SystemController &sys, int camera) : sys(sys), id(camera), cfg(sy
     seconds_per_file = av_make_q(seconds_per_file_raw, 1);
 }
 Camera::~Camera(){
-    
+    av_packet_free(&pkt);
 }
 
 void Camera::load_cfg(void){
@@ -280,6 +280,11 @@ void Camera::run(void){
     if (frame){
         av_frame_free(&frame);
         frame = NULL;
+    }
+
+    if (filtered_frame){
+        av_frame_free(&filtered_frame);
+        filtered_frame = NULL;
     }
 
     alive = false;
