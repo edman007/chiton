@@ -450,7 +450,17 @@ bool CFFUtil::have_vaapi(AVCodecID codec_id, int codec_profile, int width, int h
 
     //if we couldn't find a matching profile we bail
     if (profile == VAProfileNone){
-        LINFO("VA-API does not support this codec (" + std::string(avcodec_get_name(codec_id)) + "/" + avcodec_profile_name(codec_id, codec_profile) + "), no profile found");
+        const char* codec_cstr = avcodec_get_name(codec_id);
+        const char* profile_cstr = avcodec_profile_name(codec_id, codec_profile);
+        std::string codec_name = "Unknown";
+        if (codec_cstr != NULL){
+            codec_name = std::string(codec_cstr);
+        }
+        std::string profile_name = "Unknown";
+        if (profile_cstr != NULL){
+            profile_name = std::string(profile_cstr);
+        }
+        LINFO("VA-API does not support this codec (" + codec_name + "/" + profile_name + "), no profile found");
         return NULL;
     }
 #endif
