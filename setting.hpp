@@ -167,4 +167,9 @@ const std::vector<Setting> setting_options {
   */
  {"motion-cvresize-scale", "1", "Motion Detection Scale ratio <0-1>", "Scale ratio for motion processing, 1 is no scaling, 0.5 is downscale 50%", SETTING_OPTIONAL_CAMERA},
  {"ffmpeg-log-level", "40", "FFMpeg log level <-8-56>", "FFMpeg Log level, ffmpeg messages above this will not be printed", SETTING_OPTIONAL_SYSTEM},
+ /* @opencv-disable-opencl Useful to set to true when you have a buggy/broken OpenCL implementation. Note: Setting to "false"
+  * does not re-enable it even with a full system reload, application must be fully restarted to re-enable it.
+  */
+ {"opencv-disable-opencl", "false", "Disable OpenCL Acceleration in OpenCV <true|false|>", "Set to true to disable OpenCL use by OpenCV "
+  "(forces opencv motion detection to SW)", SETTING_OPTIONAL_SYSTEM},
 };
