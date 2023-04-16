@@ -239,7 +239,7 @@ void MotionOpenCV::indirect_vaapi_map(const AVFrame *input){
 
     status = vaSyncSurface(hw_ctx->display, surface);
     if (status != VA_STATUS_SUCCESS){
-        LWARN("vaSyncSurface: Failed");
+        LWARN("vaSyncSurface: Failed (" + std::to_string(status) + ")");
         return;
     }
 
