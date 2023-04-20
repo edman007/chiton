@@ -15,7 +15,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with Chiton.  If not, see <https://www.gnu.org/licenses/>.
  *
- *   Copyright 2020-2022 Ed Martin <edman007@edman007.com>
+ *   Copyright 2020-2023 Ed Martin <edman007@edman007.com>
  *
  **************************************************************************
  */
@@ -172,4 +172,9 @@ const std::vector<Setting> setting_options {
   */
  {"opencv-disable-opencl", "false", "Disable OpenCL Acceleration in OpenCV <true|false>", "Set to true to disable OpenCL use by OpenCV "
   "(forces opencv motion detection to SW)", SETTING_OPTIONAL_CAMERA},
+  /* @opencv-opencl-device this is the same function as the environmental variable OPENCV_OPENCL_DEVICE, DRIVER is the platform reported by clinfo, TYPE is the accelerator type
+   * which can be CPU, GPU, etc. NAME is either the index <0-9> or the name of the card, leaving a parameter empty acts as a wild card, e.g. ':GPU:' is any GPU.
+   * See https://github.com/opencv/opencv/wiki/OpenCL-optimizations
+  */
+ {"opencv-opencl-device", "", "OpenCV OpenCL Device <DRIVER:TYPE:NAME>", "OpenCV Device selection string, this is the configuration parameter", SETTING_OPTIONAL_CAMERA},
 };

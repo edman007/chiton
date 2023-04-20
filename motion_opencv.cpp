@@ -53,6 +53,17 @@ MotionOpenCV::MotionOpenCV(Config &cfg, Database &db, MotionController &controll
     map_cl = cfg.get_value("motion-opencv-map-cl") != "false";//use ffmpeg to convert to opencl and then map that into opencv
     map_vaapi = cfg.get_value("motion-opencv-map-vaapi") != "false";//use OpenCV's VA-API mapping implementation
 
+    if (cfg.get_value("opencv-opencl-device") != ""){
+        ocv_cl_ctx = cv::ocl::Context::create(cfg.get_value("opencv-opencl-device"));
+        if (ocv_cl_ctx.ndevices() > 0){
+            cv::ocl::Device &dev = ocv_cl_ctx.device(0);
+            LINFO("OpenCV Selecting OpenCL device: " + dev.name());
+            ocv_exe_ctx = cv::ocl::OpenCLExecutionContext::create(ocv_cl_ctx, dev);
+            ocv_exe_ctx.bind();
+        } else {
+            LWARN("Could not find OpenCL device matching '" + cfg.get_value("opencv-opencl-device") + "'");
+        }
+    }
     //disable opencv use if requested
     if (cfg.get_value("opencv-disable-opencl") == "true"){
         //We only ever disable it (never enable it) because the default OpenCV
@@ -64,6 +75,7 @@ MotionOpenCV::MotionOpenCV(Config &cfg, Database &db, MotionController &controll
 
 MotionOpenCV::~MotionOpenCV(){
     av_frame_free(&input);
+    cv::ocl::finish();//call clFinish()
 }
 bool MotionOpenCV::process_frame(const AVFrame *frame, bool video){
     if (!video){

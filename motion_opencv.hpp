@@ -27,6 +27,7 @@
 #include "motion_algo.hpp"
 #include "filter.hpp"
 #include <opencv2/core.hpp>
+#include <opencv2/core/ocl.hpp>
 
 class MotionOpenCV : public MotionAlgo {
 public:
@@ -46,6 +47,11 @@ private:
     bool map_cl;//true if using opencl mapping instead of direct vaapi mapping
     bool map_indirect;//true if mapping indirectly from VA-API to SW OpenCV
     bool map_vaapi;//true if mapping using OpenCV's VA-API to OpenCV
+
+    //OpenCV device selection
+    cv::ocl::Context ocv_cl_ctx;
+    cv::ocl::OpenCLExecutionContext ocv_exe_ctx;
+
 #ifdef HAVE_OPENCL
     void map_ocl_frame(AVFrame *input);
 #endif
