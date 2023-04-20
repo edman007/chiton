@@ -41,10 +41,6 @@
 #include <sys/un.h>
 #include <functional>
 
-#ifdef HAVE_OPENCV
-#include <opencv2/core/ocl.hpp>
-#endif
-
 SystemController::SystemController(Config &args) :
     system_args(args),
     db(std::unique_ptr<Database>(new MariaDB())),
@@ -231,15 +227,6 @@ void SystemController::load_sys_cfg(Config &cfg) {
 
     //set the ffmpeg log level
     gcff_util.set_ff_log_level(cfg.get_value_int("ffmpeg-log-level"));
-
-#ifdef HAVE_OPENCV
-    //disable opencv use if requested
-    if (cfg.get_value("opencv-disable-opencl") == "true"){
-        //We only ever disable it (never enable it) because the default OpenCV
-        //value is effectivitly auto, but the API does not accept auto
-        cv::ocl::setUseOpenCL(false);
-    }
-#endif
 }
 
 bool SystemController::stop_cam(int id){

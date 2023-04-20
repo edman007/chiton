@@ -170,6 +170,6 @@ const std::vector<Setting> setting_options {
  /* @opencv-disable-opencl Useful to set to true when you have a buggy/broken OpenCL implementation. Note: Setting to "false"
   * does not re-enable it even with a full system reload, application must be fully restarted to re-enable it.
   */
- {"opencv-disable-opencl", "false", "Disable OpenCL Acceleration in OpenCV <true|false|>", "Set to true to disable OpenCL use by OpenCV "
-  "(forces opencv motion detection to SW)", SETTING_OPTIONAL_SYSTEM},
+ {"opencv-disable-opencl", "false", "Disable OpenCL Acceleration in OpenCV <true|false>", "Set to true to disable OpenCL use by OpenCV "
+  "(forces opencv motion detection to SW)", SETTING_OPTIONAL_CAMERA},
 };

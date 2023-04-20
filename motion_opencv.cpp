@@ -38,6 +38,7 @@
 #endif
 
 #include <opencv2/imgproc.hpp>
+#include <opencv2/core/ocl.hpp>
 
 //debug things
 #include <opencv2/highgui.hpp>
@@ -51,6 +52,14 @@ MotionOpenCV::MotionOpenCV(Config &cfg, Database &db, MotionController &controll
     map_indirect = cfg.get_value("motion-opencv-map-indirect") != "false";//if true will use libva to copy the brighness
     map_cl = cfg.get_value("motion-opencv-map-cl") != "false";//use ffmpeg to convert to opencl and then map that into opencv
     map_vaapi = cfg.get_value("motion-opencv-map-vaapi") != "false";//use OpenCV's VA-API mapping implementation
+
+    //disable opencv use if requested
+    if (cfg.get_value("opencv-disable-opencl") == "true"){
+        //We only ever disable it (never enable it) because the default OpenCV
+        //value is effectivitly auto, but the API does not accept auto
+        cv::ocl::setUseOpenCL(false);
+    }
+
 }
 
 MotionOpenCV::~MotionOpenCV(){
